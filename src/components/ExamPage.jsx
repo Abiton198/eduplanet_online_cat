@@ -59,51 +59,43 @@ export default function ExamPage({ studentInfo, addResult }) {
   };
 
   const handleSubmit = () => {
-    if (submitted) return;
-  
-    let correct = 0;
+    let score = 0;
     let unanswered = 0;
+    const detailedAnswers = [];
   
-    questions.forEach(q => {
-      const userAnswer = answers[String(q.id)]; // Get the selected answer text (e.g., "Google Drive")
-      if (!userAnswer) {
+    questions.forEach((q, index) => {
+      const selected = answers[index];
+      const isCorrect = selected === q.correctAnswer;
+      if (selected === undefined) {
         unanswered++;
-      } else if (userAnswer === q.correctAnswer) {
-        correct++;
+      } else if (isCorrect) {
+        score++;
       }
+      detailedAnswers.push({
+        question: q.question,
+        selectedAnswer: selected,
+        correctAnswer: q.correctAnswer,
+        isCorrect: isCorrect,
+      });
     });
   
-    const total = questions.length;
-    const percentage = (correct / total) * 100;
-    const examResult = {
+    const percentage = ((score / questions.length) * 100).toFixed(2);
+  
+    const result = {
       name: studentInfo.name,
-      score: correct,
-      percentage: percentage.toFixed(2),
-      unanswered,
-      time: new Date().toLocaleString()
+      score: `${score} / ${questions.length}`,
+      percentage: percentage,
+      unanswered: unanswered,
+      time: new Date().toLocaleString(),
     };
   
-    // Add result to your result list (assuming you have an addResult function)
-    addResult(examResult);
-  
-    // Save to localStorage
-    localStorage.setItem('examResult', JSON.stringify(examResult));
-  
-    setSubmitted(true);
-  
-    Swal.fire({
-      icon: 'success',
-      title: '🎉 Exam Submitted Successfully!',
-      html: `You scored <b>${correct}/${total}</b>.<br>Unanswered: <b>${unanswered}</b>.<br>Redirecting to your results...`,
-      timer: 3000,
-      showConfirmButton: false
-    });
-  
-    setTimeout(() => {
-      navigate('/results');
-    }, 3000);
-  };
+    localStorage.setItem('examResult', JSON.stringify(result));   // ✅ this saves result
+    localStorage.setItem('examAnswers', JSON.stringify(detailedAnswers)); // ✅ this saves answers (VERY IMPORTANT)
     
+    addResult(result);
+    navigate('/results');
+  };
+      
   
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
