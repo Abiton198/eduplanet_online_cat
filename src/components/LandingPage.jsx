@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import React from 'react';
+import ExamRules from "../utils/ExamRules";
 
 
 export default function LandingPage() {
@@ -21,20 +22,22 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-blue-50">
 
-      <div className="bg-white p-8 rounded shadow-lg">
-        <h2 className="text-xl mb-4">Enter Exam Password</h2>
-        <input
-          className="border p-2 w-full mb-4"
-          type="text"
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button
-          onClick={handleLogin}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          Start Exam
-        </button>
-      </div>
+      <ExamRules/>
+
     </div>
   );
 }
+      // <div className="bg-white p-8 rounded shadow-lg">
+      //   <h2 className="text-xl mb-4">Enter Exam Password</h2>
+      //   <input
+      //     className="border p-2 w-full mb-4"
+      //     type="text"
+      //     onChange={(e) => setPassword(e.target.value)}
+      //   />
+      //   <button
+      //     onClick={handleLogin}
+      //     className="bg-blue-600 text-white px-4 py-2 rounded"
+      //   >
+      //     Start Exam
+      //   </button>
+      // </div>

@@ -1,49 +1,61 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ExamRules from '../utils/ExamRules';
-
-const validPasswords = {
-  "PASS123": "John Doe",
-  "PASS456": "Jane Smith",
-  "PASS789": "Mike Johnson"
-};
 
 export default function PasswordPage({ setStudentInfo }) {
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [name, setName] = useState('');
+  const [grade, setGrade] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (validPasswords[password]) {
-      const studentName = validPasswords[password];
-      setStudentInfo({ name: studentName, password: password });
-      delete validPasswords[password]; // Password used, delete!
-      navigate('/exam');
+  const handleLogin = () => {
+    // Basic validation: you can customize your password rules here
+    if (password === 'student123') {  // Replace with your password logic or database check
+      setStudentInfo({ name, grade, password });
+      navigate('/exam'); // Redirect to exam page after successful login
     } else {
-      setError("Invalid or used password. Contact your teacher.");
+      setError('Incorrect password. Please try again.');
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
-        <ExamRules/>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
+      <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
+        <h1 className="text-3xl font-bold mb-6 text-center text-blue-700">Welcome to EduPlanet CAT Exams</h1>
 
-      <h1 className="text-2xl font-bold mb-4">Enter Exam Password</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
+        <input
+          type="text"
+          placeholder="Enter your full name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full p-3 mb-4 border border-gray-300 rounded"
+        />
+
+        <input
+          type="text"
+          placeholder="Enter your grade (e.g. Grade 12A)"
+          value={grade}
+          onChange={(e) => setGrade(e.target.value)}
+          className="w-full p-3 mb-4 border border-gray-300 rounded text-black"
+        />
+
         <input
           type="password"
+          placeholder="Enter your unique password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="border p-2 rounded-md w-72"
-          placeholder="Enter your unique password"
-          required
+          className="w-full p-3 mb-6 border border-gray-300 rounded text-black"
         />
-        {error && <div className="text-red-500">{error}</div>}
-        <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-800">
-          Start Exam
+
+        <button
+          onClick={handleLogin}
+          className="w-full bg-blue-500 hover:bg-blue-600 text-white p-3 rounded font-semibold"
+        >
+          Enter Exam
         </button>
-      </form>
+
+        {error && <p className="text-red-500 text-center mt-4">{error}</p>}
+      </div>
     </div>
   );
 }
