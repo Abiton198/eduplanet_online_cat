@@ -1,8 +1,6 @@
-export { default as Navbar } from "./Navbar";
-export { default as Contact } from "./Contact";
-export { default as Main } from "./Main";
-export { default as Header } from "./Header";
-export { default as Skills } from "./Skills";
-export { default as About } from "./About";
-export { default as Projects } from "./Projects";
-export { default as Footer } from "./Footer";
+
+export { default as LandingPage } from "./LandingPage";
+export { default as ExamRules } from "../utils/ExamRules";
+export { default as ExamPage } from "./ExamPage";
+export { default as PasswordPage } from "./PasswordPage";
+export { default as ResultPage } from "./ResultPage";

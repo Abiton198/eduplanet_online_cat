@@ -1,29 +1,42 @@
-// import './App.css'
-import { Route,Routes } from 'react-router-dom'
-import { About, Contact,Header,Main, Navbar,Skills, Projects, Footer } from './components'
+import React, { useState } from 'react';
+import { Routes, Route } from 'react-router-dom';
+import {PasswordPage, ExamPage, ResultPage} from './components'
+import ProtectedRoute from './utils/ProtectedRoute'; //so student puts password to access exam
 
 function App() {
- 
+  const [studentInfo, setStudentInfo] = useState(null);
+  const [results, setResults] = useState([]);
+
+  const addResult = (result) => {
+    setResults([...results, result]);
+  };
 
   return (
-    <div className="dark:bg[#0d0d0d] dark:text-[#f5f5f5] bg-slate-300  text-black font-Nunito"  >
+    <Routes>
+      <Route path="/" element={<PasswordPage setStudentInfo={setStudentInfo} />} />
       
-             <Navbar/>
-            
-            
-         
-         
+      {/* Protected Exam Page */}
+      <Route
+        path="/exam"
+        element={
+          <ProtectedRoute studentInfo={studentInfo}>
+            <ExamPage studentInfo={studentInfo} addResult={addResult} />
+          </ProtectedRoute>
+        }
+      />
 
-         <Routes>
-           <Route exact path='/' element={<Main/>}/> 
-           <Route path='/AboutMe'  element={<About/>}/>
-           <Route path='/Skills'  element={<Skills/>}/>
-           <Route path='/Projects' element={<Projects/>}/> 
-         
-         </Routes> 
-         <Footer/>
-    </div>
-  )
+      {/* Protected Result Page */}
+      <Route
+        path="/results"
+        element={
+          <ProtectedRoute studentInfo={studentInfo}>
+            <ResultPage results={results} />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>  );
 }
 
-export default App
+export default App;
+
+
