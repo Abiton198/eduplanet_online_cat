@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { questions } from '../utils/Questions'; // You may later make different questions per exam
+import {questions} from '../utils/Questions'; // You may later make different questions per exam
 
 export default function ExamPage({ studentInfo, addResult }) {
   const navigate = useNavigate();
@@ -11,9 +11,16 @@ export default function ExamPage({ studentInfo, addResult }) {
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
 
+// Later when you load or select exam:
+// const questions = selectedExam ? questions[selectedExam] : [];
+const currentQuestions = selectedExam ? questions[selectedExam.title] : [];
+
+
+
   const exams = [
     { id: 1, title: "Exam 1 - Grade 12", password: "grade12pass" },
-    { id: 2, title: "Exam 2 - Grade 10", password: "grade10pass" },
+    { id: 2, title: "Exam 2 - Grade 11", password: "grade11pass" },
+    { id: 3, title: "Exam 3 - Grade 10", password: "grade10pass" },
     // Add more exams here
   ];
 
@@ -97,7 +104,7 @@ export default function ExamPage({ studentInfo, addResult }) {
     let unanswered = 0;
     const detailedAnswers = [];
 
-    questions.forEach((q) => {
+    currentQuestions.forEach((q) => {
       const selected = answers[String(q.id)];
       const isCorrect = selected === q.correctAnswer;
       if (selected === undefined) {
@@ -113,12 +120,12 @@ export default function ExamPage({ studentInfo, addResult }) {
       });
     });
 
-    const percentage = ((score / questions.length) * 100).toFixed(2);
+    const percentage = ((score / currentQuestions.length) * 100).toFixed(2);
 
     const result = {
       name: studentInfo.name,
       exam: selectedExam.title,
-      score: `${score} / ${questions.length}`,
+      score: `${score} / ${currentQuestions.length}`,
       percentage: percentage,
       unanswered: unanswered,
       time: new Date().toLocaleString(),
@@ -168,7 +175,7 @@ export default function ExamPage({ studentInfo, addResult }) {
           </div>
           {!submitted ? (
             <form className="space-y-6">
-              {questions.map((q) => (
+              {currentQuestions.map((q) => (
                 <div key={q.id} className="bg-white p-4 rounded-md shadow">
                   <h3 className="text-lg font-semibold">{q.question}</h3>
                   <div className="space-y-2 mt-2">

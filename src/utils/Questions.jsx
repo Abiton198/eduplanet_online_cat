@@ -1,4 +1,7 @@
-export const questions = [
+ // utils/Exams.js
+
+export const questions = {
+  "Exam 1 - Grade 12": [
     { id: 1, question: "Which of the following is an example of cloud computing?", options: ["Gmail", "Google Drive", "Google Maps", "WhatsApp"], correctAnswer: "Google Drive" },
     { id: 2, question: "Which protocol is used to send emails?", options: ["POP3", "IMAP", "SMTP", "HTTP"], correctAnswer: "SMTP" },
     { id: 3, question: "What does IoT stand for?", options: ["Internet of Things", "Integration of Technology", "Internet on Technology", "Internal Operating Technology"], correctAnswer: "Internet of Things" },
@@ -34,5 +37,14 @@ export const questions = [
     { id: 28, question: "Which of the following is an example of a browser extension?", options: ["Windows Firewall", "Ad blocker", "Google Maps", "Dropbox"], correctAnswer: "Ad blocker" },
     { id: 29, question: "Smartwatches can monitor:", options: ["Temperature only", "Heart rate and fitness", "Social media posts", "Internet speed"], correctAnswer: "Heart rate and fitness" },
     { id: 30, question: "Which private browsing feature clears cookies automatically after a session?", options: ["History", "Bookmarks", "Incognito Mode", "Proxy Server"], correctAnswer: "Incognito Mode" },
-  ];
-  
+
+  ],
+  "Exam 2 - Grade 11": [
+    { id: 1, question: "What does CPU stand for?", options: ["Central Processing Unit", "Computer Power Unit", "Central Program Unit", "Computer Processing Utility"], correctAnswer: "Central Processing Unit" },
+    { id: 2, question: "What is the brain of the computer?", options: ["RAM", "Hard Drive", "CPU", "Monitor"], correctAnswer: "CPU" },
+    // more Grade 11 questions here
+  ],
+  "Exam 3 - Grade 10": [
+    // Grade 10 questions
+  ]
+};

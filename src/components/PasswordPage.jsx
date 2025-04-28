@@ -9,8 +9,8 @@ export default function PasswordPage({ setStudentInfo }) {
   const navigate = useNavigate();
 
   const handleLogin = () => {
-    // Basic validation: you can customize your password rules here
-    if (password === 'student123') {  // Replace with your password logic or database check
+    // Basic validation: you can customize your password 
+    if (password === 'student123') {  // password logic or database check
       setStudentInfo({ name, grade, password });
       navigate('/exam'); // Redirect to exam page after successful login
     } else {
