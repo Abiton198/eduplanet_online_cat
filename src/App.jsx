@@ -6,6 +6,7 @@ import ResultPage from './components/ResultPage';
 import ExamRules from './utils/ExamRules'; // ✅ Import your Exam Rules Page
 import ProtectedRoute from './utils/ProtectedRoute';
 import ReviewPage from './components/ReviewPage';
+import logo from './img/edu_logo.jpg';
 
 function App() {
   const [studentInfo, setStudentInfo] = useState(null);
@@ -18,8 +19,11 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header Section */}
-      <header className="flex justify-between items-center p-6 bg-blue-600 text-white shadow-md">
-        <Link to="/" className="text-2xl font-bold hover:text-gray-300 transition">EduPlanet CAT Exam</Link>
+      <header className="fixed top-0 left-0 w-full flex justify-between items-center p-6 bg-blue-600 text-white shadow-md z-50">
+        <Link to="/" className="text-2xl font-bold hover:text-gray-300 transition">
+        
+        <img src={logo} alt="Eduplanet Logo" className="h-16 w-auto rounded-md shadow-md" />
+        </Link>
         <div className="flex space-x-6">
           <Link to="/exam-rules" className="hover:text-gray-300 transition">Exam Rules</Link>
           <Link to="/exam" className="hover:text-gray-300 transition">Take Exam</Link>
@@ -28,7 +32,7 @@ function App() {
       </header>
 
       {/* Main Content Section */}
-      <div className="p-6">
+      <div className="pt-28">
         <Routes>
           {/* Landing Page with Password Input */}
           <Route path="/" element={<PasswordPage setStudentInfo={setStudentInfo} />} />
