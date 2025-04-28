@@ -60,14 +60,54 @@ const currentQuestions = selectedExam ? questions[selectedExam.title] : [];
           alert("Action blocked during exam!");
         }
       };
+
+          // Block right-click
+    const handleRightClick = (e) => {
+      e.preventDefault();
+    };
+    document.addEventListener('contextmenu', handleRightClick);
+
+        // Block text selection
+        const disableSelection = (e) => {
+          e.preventDefault();
+        };
+        document.addEventListener('selectstart', disableSelection);
   
       document.addEventListener('contextmenu', handleContextMenu);
       document.addEventListener('keydown', handleKeyDown);
+
+      // Warn or auto-submit on page unload
+  const handleBeforeUnload = (e) => {
+    e.preventDefault();
+    e.returnValue = ''; // Chrome requires returnValue to be set
+    // trigger auto-submit 
+  };
+  window.addEventListener('beforeunload', handleBeforeUnload);
+
+   // Detect if user switches tabs
+   const handleVisibilityChange = () => {
+    if (document.visibilityState === 'hidden') {
+      alert('⚠️ You switched tabs or minimized. Please return to the exam.');
+      // You could also auto-submit here if you want
+      // handleSubmit();
+    }
+  };
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+
   
       return () => {
         clearInterval(timer);
         document.removeEventListener('contextmenu', handleContextMenu);
         document.removeEventListener('keydown', handleKeyDown);
+
+        // Cleanup on unmount
+  
+      document.removeEventListener('contextmenu', handleRightClick);
+      document.removeEventListener('selectstart', disableSelection);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    
       };
     }
   }, [authenticated]);
@@ -103,6 +143,14 @@ const currentQuestions = selectedExam ? questions[selectedExam.title] : [];
     let score = 0;
     let unanswered = 0;
     const detailedAnswers = [];
+
+
+    const totalQuestions = 30; // have 30 questions
+    
+    if (Object.keys(answers).length < totalQuestions) {
+      alert("❗ You must answer all questions before submitting.");
+      return;
+    }
 
     currentQuestions.forEach((q) => {
       const selected = answers[String(q.id)];
