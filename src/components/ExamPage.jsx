@@ -63,8 +63,8 @@ export default function ExamPage({ studentInfo, addResult }) {
     let unanswered = 0;
     const detailedAnswers = [];
   
-    questions.forEach((q, index) => {
-      const selected = answers[index];
+    questions.forEach((q) => {
+      const selected = answers[String(q.id)];
       const isCorrect = selected === q.correctAnswer;
       if (selected === undefined) {
         unanswered++;
@@ -89,9 +89,13 @@ export default function ExamPage({ studentInfo, addResult }) {
       time: new Date().toLocaleString(),
     };
   
-    localStorage.setItem('examResult', JSON.stringify(result));   // ✅ this saves result
-    localStorage.setItem('examAnswers', JSON.stringify(detailedAnswers)); // ✅ this saves answers (VERY IMPORTANT)
-    
+    localStorage.setItem('examResult', JSON.stringify(result));
+    localStorage.setItem('examAnswers', JSON.stringify(detailedAnswers));
+  
+    const allResults = JSON.parse(localStorage.getItem('allResults')) || [];
+    allResults.push(result);
+    localStorage.setItem('allResults', JSON.stringify(allResults));
+  
     addResult(result);
     navigate('/results');
   };
@@ -146,7 +150,7 @@ export default function ExamPage({ studentInfo, addResult }) {
                 confirmButtonColor: '#0000',
                 cancelButtonColor: '#d33',
                 confirmButtonText: 'Yes, submit it!',
-                cancelButtonText: 'No, stay'
+                cancelButtonText: 'No, stay',
               }).then((result) => {
                 if (result.isConfirmed) {
                   Swal.fire({
