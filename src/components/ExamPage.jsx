@@ -1,29 +1,90 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import {questions} from '../utils/Questions'; // You may later make different questions per exam
+import {questions} from '../utils/Questions';
 
 export default function ExamPage({ studentInfo, addResult }) {
   const navigate = useNavigate();
   const [selectedExam, setSelectedExam] = useState(null);
   const [authenticated, setAuthenticated] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(1800); // 30 minutes
+  const [timeLeft, setTimeLeft] = useState(1800);
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
-
-// Later when you load or select exam:
-// const questions = selectedExam ? questions[selectedExam] : [];
-const currentQuestions = selectedExam ? questions[selectedExam.title] : [];
-
-
+  const currentQuestions = selectedExam ? questions[selectedExam.title] : [];
 
   const exams = [
     { id: 1, title: "Exam 1 - Grade 12", password: "grade12pass" },
     { id: 2, title: "Exam 2 - Grade 11", password: "grade11pass" },
     { id: 3, title: "Exam 3 - Grade 10", password: "grade10pass" },
-    // Add more exams here
   ];
 
+  useEffect(() => {
+    if (!studentInfo) {
+      navigate('/');
+      return;
+    }
+  
+    // ✅ Store student info for result usage
+    localStorage.setItem('studentName', studentInfo.name);
+    localStorage.setItem('studentGrade', studentInfo.grade);
+  }, [studentInfo, navigate]);
+  
+
+  useEffect(() => {
+    localStorage.setItem('examStartTime', new Date().toISOString());
+  }, []);
+
+  const handleSubmitExam = () => {
+    const endTime = new Date();
+    const startTime = new Date(localStorage.getItem('examStartTime') || new Date());
+    const timeSpentInSeconds = Math.round((endTime - startTime) / 1000);
+    const timeSpentFormatted = `${Math.floor(timeSpentInSeconds / 60)}m ${timeSpentInSeconds % 60}s`;
+  
+    const studentName = localStorage.getItem('studentName') || 'Unknown';
+    const studentGrade = localStorage.getItem('studentGrade') || 'N/A';
+    const examTitle = localStorage.getItem('examTitle') || 'Unnamed Exam';
+    const attemptsKey = `${studentName}_${examTitle}_attempts`;
+  
+    const previousAttempts = parseInt(localStorage.getItem(attemptsKey)) || 0;
+    const updatedAttempts = previousAttempts + 1;
+  
+    const unansweredQuestions = currentQuestions.filter(q => !answers[q.id]);
+    const unansweredCount = unansweredQuestions.length;
+    const totalQuestions = currentQuestions.length;
+  
+    let score = 0;
+    currentQuestions.forEach((q) => {
+      if (answers[q.id] === q.correctAnswer) score++;
+    });
+  
+    const percentage = ((score / totalQuestions) * 100).toFixed(2);
+
+    const newResult = {
+      completedTime: endTime.toLocaleString(),
+      name: studentName,
+      grade: studentGrade,
+      exam: examTitle,
+      score: score,
+      percentage: percentage,
+      unanswered: unansweredCount,
+      attempts: updatedAttempts,
+      timeSpent: timeSpentFormatted,
+      answers: currentQuestions.map(q => ({
+        question: q.question,
+        answer: answers[q.id],
+        correctAnswer: q.correctAnswer
+      }))
+    };
+  
+    localStorage.setItem('examResult', JSON.stringify(newResult));
+    const allResults = JSON.parse(localStorage.getItem('allResults')) || [];
+    allResults.push(newResult);
+    localStorage.setItem('allResults', JSON.stringify(allResults));
+    localStorage.setItem(attemptsKey, updatedAttempts.toString());
+    navigate('/results');
+  };
+
+  
   useEffect(() => {
     if (!studentInfo) {
       navigate('/');
@@ -46,73 +107,79 @@ const currentQuestions = selectedExam ? questions[selectedExam.title] : [];
           return prev - 1;
         });
       }, 1000);
-  
+
       const handleContextMenu = (e) => e.preventDefault();
       const handleKeyDown = (e) => {
-        if (
-          (e.ctrlKey && (e.key === 'r' || e.key === 'R')) ||
-          e.key === 'F5' ||
-          (e.ctrlKey && (e.key === 'c' || e.key === 'C')) ||
-          (e.ctrlKey && (e.key === 'v' || e.key === 'V')) ||
-          (e.ctrlKey && (e.key === 'x' || e.key === 'X'))
-        ) {
+        if ((e.ctrlKey && ['r', 'R', 'c', 'C', 'v', 'V', 'x', 'X'].includes(e.key)) || e.key === 'F5') {
           e.preventDefault();
           alert("Action blocked during exam!");
         }
       };
 
-          // Block right-click
-    const handleRightClick = (e) => {
-      e.preventDefault();
-    };
-    document.addEventListener('contextmenu', handleRightClick);
+      const handleRightClick = (e) => e.preventDefault();
+      const disableSelection = (e) => e.preventDefault();
+      const handleBeforeUnload = (e) => {
+        e.preventDefault();
+        e.returnValue = '';
+      };
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'hidden') {
+          alert('⚠️ You switched tabs or minimized. Please return to the exam.');
+        }
+      };
 
-        // Block text selection
-        const disableSelection = (e) => {
-          e.preventDefault();
-        };
-        document.addEventListener('selectstart', disableSelection);
-  
+      document.addEventListener('contextmenu', handleRightClick);
+      document.addEventListener('selectstart', disableSelection);
       document.addEventListener('contextmenu', handleContextMenu);
       document.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
 
-      // Warn or auto-submit on page unload
-  const handleBeforeUnload = (e) => {
-    e.preventDefault();
-    e.returnValue = ''; // Chrome requires returnValue to be set
-    // trigger auto-submit 
-  };
-  window.addEventListener('beforeunload', handleBeforeUnload);
-
-   // Detect if user switches tabs
-   const handleVisibilityChange = () => {
-    if (document.visibilityState === 'hidden') {
-      alert('⚠️ You switched tabs or minimized. Please return to the exam.');
-      // You could also auto-submit here if you want
-      // handleSubmit();
-    }
-  };
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-
-
-  
       return () => {
         clearInterval(timer);
+        document.removeEventListener('contextmenu', handleRightClick);
+        document.removeEventListener('selectstart', disableSelection);
         document.removeEventListener('contextmenu', handleContextMenu);
         document.removeEventListener('keydown', handleKeyDown);
-
-        // Cleanup on unmount
-  
-      document.removeEventListener('contextmenu', handleRightClick);
-      document.removeEventListener('selectstart', disableSelection);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
       };
     }
   }, [authenticated]);
 
   const handleSelectExam = (exam) => {
+    const studentName = localStorage.getItem('studentName') || 'Unknown';
+    const attemptsKey = `${studentName}_${exam.title}_attempts`;
+    const lastAttemptKey = `${studentName}_${exam.title}_lastAttempt`;
+  
+    const attempts = parseInt(localStorage.getItem(attemptsKey)) || 0;
+    const lastAttemptTime = localStorage.getItem(lastAttemptKey);
+    const now = new Date();
+  
+    if (attempts >= 3) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Maximum Attempts Reached',
+        text: `You have already attempted this exam 3 times.`,
+      });
+      return;
+    }
+  
+    if (lastAttemptTime) {
+      const lastAttemptDate = new Date(lastAttemptTime);
+      const hoursSinceLastAttempt = (now - lastAttemptDate) / (1000 * 60 * 60);
+      if (hoursSinceLastAttempt < 48) {
+        const hoursLeft = Math.ceil(48 - hoursSinceLastAttempt);
+        Swal.fire({
+          icon: 'warning',
+          title: 'Too Soon to Retry',
+          text: `Please wait ${hoursLeft} more hour(s) before attempting this exam again.`,
+        });
+        return;
+      }
+    }
+  
+    // Continue to password prompt if passed time check
     Swal.fire({
       title: `Enter Password for ${exam.title}`,
       input: 'password',
@@ -126,6 +193,14 @@ const currentQuestions = selectedExam ? questions[selectedExam.title] : [];
         if (inputPassword === exam.password) {
           setSelectedExam(exam);
           setAuthenticated(true);
+          localStorage.setItem('examTitle', exam.title);
+  
+          Swal.fire({
+            icon: 'info',
+            title: 'Attempt Allowed',
+            text: `This is your attempt #${attempts + 1}. You have ${2 - attempts} more after this.`,
+          });
+  
           return true;
         } else {
           Swal.showValidationMessage('Incorrect password');
@@ -134,60 +209,21 @@ const currentQuestions = selectedExam ? questions[selectedExam.title] : [];
       }
     });
   };
+  
 
   const handleChange = (id, answer) => {
-    setAnswers(prev => ({ ...prev, [String(id)]: answer }));
+    setAnswers(prev => ({ ...prev, [id]: answer }));
   };
 
   const handleSubmit = () => {
-    let score = 0;
-    let unanswered = 0;
-    const detailedAnswers = [];
-
-
-    const totalQuestions = 30; // have 30 questions
-    
-    if (Object.keys(answers).length < totalQuestions) {
+    if (Object.keys(answers).length < currentQuestions.length) {
       alert("❗ You must answer all questions before submitting.");
       return;
     }
 
-    currentQuestions.forEach((q) => {
-      const selected = answers[String(q.id)];
-      const isCorrect = selected === q.correctAnswer;
-      if (selected === undefined) {
-        unanswered++;
-      } else if (isCorrect) {
-        score++;
-      }
-      detailedAnswers.push({
-        question: q.question,
-        selectedAnswer: selected,
-        correctAnswer: q.correctAnswer,
-        isCorrect: isCorrect,
-      });
-    });
-
-    const percentage = ((score / currentQuestions.length) * 100).toFixed(2);
-
-    const result = {
-      name: studentInfo.name,
-      exam: selectedExam.title,
-      score: `${score} / ${currentQuestions.length}`,
-      percentage: percentage,
-      unanswered: unanswered,
-      time: new Date().toLocaleString(),
-    };
-
-    localStorage.setItem('examResult', JSON.stringify(result));
-    localStorage.setItem('examAnswers', JSON.stringify(detailedAnswers));
-
-    const allResults = JSON.parse(localStorage.getItem('allResults')) || [];
-    allResults.push(result);
-    localStorage.setItem('allResults', JSON.stringify(allResults));
-
-    addResult(result);
-    navigate('/results');
+    setSubmitted(true);
+    handleSubmitExam();
+    addResult(JSON.parse(localStorage.getItem('examResult')));
   };
 
   const formatTime = (seconds) => {
