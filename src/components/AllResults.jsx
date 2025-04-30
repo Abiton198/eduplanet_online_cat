@@ -35,9 +35,9 @@ export default function AllResults() {
     });
   };
   
-  
   const submitExamResult = async ({ score, scorePercentage, studentId, exam, grade, name, timespent }) => {
     try {
+      const now = new Date();
       await addDoc(collection(db, "examResults"), {
         score,
         scorePercentage,
@@ -47,23 +47,14 @@ export default function AllResults() {
         name,
         timespent,
         submittedBy: "student",
-        date: Timestamp.now(),
-        action: "" // Leave empty or set based on your logic
+        completedTime: now.toISOString(),  // <-- This is what you're trying to access
+        action: ""
       });
       console.log("Result submitted to Firestore ✅");
     } catch (error) {
       console.error("Error saving result:", error);
     }
-  };
-  
-  // useEffect(() => {
-  //   const unsub = onSnapshot(collection(db, "results"), (snapshot) => {
-  //     const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  //     setExamResults(data); // set state for the table
-  //   });
-  
-  //   return () => unsub(); // cleanup on unmount
-  // }, []);
+  }
 
   useEffect(() => {
     const checkAdminPassword = async () => {
