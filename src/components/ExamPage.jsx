@@ -11,12 +11,28 @@ export default function ExamPage({ studentInfo, addResult }) {
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const currentQuestions = selectedExam ? questions[selectedExam.title] : [];
+  const [activeGrade, setActiveGrade] = useState(null);
 
-  const exams = [
-    { id: 1, title: "Exam 1 - Grade 12", password: "grade12pass" },
-    { id: 2, title: "Exam 2 - Grade 11", password: "grade11pass" },
-    { id: 3, title: "Exam 3 - Grade 10", password: "grade10pass" },
-  ];
+  
+  
+  const gradeExams = {
+    "Grade 12": [
+      { id: 1, title: "Networks - Grade 12", password: "grade12pass" },
+      { id: 2, title: "Functions - Grade 12", password: "grade12pass2" }
+    ],
+    "Grade 11": [
+      { id: 3, title: "Exam 1 - Grade 11", password: "grade11pass" }
+    ],
+    "Grade 10": [
+      { id: 4, title: "Exam 1 - Grade 10", password: "grade10pass" }
+    ]
+  };
+  
+  const gradeGroups = {
+    "Grade 10": gradeExams["Grade 10"],
+    "Grade 11": gradeExams["Grade 11"],
+    "Grade 12": gradeExams["Grade 12"],
+  };
 
   useEffect(() => {
     if (!studentInfo) {
@@ -236,20 +252,41 @@ export default function ExamPage({ studentInfo, addResult }) {
     <div className="min-h-screen p-4 bg-gray-50">
       <h2 className="text-2xl font-bold mb-6">Welcome {studentInfo.name} from {studentInfo.grade}</h2>
 
+{/* Exam cards per grade */}
       {!selectedExam && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {exams.map((exam) => (
+  <div className="max-w-4xl mx-auto">
+    <h3 className="text-xl font-bold mb-4 text-gray-700">Select Your Grade:</h3>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      {Object.keys(gradeGroups).map((grade) => (
+        <div
+          key={grade}
+          onClick={() => setActiveGrade(activeGrade === grade ? null : grade)}
+          className="bg-blue-100 hover:bg-blue-200 rounded-xl p-6 shadow-md cursor-pointer text-center transition-transform transform hover:scale-105"
+        >
+          <h4 className="text-lg font-bold text-blue-900">{grade}</h4>
+        </div>
+      ))}
+    </div>
+
+    {activeGrade && (
+      <div className="mt-6">
+        <h4 className="text-lg font-semibold text-gray-800 mb-3">{activeGrade} Exams:</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {gradeGroups[activeGrade].map((exam) => (
             <div
               key={exam.id}
-              className="bg-white shadow-md rounded-md p-6 cursor-pointer hover:shadow-lg transition"
+              className="bg-white border border-gray-200 rounded-md p-5 shadow-sm hover:shadow-lg transition cursor-pointer"
               onClick={() => handleSelectExam(exam)}
             >
-              <h3 className="text-xl font-semibold text-center">{exam.title}</h3>
-              <p className="text-center mt-2 text-gray-600">Click to Attempt</p>
+              <h5 className="text-md font-semibold text-center">{exam.title}</h5>
+              <p className="text-sm text-gray-500 text-center mt-2">Click to attempt</p>
             </div>
           ))}
         </div>
-      )}
+      </div>
+    )}
+  </div>
+)}
 
       {authenticated && (
         <div className="mt-8">
