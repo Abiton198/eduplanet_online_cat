@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import {questions} from '../utils/Questions';
 
+
 export default function ExamPage({ studentInfo, addResult }) {
   const navigate = useNavigate();
   const [selectedExam, setSelectedExam] = useState(null);
@@ -10,8 +11,11 @@ export default function ExamPage({ studentInfo, addResult }) {
   const [timeLeft, setTimeLeft] = useState(1800);
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
-  const currentQuestions = selectedExam ? questions[selectedExam.title] : [];
+  const currentQuestions = selectedExam && questions[selectedExam.title] ? questions[selectedExam.title] : [];
   const [activeGrade, setActiveGrade] = useState(null);
+  const endTime = new Date(); // or your actual end time
+  const hours = endTime.getHours().toString().padStart(2, '0');
+  const minutes = endTime.getMinutes().toString().padStart(2, '0');
 
   
   
@@ -24,7 +28,8 @@ export default function ExamPage({ studentInfo, addResult }) {
       { id: 3, title: "Exam 1 - Grade 11", password: "grade11pass" }
     ],
     "Grade 10": [
-      { id: 4, title: "Exam 1 - Grade 10", password: "grade10pass" }
+      { id: 4, title: "Exam 1 - Grade 10", password: "grade10pass" },
+      { id: 5, title: "Hardware - Grade 10", password: "grade10pass" }
     ]
   };
   
@@ -76,7 +81,9 @@ export default function ExamPage({ studentInfo, addResult }) {
     const percentage = ((score / totalQuestions) * 100).toFixed(2);
 
     const newResult = {
-      completedTime: endTime.toLocaleString(),
+      completedDate: endTime.toISOString().split('T')[0], // "2025-04-30"
+   completedTimeOnly: `${hours}:${minutes}`,           // "14:23"
+    completedTime: endTime.toISOString(),
       name: studentName,
       grade: studentGrade,
       exam: examTitle,
@@ -91,7 +98,7 @@ export default function ExamPage({ studentInfo, addResult }) {
         correctAnswer: q.correctAnswer
       }))
     };
-  
+    
     localStorage.setItem('examResult', JSON.stringify(newResult));
     const allResults = JSON.parse(localStorage.getItem('allResults')) || [];
     allResults.push(newResult);
@@ -296,9 +303,14 @@ export default function ExamPage({ studentInfo, addResult }) {
           </div>
           {!submitted ? (
             <form className="space-y-6">
-              {currentQuestions.map((q) => (
+              <div className="text-xl font-bold mb-4">
+                Total Questions: {currentQuestions.length}
+              </div>
+
+
+              {currentQuestions.map((q, index) => (
                 <div key={q.id} className="bg-white p-4 rounded-md shadow">
-                  <h3 className="text-lg font-semibold">{q.question}</h3>
+                  <h3 className="text-lg font-semibold"> Question {index + 1}: {q.question} </h3>
                   <div className="space-y-2 mt-2">
                     {q.options.map((opt) => (
                       <label key={opt} className="flex items-center space-x-2">
@@ -323,12 +335,27 @@ export default function ExamPage({ studentInfo, addResult }) {
                     text: "You won't be able to change your answers after submitting.",
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
                     confirmButtonText: 'Yes, submit it!',
                     cancelButtonText: 'No, stay',
+                    didOpen: () => {
+                      const confirmBtn = document.querySelector('.swal2-confirm');
+                      const cancelBtn = document.querySelector('.swal2-cancel');
+                  
+                      if (confirmBtn) {
+                        confirmBtn.style.backgroundColor = '#28a745'; // Green
+                        confirmBtn.style.color = 'white';
+                        confirmBtn.style.border = 'none';
+                      }
+                  
+                      if (cancelBtn) {
+                        cancelBtn.style.backgroundColor = '#dc3545'; // Red
+                        cancelBtn.style.color = 'white';
+                        cancelBtn.style.border = 'none';
+                      }
+                    },                                
                   }).then((result) => {
                     if (result.isConfirmed) {
+
                       Swal.fire({
                         title: 'Submitting...',
                         text: 'Please wait while we process your exam.',
@@ -336,12 +363,13 @@ export default function ExamPage({ studentInfo, addResult }) {
                         allowEscapeKey: false,
                         didOpen: () => {
                           Swal.showLoading();
+                          setTimeout(() => {
+                            handleSubmit();
+
+                            Swal.close();
+                          }, 1500); // Simulate delay, then submit
                         }
                       });
-                      setTimeout(() => {
-                        handleSubmit();
-                        Swal.close();
-                      }, 1500);
                     }
                   });
                 }}

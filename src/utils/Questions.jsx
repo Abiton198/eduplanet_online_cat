@@ -1,7 +1,7 @@
  // utils/Exams.js
 
 export const questions = {
-  "Exam 1 - Grade 12": [
+  "Networks - Grade 12": [
     { id: 1, question: "Which of the following is an example of cloud computing?", options: ["Gmail", "Google Drive", "Google Maps", "WhatsApp"], correctAnswer: "Google Drive" },
     { id: 2, question: "Which protocol is used to send emails?", options: ["POP3", "IMAP", "SMTP", "HTTP"], correctAnswer: "SMTP" },
     { id: 3, question: "What does IoT stand for?", options: ["Internet of Things", "Integration of Technology", "Internet on Technology", "Internal Operating Technology"], correctAnswer: "Internet of Things" },
@@ -46,5 +46,13 @@ export const questions = {
   ],
   "Exam 3 - Grade 10": [
     // Grade 10 questions
+  ],
+
+
+  "Hardware - Grade 10": [
+    { id: 1, question: "What does HTML stand for?", options: ["HyperText Markup Language", "HighText Machine Language", "Hyperloop Machine Language", "None of the above"], correctAnswer: "HyperText Markup Language" },
+    { id: 2, question: "Which one is a search engine?", options: ["Google", "Facebook", "Wikipedia", "YouTube"], correctAnswer: "Google" },
+    { id: 3, question: "What device is used to input text?", options: ["Monitor", "Printer", "Keyboard", "Speaker"], correctAnswer: "Keyboard" },
+    // add more Grade 9 questions as needed
   ]
 };
