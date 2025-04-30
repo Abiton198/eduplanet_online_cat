@@ -54,5 +54,13 @@ export const questions = {
     { id: 2, question: "Which one is a search engine?", options: ["Google", "Facebook", "Wikipedia", "YouTube"], correctAnswer: "Google" },
     { id: 3, question: "What device is used to input text?", options: ["Monitor", "Printer", "Keyboard", "Speaker"], correctAnswer: "Keyboard" },
     // add more Grade 9 questions as needed
+  ],
+
+  "HTML & Web Designs - Grade 12": [
+    { id: 1, question: "What does HTML stand for?", options: ["HyperText Markup Language", "HighText Machine Language", "Hyperloop Machine Language", "None of the above"], correctAnswer: "HyperText Markup Language" },
+    { id: 2, question: "Which one is a search engine?", options: ["Google", "Facebook", "Wikipedia", "YouTube"], correctAnswer: "Google" },
+    { id: 3, question: "What device is used to input text?", options: ["Monitor", "Printer", "Keyboard", "Speaker"], correctAnswer: "Keyboard" },
+    // add more Grade 9 questions as needed
   ]
+
 };

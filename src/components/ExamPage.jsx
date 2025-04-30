@@ -29,15 +29,16 @@ export default function ExamPage({ studentInfo, addResult }) {
 
   const gradeExams = {
     "Grade 12": [
-      { id: 1, title: "Networks - Grade 12", password: "grade12pass" },
-      { id: 2, title: "Functions - Grade 12", password: "grade12pass2" }
+      { id: 1, title: "Networks & Internet Technologies", password: "grade12pass" },
+      { id: 2, title: "HTML & Web Designs", password: "grade12pass2" }
     ],
     "Grade 11": [
-      { id: 3, title: "Exam 1 - Grade 11", password: "grade11pass" }
+      { id: 3, title: "Spreadsheets", password: "grade11pass" },
+      { id: 4, title: "Databases", password: "grade11pass" }
     ],
     "Grade 10": [
-      { id: 4, title: "Exam 1 - Grade 10", password: "grade10pass" },
-      { id: 5, title: "Hardware - Grade 10", password: "grade10pass" }
+      { id: 5, title: "Networks - Grade 10", password: "grade10pass" },
+      { id: 6, title: "Social Implications - Grade 10", password: "grade10pass" }
     ]
   };
 
