@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { collection, addDoc, Timestamp } from "firebase/firestore";
+import { collection, addDoc, Timestamp, onSnapshot } from "firebase/firestore";
 import { db } from "../utils/firebase"; // path to your firebase.js
 import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx';
+
 
 export default function AllResults() {
   const [results, setResults] = useState([]);
@@ -55,6 +56,14 @@ export default function AllResults() {
     }
   };
   
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "results"), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setExamResults(data); // set state for the table
+    });
+  
+    return () => unsub(); // cleanup on unmount
+  }, []);
 
   useEffect(() => {
     const checkAdminPassword = async () => {
