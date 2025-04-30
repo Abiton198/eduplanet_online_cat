@@ -56,14 +56,14 @@ export default function AllResults() {
     }
   };
   
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, "results"), (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setExamResults(data); // set state for the table
-    });
+  // useEffect(() => {
+  //   const unsub = onSnapshot(collection(db, "results"), (snapshot) => {
+  //     const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  //     setExamResults(data); // set state for the table
+  //   });
   
-    return () => unsub(); // cleanup on unmount
-  }, []);
+  //   return () => unsub(); // cleanup on unmount
+  // }, []);
 
   useEffect(() => {
     const checkAdminPassword = async () => {
@@ -76,37 +76,33 @@ export default function AllResults() {
         confirmButtonText: 'Enter',
         allowOutsideClick: false
       });
-
+  
       if (isConfirmed && password === 'admin123') {
         setAccessGranted(true);
-        const savedResults = JSON.parse(localStorage.getItem('allResults')) || [];
-
-        // Split date and time from completedTime
-        const updatedResults = savedResults.map(r => {
-          if (!r.completedTime) return { ...r, completedDate: '', completedTimeOnly: '' };
-        
-          const dateObj = new Date(r.completedTime);
-          if (isNaN(dateObj.getTime())) {
-            console.warn('Invalid date for result:', r);
-            return { ...r, completedDate: '', completedTimeOnly: '' };
-          }
-        
-          return {
-            ...r,
-            completedDate: dateObj.toISOString().split('T')[0],
-            completedTimeOnly: dateObj.toTimeString().split(' ')[0],
-          };
-        });        
-
-        setResults(updatedResults);
+  
+        // ✅ Listen to Firestore collection
+        const unsubscribe = onSnapshot(collection(db, "examResults"), (snapshot) => {
+          const fetchedResults = snapshot.docs.map(doc => {
+            const data = doc.data();
+            const dateObj = new Date(data.completedTime);
+            return {
+              ...data,
+              completedDate: !isNaN(dateObj.getTime()) ? dateObj.toISOString().split("T")[0] : '',
+              completedTimeOnly: !isNaN(dateObj.getTime()) ? dateObj.toTimeString().split(" ")[0] : ''
+            };
+          });
+          setResults(fetchedResults);
+        });
+  
+        return () => unsubscribe();
       }
-
+  
       setAccessChecked(true);
     };
-
+  
     checkAdminPassword();
   }, []);
-
+  
   const uniqueGrades = [...new Set(results.map(r => r.grade))];
   const uniqueNames = [...new Set(results.map(r => r.name))];
   const uniqueTopics = [...new Set(results.flatMap(r => r.answers?.map(a => a.topic)))];
