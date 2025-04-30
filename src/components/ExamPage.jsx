@@ -189,6 +189,23 @@ export default function ExamPage({ studentInfo, addResult }) {
       showCancelButton: true,
       confirmButtonText: 'Enter',
       showLoaderOnConfirm: true,
+
+      didOpen: () => {
+        const confirmBtn = document.querySelector('.swal2-confirm');
+        const cancelBtn = document.querySelector('.swal2-cancel');
+    
+        if (confirmBtn) {
+          confirmBtn.style.backgroundColor = '#28a745'; // Green
+          confirmBtn.style.color = 'white';
+          confirmBtn.style.border = 'none';
+        }
+    
+        if (cancelBtn) {
+          cancelBtn.style.backgroundColor = '#dc3545'; // Red
+          cancelBtn.style.color = 'white';
+          cancelBtn.style.border = 'none';
+        }
+      },            
       preConfirm: (inputPassword) => {
         if (inputPassword === exam.password) {
           setSelectedExam(exam);
