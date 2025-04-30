@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { questions } from '../utils/Questions';
-// import { db } from '../utils/firebase'; // ✅ Make sure you have a firebase.js file exporting initialized `db`
 import { addDoc, collection } from 'firebase/firestore'; // ✅ Import Firestore functions
 import { auth, db, signInAnonymously } from '../utils/firebase';
 
@@ -73,77 +72,72 @@ export default function ExamPage({ studentInfo, addResult }) {
     localStorage.setItem('examStartTime', new Date().toISOString());
   }, []);
 
-  const handleSubmitExam = async () => {
-    const endTime = new Date();
-    const startTime = new Date(localStorage.getItem('examStartTime') || new Date());
-    const timeSpentInSeconds = Math.round((endTime - startTime) / 1000);
-    const timeSpentFormatted = `${Math.floor(timeSpentInSeconds / 60)}m ${timeSpentInSeconds % 60}s`;
+const handleSubmitExam = async () => {
+  const endTime = new Date();
+  const startTime = new Date(localStorage.getItem('examStartTime') || new Date());
+  const timeSpentInSeconds = Math.round((endTime - startTime) / 1000);
+  const timeSpentFormatted = `${Math.floor(timeSpentInSeconds / 60)}m ${timeSpentInSeconds % 60}s`;
 
-    const studentName = localStorage.getItem('studentName') || 'Unknown';
-    const studentGrade = localStorage.getItem('studentGrade') || 'N/A';
-    const examTitle = localStorage.getItem('examTitle') || 'Unnamed Exam';
-    const attemptsKey = `${studentName}_${examTitle}_attempts`;
+  const studentName = localStorage.getItem('studentName') || 'Unknown';
+  const studentGrade = localStorage.getItem('studentGrade') || 'N/A';
+  const examTitle = localStorage.getItem('examTitle') || 'Unnamed Exam';
+  const attemptsKey = `${studentName}_${examTitle}_attempts`;
 
-    const previousAttempts = parseInt(localStorage.getItem(attemptsKey)) || 0;
-    const updatedAttempts = previousAttempts + 1;
+  const previousAttempts = parseInt(localStorage.getItem(attemptsKey)) || 0;
+  const updatedAttempts = previousAttempts + 1;
 
-    const unansweredQuestions = currentQuestions.filter(q => !answers[q.id]);
-    const unansweredCount = unansweredQuestions.length;
-    const totalQuestions = currentQuestions.length;
+  const unansweredQuestions = currentQuestions.filter(q => !answers[q.id]);
+  const unansweredCount = unansweredQuestions.length;
+  const totalQuestions = currentQuestions.length;
 
-    let score = 0;
-    currentQuestions.forEach((q) => {
-      if (answers[q.id] === q.correctAnswer) score++;
-    });
+  let score = 0;
+  currentQuestions.forEach((q) => {
+    if (answers[q.id] === q.correctAnswer) score++;
+  });
 
-    const percentage = ((score / totalQuestions) * 100).toFixed(2);
+  const percentage = ((score / totalQuestions) * 100).toFixed(2);
 
-    const newResult = {
-      completedDate: endTime.toISOString().split('T')[0],
-      completedTimeOnly: `${hours}:${minutes}`,
-      completedTime: endTime.toISOString(),
-      name: studentName,
-      grade: studentGrade,
-      exam: examTitle,
-      score: score,
-      percentage: percentage,
-      unanswered: unansweredCount,
-      attempts: updatedAttempts,
-      timeSpent: timeSpentFormatted,
-      answers: currentQuestions.map(q => ({
-        question: q.question,
-        answer: answers[q.id],
-        correctAnswer: q.correctAnswer
-      }))
-    };
-
-    try {
-      await addDoc(collection(db, "examResults"), newResult);
-      console.log("Result saved to Firebase.");
-    } catch (error) {
-      console.error("Error saving result to Firebase:", error);
-    }
-
-    localStorage.setItem('examResult', JSON.stringify(newResult));
-    const allResults = JSON.parse(localStorage.getItem('allResults')) || [];
-    allResults.push(newResult);
-    localStorage.setItem('allResults', JSON.stringify(allResults));
-    localStorage.setItem(attemptsKey, updatedAttempts.toString());
-    localStorage.setItem(`${studentName}_${examTitle}_lastAttempt`, endTime.toISOString());
-
-    addResult(newResult);
-    navigate('/results');
+  const newResult = {
+    completedDate: endTime.toISOString().split('T')[0],
+    completedTimeOnly: `${endTime.getHours()}:${endTime.getMinutes()}`,
+    completedTime: endTime.toISOString(),
+    name: studentName,
+    grade: studentGrade,
+    exam: examTitle,
+    score: score,
+    percentage: percentage,
+    unanswered: unansweredCount,
+    attempts: updatedAttempts,
+    timeSpent: timeSpentFormatted,
+    answers: currentQuestions.map(q => ({
+      question: q.question,
+      answer: answers[q.id],
+      correctAnswer: q.correctAnswer
+    }))
   };
 
-  const handleSubmit = async () => {
-    if (Object.keys(answers).length < currentQuestions.length) {
-      alert("❗ You must answer all questions before submitting.");
-      return;
-    }
+  try {
+    // 👇 Authenticate anonymously first
+    const userCredential = await signInAnonymously(auth);
+    console.log("Anonymous user ID:", userCredential.user.uid);
 
-    setSubmitted(true);
-    await handleSubmitExam();
-  };
+    // 👇 Now you're authenticated — save result
+    await addDoc(collection(db, "examResults"), newResult);
+    console.log("Result saved to Firebase.");
+  } catch (error) {
+    console.error("Error saving result to Firebase:", error);
+  }
+
+  localStorage.setItem('examResult', JSON.stringify(newResult));
+  const allResults = JSON.parse(localStorage.getItem('allResults')) || [];
+  allResults.push(newResult);
+  localStorage.setItem('allResults', JSON.stringify(allResults));
+  localStorage.setItem(attemptsKey, updatedAttempts.toString());
+  localStorage.setItem(`${studentName}_${examTitle}_lastAttempt`, endTime.toISOString());
+
+  addResult(newResult);
+  navigate('/results');
+};
 
   // ...rest of your code remains unchanged, including:
   // - handleSelectExam
@@ -156,7 +150,7 @@ export default function ExamPage({ studentInfo, addResult }) {
     const lastAttemptTime = localStorage.getItem(lastAttemptKey);
     const now = new Date();
   
-    if (attempts >= 3) {
+    if (attempts >= 5) {
       Swal.fire({
         icon: 'error',
         title: 'Maximum Attempts Reached',
@@ -165,6 +159,7 @@ export default function ExamPage({ studentInfo, addResult }) {
       return;
     }
   
+    // RESTRICTING TIME FOR SECOND ATTEMPT
     if (lastAttemptTime) {
       const lastAttemptDate = new Date(lastAttemptTime);
       const hoursSinceLastAttempt = (now - lastAttemptDate) / (1000 * 60 * 60);
@@ -288,7 +283,17 @@ export default function ExamPage({ studentInfo, addResult }) {
     }
   }, [authenticated]);
 
-  // - UI rendering (already good)
+  // -Handle submit before end of exam
+  const handleSubmit = async () => {
+    if (Object.keys(answers).length < currentQuestions.length) {
+      alert("❗ You must answer all questions before submitting.");
+      return;
+    }
+  
+    setSubmitted(true);
+    await handleSubmitExam(); // ✅ This is where handleSubmitExam gets called
+  };
+  
 
   return (
     // Your existing JSX stays as-is.    
