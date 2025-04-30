@@ -1,7 +1,7 @@
  // utils/Exams.js
 
 export const questions = {
-  "Networks - Grade 12": [
+  "Networks": [
     { id: 1, question: "Which of the following is an example of cloud computing?", options: ["Gmail", "Google Drive", "Google Maps", "WhatsApp"], correctAnswer: "Google Drive" },
     { id: 2, question: "Which protocol is used to send emails?", options: ["POP3", "IMAP", "SMTP", "HTTP"], correctAnswer: "SMTP" },
     { id: 3, question: "What does IoT stand for?", options: ["Internet of Things", "Integration of Technology", "Internet on Technology", "Internal Operating Technology"], correctAnswer: "Internet of Things" },

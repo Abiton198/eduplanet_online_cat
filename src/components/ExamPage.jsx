@@ -29,7 +29,7 @@ export default function ExamPage({ studentInfo, addResult }) {
 
   const gradeExams = {
     "Grade 12": [
-      { id: 1, title: "Networks & Internet Technologies", password: "grade12pass" },
+      { id: 1, title: "Networks", password: "grade12pass" },
       { id: 2, title: "HTML & Web Designs", password: "grade12pass2" }
     ],
     "Grade 11": [
@@ -72,6 +72,17 @@ export default function ExamPage({ studentInfo, addResult }) {
   useEffect(() => {
     localStorage.setItem('examStartTime', new Date().toISOString());
   }, []);
+
+  useEffect(() => {
+    if (studentInfo?.grade && gradeGroups[studentInfo.grade]) {
+      setActiveGrade(studentInfo.grade);
+    }
+  }, [studentInfo]);
+  useEffect(() => {
+    console.log('Student Info:', studentInfo);
+    console.log('Available Grade Groups:', Object.keys(gradeGroups));
+  }, [studentInfo]);
+    
 
 const handleSubmitExam = async () => {
   const endTime = new Date();
@@ -351,24 +362,26 @@ const handleSubmitExam = async () => {
 
 
               {currentQuestions.map((q, index) => (
-                <div key={q.id} className="bg-white p-4 rounded-md shadow">
-                  <h3 className="text-lg font-semibold"> Question {index + 1}: {q.question} </h3>
-                  <div className="space-y-2 mt-2">
-                    {q.options.map((opt) => (
-                      <label key={opt} className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          name={q.id}
-                          value={opt}
-                          onChange={() => handleChange(q.id, opt)}
-                          required
-                        />
-                        <span>{opt}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
+  <div key={q.id} className="bg-white p-4 rounded-md shadow mb-4">
+    <h3 className="text-lg font-semibold">
+      Question {index + 1}: {q.question}
+    </h3>
+    <div className="space-y-2 mt-2">
+      {q.options.map((opt, i) => (
+        <label key={i} className="flex items-center space-x-2">
+          <input
+            type="radio"
+            name={`question-${q.id}`}  // Important: unique group name per question
+            value={opt}
+            onChange={() => handleChange(q.id, opt)}
+            required={index === 0} // optional: only require first question to prevent mass HTML5 alerts
+          />
+          <span>{opt}</span>
+        </label>
+      ))}
+    </div>
+  </div>
+))}
               <button
                 type="button"
                 onClick={() => {
