@@ -1,7 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import {questions} from '../utils/Questions';
+import { questions } from '../utils/Questions';
+// import { db } from '../utils/firebase'; // ✅ Make sure you have a firebase.js file exporting initialized `db`
+import { addDoc, collection } from 'firebase/firestore'; // ✅ Import Firestore functions
+import { auth, db, signInAnonymously } from '../utils/firebase';
+
+
+function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}
 
 
 export default function ExamPage({ studentInfo, addResult }) {
@@ -13,12 +23,11 @@ export default function ExamPage({ studentInfo, addResult }) {
   const [submitted, setSubmitted] = useState(false);
   const currentQuestions = selectedExam && questions[selectedExam.title] ? questions[selectedExam.title] : [];
   const [activeGrade, setActiveGrade] = useState(null);
-  const endTime = new Date(); // or your actual end time
+
+  const endTime = new Date();
   const hours = endTime.getHours().toString().padStart(2, '0');
   const minutes = endTime.getMinutes().toString().padStart(2, '0');
 
-  
-  
   const gradeExams = {
     "Grade 12": [
       { id: 1, title: "Networks - Grade 12", password: "grade12pass" },
@@ -32,7 +41,7 @@ export default function ExamPage({ studentInfo, addResult }) {
       { id: 5, title: "Hardware - Grade 10", password: "grade10pass" }
     ]
   };
-  
+
   const gradeGroups = {
     "Grade 10": gradeExams["Grade 10"],
     "Grade 11": gradeExams["Grade 11"],
@@ -40,50 +49,59 @@ export default function ExamPage({ studentInfo, addResult }) {
   };
 
   useEffect(() => {
+    // Automatically sign in anonymously when component loads
+    signInAnonymously(auth)
+      .then(() => {
+        console.log('Signed in anonymously');
+      })
+      .catch((error) => {
+        console.error('Anonymous sign-in error:', error);
+      });
+  }, []);
+
+  useEffect(() => {
     if (!studentInfo) {
       navigate('/');
       return;
     }
-  
-    // ✅ Store student info for result usage
+
     localStorage.setItem('studentName', studentInfo.name);
     localStorage.setItem('studentGrade', studentInfo.grade);
   }, [studentInfo, navigate]);
-  
 
   useEffect(() => {
     localStorage.setItem('examStartTime', new Date().toISOString());
   }, []);
 
-  const handleSubmitExam = () => {
+  const handleSubmitExam = async () => {
     const endTime = new Date();
     const startTime = new Date(localStorage.getItem('examStartTime') || new Date());
     const timeSpentInSeconds = Math.round((endTime - startTime) / 1000);
     const timeSpentFormatted = `${Math.floor(timeSpentInSeconds / 60)}m ${timeSpentInSeconds % 60}s`;
-  
+
     const studentName = localStorage.getItem('studentName') || 'Unknown';
     const studentGrade = localStorage.getItem('studentGrade') || 'N/A';
     const examTitle = localStorage.getItem('examTitle') || 'Unnamed Exam';
     const attemptsKey = `${studentName}_${examTitle}_attempts`;
-  
+
     const previousAttempts = parseInt(localStorage.getItem(attemptsKey)) || 0;
     const updatedAttempts = previousAttempts + 1;
-  
+
     const unansweredQuestions = currentQuestions.filter(q => !answers[q.id]);
     const unansweredCount = unansweredQuestions.length;
     const totalQuestions = currentQuestions.length;
-  
+
     let score = 0;
     currentQuestions.forEach((q) => {
       if (answers[q.id] === q.correctAnswer) score++;
     });
-  
+
     const percentage = ((score / totalQuestions) * 100).toFixed(2);
 
     const newResult = {
-      completedDate: endTime.toISOString().split('T')[0], // "2025-04-30"
-   completedTimeOnly: `${hours}:${minutes}`,           // "14:23"
-    completedTime: endTime.toISOString(),
+      completedDate: endTime.toISOString().split('T')[0],
+      completedTimeOnly: `${hours}:${minutes}`,
+      completedTime: endTime.toISOString(),
       name: studentName,
       grade: studentGrade,
       exam: examTitle,
@@ -98,78 +116,37 @@ export default function ExamPage({ studentInfo, addResult }) {
         correctAnswer: q.correctAnswer
       }))
     };
-    
+
+    try {
+      await addDoc(collection(db, "examResults"), newResult);
+      console.log("Result saved to Firebase.");
+    } catch (error) {
+      console.error("Error saving result to Firebase:", error);
+    }
+
     localStorage.setItem('examResult', JSON.stringify(newResult));
     const allResults = JSON.parse(localStorage.getItem('allResults')) || [];
     allResults.push(newResult);
     localStorage.setItem('allResults', JSON.stringify(allResults));
     localStorage.setItem(attemptsKey, updatedAttempts.toString());
+    localStorage.setItem(`${studentName}_${examTitle}_lastAttempt`, endTime.toISOString());
+
+    addResult(newResult);
     navigate('/results');
   };
 
-  
-  useEffect(() => {
-    if (!studentInfo) {
-      navigate('/');
+  const handleSubmit = async () => {
+    if (Object.keys(answers).length < currentQuestions.length) {
+      alert("❗ You must answer all questions before submitting.");
       return;
     }
-  }, [studentInfo, navigate]);
 
-  useEffect(() => {
-    if (authenticated) {
-      const timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            handleSubmit();
-            return 0;
-          }
-          if (prev === 300) {
-            alert("⚠️ 5 minutes left! Please finish up!");
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    setSubmitted(true);
+    await handleSubmitExam();
+  };
 
-      const handleContextMenu = (e) => e.preventDefault();
-      const handleKeyDown = (e) => {
-        if ((e.ctrlKey && ['r', 'R', 'c', 'C', 'v', 'V', 'x', 'X'].includes(e.key)) || e.key === 'F5') {
-          e.preventDefault();
-          alert("Action blocked during exam!");
-        }
-      };
-
-      const handleRightClick = (e) => e.preventDefault();
-      const disableSelection = (e) => e.preventDefault();
-      const handleBeforeUnload = (e) => {
-        e.preventDefault();
-        e.returnValue = '';
-      };
-      const handleVisibilityChange = () => {
-        if (document.visibilityState === 'hidden') {
-          alert('⚠️ You switched tabs or minimized. Please return to the exam.');
-        }
-      };
-
-      document.addEventListener('contextmenu', handleRightClick);
-      document.addEventListener('selectstart', disableSelection);
-      document.addEventListener('contextmenu', handleContextMenu);
-      document.addEventListener('keydown', handleKeyDown);
-      window.addEventListener('beforeunload', handleBeforeUnload);
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-
-      return () => {
-        clearInterval(timer);
-        document.removeEventListener('contextmenu', handleRightClick);
-        document.removeEventListener('selectstart', disableSelection);
-        document.removeEventListener('contextmenu', handleContextMenu);
-        document.removeEventListener('keydown', handleKeyDown);
-        window.removeEventListener('beforeunload', handleBeforeUnload);
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-      };
-    }
-  }, [authenticated]);
-
+  // ...rest of your code remains unchanged, including:
+  // - handleSelectExam
   const handleSelectExam = (exam) => {
     const studentName = localStorage.getItem('studentName') || 'Unknown';
     const attemptsKey = `${studentName}_${exam.title}_attempts`;
@@ -234,28 +211,70 @@ export default function ExamPage({ studentInfo, addResult }) {
   };
   
 
+  // - handleChange
   const handleChange = (id, answer) => {
     setAnswers(prev => ({ ...prev, [id]: answer }));
   };
+  // - Timer & Anti-cheating useEffect
+  useEffect(() => {
+    if (authenticated) {
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            handleSubmit();
+            return 0;
+          }
+          if (prev === 300) {
+            alert("⚠️ 5 minutes left! Please finish up!");
+          }
+          return prev - 1;
+        });
+      }, 1000);
 
-  const handleSubmit = () => {
-    if (Object.keys(answers).length < currentQuestions.length) {
-      alert("❗ You must answer all questions before submitting.");
-      return;
+      const handleContextMenu = (e) => e.preventDefault();
+      const handleKeyDown = (e) => {
+        if ((e.ctrlKey && ['r', 'R', 'c', 'C', 'v', 'V', 'x', 'X'].includes(e.key)) || e.key === 'F5') {
+          e.preventDefault();
+          alert("Action blocked during exam!");
+        }
+      };
+
+      const handleRightClick = (e) => e.preventDefault();
+      const disableSelection = (e) => e.preventDefault();
+      const handleBeforeUnload = (e) => {
+        e.preventDefault();
+        e.returnValue = '';
+      };
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'hidden') {
+          alert('⚠️ You switched tabs or minimized. Please return to the exam.');
+        }
+      };
+
+      document.addEventListener('contextmenu', handleRightClick);
+      document.addEventListener('selectstart', disableSelection);
+      document.addEventListener('contextmenu', handleContextMenu);
+      document.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      return () => {
+        clearInterval(timer);
+        document.removeEventListener('contextmenu', handleRightClick);
+        document.removeEventListener('selectstart', disableSelection);
+        document.removeEventListener('contextmenu', handleContextMenu);
+        document.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
     }
+  }, [authenticated]);
 
-    setSubmitted(true);
-    handleSubmitExam();
-    addResult(JSON.parse(localStorage.getItem('examResult')));
-  };
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
-  };
+  // - UI rendering (already good)
 
   return (
+    // Your existing JSX stays as-is.    
     <div className="min-h-screen p-4 bg-gray-50">
       <h2 className="text-2xl font-bold mb-6">Welcome {studentInfo.name} from {studentInfo.grade}</h2>
 

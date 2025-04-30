@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { collection, addDoc, Timestamp } from "firebase/firestore";
+import { db } from "../utils/firebase"; // path to your firebase.js
 import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx';
 
@@ -12,6 +14,47 @@ export default function AllResults() {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
+  const handleQuizComplete = () => {
+    const score = 4; // Example
+    const scorePercentage = 80;
+    const studentId = "abc123";
+    const exam = "Term 2 Exam";
+    const grade = "Grade 10";
+    const name = "John Doe";
+    const timespent = 300; // in seconds
+  
+    submitExamResult({
+      score,
+      scorePercentage,
+      studentId,
+      exam,
+      grade,
+      name,
+      timespent
+    });
+  };
+  
+  
+  const submitExamResult = async ({ score, scorePercentage, studentId, exam, grade, name, timespent }) => {
+    try {
+      await addDoc(collection(db, "examResults"), {
+        score,
+        scorePercentage,
+        studentId,
+        exam,
+        grade,
+        name,
+        timespent,
+        submittedBy: "student",
+        date: Timestamp.now(),
+        action: "" // Leave empty or set based on your logic
+      });
+      console.log("Result submitted to Firestore ✅");
+    } catch (error) {
+      console.error("Error saving result:", error);
+    }
+  };
+  
 
   useEffect(() => {
     const checkAdminPassword = async () => {
