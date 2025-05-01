@@ -4,7 +4,6 @@ import { db } from "../utils/firebase"; // path to your firebase.js
 import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx';
 
-
 export default function AllResults() {
   const [results, setResults] = useState([]);
   const [accessChecked, setAccessChecked] = useState(false);

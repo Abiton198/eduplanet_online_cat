@@ -30,15 +30,24 @@ export default function ExamPage({ studentInfo, addResult }) {
   const gradeExams = {
     "Grade 12": [
       { id: 1, title: "Networks & Internet Technologies", password: "grade12pass" },
-      { id: 2, title: "HTML & Web Designs", password: "grade12pass2" }
+      { id: 2, title: "HTML & Web Designs", password: "grade12pass2" },
+      { id: 3, title: "HTML & Web Design 2", password: "grade12pass3" }, 
+      { id: 4, title: "Spreadsheets & Word Processing", password: "grade12pass4" },
+      { id: 5, title: "Spreadsheets", password: "grade12pass5" },
+      { id: 6, title: "Word Processing & Databases", password: "grade12pass5" },
+      
     ],
     "Grade 11": [
-      { id: 3, title: "Spreadsheets", password: "grade11pass" },
-      { id: 4, title: "Databases", password: "grade11pass" }
+      { id: 1, title: "Databases - Grade 11", password: "grade11pass" },
+      { id: 2, title: "SPREADSHEETS - Grade 11", password: "grade11pass1" },
+      { id: 3, title: "NETWORKS - Grade 11", password: "grade11pass1" },
+      { id: 4, title: "Internet & WWW - Grade 11", password: "grade11pass1" }
+
+      
     ],
     "Grade 10": [
-      { id: 5, title: "Networks - Grade 10", password: "grade10pass" },
-      { id: 6, title: "Social Implications - Grade 10", password: "grade10pass" }
+      { id: 1, title: "NETWORK TECHNOLOGIES - Grade 10", password: "grade10pass" },
+      { id: 2, title: "SOCIAL IMPLICATIONS & INFORMATION MANAGEMENT - Grade 10", password: "grade10pass1" }
     ]
   };
 
@@ -162,7 +171,7 @@ const handleSubmitExam = async () => {
     const lastAttemptTime = localStorage.getItem(lastAttemptKey);
     const now = new Date();
   
-    if (attempts >= 5) {
+    if (attempts >= 3) {
       Swal.fire({
         icon: 'error',
         title: 'Maximum Attempts Reached',
