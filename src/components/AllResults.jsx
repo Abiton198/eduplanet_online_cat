@@ -68,6 +68,7 @@ export default function AllResults() {
       });
   
       if (isConfirmed && password === 'admin123') {
+        
         setAccessGranted(true);
   
         // ✅ Listen to Firestore collection
