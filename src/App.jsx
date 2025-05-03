@@ -78,14 +78,9 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/all-results"
-            element={
-              <ProtectedRoute studentInfo={studentInfo}>
-                <AllResults results={results} />
-              </ProtectedRoute>
-            }
-          />
+         
+          <Route path="/all-results" element={<AllResults />} />
+
           <Route path="/exam-rules" element={<ExamRules />} />
         </Routes>
       </div>
