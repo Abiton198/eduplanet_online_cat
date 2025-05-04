@@ -68,6 +68,315 @@ export const questions = {
   { "id": 30, "question": "What is the ethical thing to do if you find sensitive personal data online?", "options": ["Ignore and download it", "Share it on social media", "Report it or do nothing with it", "Sell it"], "correctAnswer": "Report it or do nothing with it" }
 ],
   
+"Introduction to Networks - Grade 10": [
+  { id: 1, question: "What is a computer network?", options: ["A type of computer virus", "A system of unrelated devices", "A system that connects devices to share data and resources", "An individual computer's memory storage"], correctAnswer: "A system that connects devices to share data and resources" },
+  { id: 2, question: "Which type of network is used to connect devices in a small geographic area, such as a school?", options: ["Wide Area Network (WAN)", "Local Area Network (LAN)", "Metropolitan Area Network (MAN)", "Home Area Network (HAN)"], correctAnswer: "Local Area Network (LAN)" },
+  { id: 3, question: "Which network type is most commonly used within a home?", options: ["PAN", "HAN", "WAN", "MAN"], correctAnswer: "HAN" },
+  { id: 4, question: "Which type of network spans across cities or large regions?", options: ["LAN", "PAN", "WAN", "HAN"], correctAnswer: "WAN" },
+  { id: 5, question: "What does a Personal Area Network (PAN) typically connect?", options: ["Computers in different cities", "A user's personal devices like phones and smartwatches", "All smart TVs in a building", "Public Wi-Fi connections"], correctAnswer: "A user's personal devices like phones and smartwatches" },
+  
+  { id: 6, question: "What is one function of a network?", options: ["Wipe data automatically", "Enable device sharing and communication", "Slow down internet access", "Block computer updates"], correctAnswer: "Enable device sharing and communication" },
+  { id: 7, question: "Which device connects a computer to a network?", options: ["Firewall", "Router", "NIC", "Modem"], correctAnswer: "NIC" },
+  { id: 8, question: "Which device extends the Wi-Fi signal in large buildings?", options: ["NIC", "Router", "Modem", "Access Point"], correctAnswer: "Access Point" },
+  { id: 9, question: "Which type of cable is commonly used in wired networks?", options: ["Fiber Optic", "HDMI", "USB", "DisplayPort"], correctAnswer: "Fiber Optic" },
+  { id: 10, question: "What is the purpose of a router?", options: ["Blocks malware", "Connects different networks and manages traffic", "Stores passwords", "Prints files"], correctAnswer: "Connects different networks and manages traffic" },
+  
+  { id: 11, question: "What is the function of a switch in a LAN?", options: ["Translates languages", "Connects and manages multiple devices in a LAN", "Increases internet speed", "Changes IP addresses"], correctAnswer: "Connects and manages multiple devices in a LAN" },
+  { id: 12, question: "Which device is used to convert digital data for internet access?", options: ["Switch", "Access Point", "NIC", "Modem"], correctAnswer: "Modem" },
+  { id: 13, question: "What is network hardware?", options: ["Only cables", "Programs to manage networks", "Devices that enable and maintain network connections", "Screens and speakers"], correctAnswer: "Devices that enable and maintain network connections" },
+  { id: 14, question: "What is network software used for?", options: ["Cooling the computer", "Power supply management", "Controlling and managing network communication", "Playing games"], correctAnswer: "Controlling and managing network communication" },
+  { id: 15, question: "What is a Network Operating System (NOS)?", options: ["Hardware component", "System that manages network resources", "A virus", "Internet provider"], correctAnswer: "System that manages network resources" },
+  
+  { id: 16, question: "What is TCP/IP used for?", options: ["Cleaning hard drives", "Managing Wi-Fi speed", "Internet communication protocol", "Making phone calls"], correctAnswer: "Internet communication protocol" },
+  { id: 17, question: "Which software protects networks from unauthorized access?", options: ["Game software", "Firewall", "Photo editor", "Bluetooth driver"], correctAnswer: "Firewall" },
+  { id: 18, question: "What does antivirus software do?", options: ["Prints reports", "Improves RAM", "Protects against malware", "Speeds up typing"], correctAnswer: "Protects against malware" },
+  { id: 19, question: "Why are passwords important in network security?", options: ["They boost Wi-Fi speed", "They save files", "They help only authorized users access the network", "They control brightness"], correctAnswer: "They help only authorized users access the network" },
+  { id: 20, question: "What does encryption do to data?", options: ["Erases it", "Makes it larger", "Converts it into a secure format", "Uploads it to the cloud"], correctAnswer: "Converts it into a secure format" },
+  
+  { id: 21, question: "Which of the following is a network protocol?", options: ["HTTP", "Windows", "Photoshop", "Excel"], correctAnswer: "HTTP" },
+  { id: 22, question: "Which command checks if a computer can reach another device on the network?", options: ["ipconfig", "ping", "format", "netstat"], correctAnswer: "ping" },
+  { id: 23, question: "Which command displays the IP address and network details?", options: ["tasklist", "shutdown", "ipconfig", "dir"], correctAnswer: "ipconfig" },
+  { id: 24, question: "What is the purpose of private IP addresses?", options: ["They identify public users on the internet", "They boost Wi-Fi speed", "They identify devices inside a private network", "They store passwords"], correctAnswer: "They identify devices inside a private network" },
+  { id: 25, question: "What does a public IP address do?", options: ["Helps internal network routing", "Identifies a device on the global internet", "Controls screen brightness", "Stores usernames"], correctAnswer: "Identifies a device on the global internet" },
+  
+  { id: 26, question: "What should be done before setting up a Wi-Fi network?", options: ["Turn off firewalls", "Configure the router securely", "Remove all passwords", "Use an unencrypted signal"], correctAnswer: "Configure the router securely" },
+  { id: 27, question: "Which setting helps secure a wireless network?", options: ["Using no password", "WPA2 or WPA3 encryption", "Sharing the password online", "Turning off firewall"], correctAnswer: "WPA2 or WPA3 encryption" },
+  { id: 28, question: "What is the benefit of centralized storage in a network?", options: ["Faster gaming", "Shared access to files across devices", "More background noise", "Better screen resolution"], correctAnswer: "Shared access to files across devices" },
+  { id: 29, question: "Which of the following helps identify devices on a network?", options: ["Keyboard", "MAC address", "Monitor", "USB cable"], correctAnswer: "MAC address" },
+  { id: 30, question: "Which is an example of a school network activity?", options: ["Browsing music videos", "Using cloud storage for assignments", "Charging phones", "Watching movies"], correctAnswer: "Using cloud storage for assignments" }
+],
+// GRDAE 10
+"Solution Development - Spreadsheets": [
+  { id: 1, question: "What is a spreadsheet?", options: ["A word processor", "A digital tool to write code", "A digital tool used to organize and analyze data in a tabular format", "An image editing program"], correctAnswer: "A digital tool used to organize and analyze data in a tabular format" },
+  { id: 2, question: "Which of the following is a spreadsheet program?", options: ["Microsoft Word", "Google Slides", "LibreOffice Calc", "Notepad"], correctAnswer: "LibreOffice Calc" },
+  { id: 3, question: "What is a worksheet?", options: ["A document template", "A single sheet in a spreadsheet file", "A printed form", "A web page"], correctAnswer: "A single sheet in a spreadsheet file" },
+  { id: 4, question: "What is a cell in a spreadsheet?", options: ["A row of numbers", "A file type", "The intersection of a row and a column", "An image in Excel"], correctAnswer: "The intersection of a row and a column" },
+  { id: 5, question: "What does the formula bar display?", options: ["The name of the file", "The address of the file", "The content or formula in the selected cell", "The column headers only"], correctAnswer: "The content or formula in the selected cell" },
+
+  { id: 6, question: "Which of the following is a correct cell reference?", options: ["AB:1", "1A", "A1", "Cell-1"], correctAnswer: "A1" },
+  { id: 7, question: "Which spreadsheet feature allows you to perform automatic calculations?", options: ["Images", "Borders", "Formulas and Functions", "Themes"], correctAnswer: "Formulas and Functions" },
+  { id: 8, question: "What is a common use of spreadsheets?", options: ["Playing games", "Editing photos", "Budgeting and financial planning", "Browsing websites"], correctAnswer: "Budgeting and financial planning" },
+  { id: 9, question: "Which feature helps in visualizing data in spreadsheets?", options: ["Clip Art", "Slide Transitions", "Graphs and Charts", "Macros"], correctAnswer: "Graphs and Charts" },
+  { id: 10, question: "What function is used to add a range of numbers?", options: ["=ADD()", "=TOTAL()", "=SUM()", "=PLUS()"], correctAnswer: "=SUM()" },
+
+  { id: 11, question: "Which function calculates the mean of numbers in Excel?", options: ["=MEAN()", "=MIDDLE()", "=AVERAGE()", "=AVG()"], correctAnswer: "=AVERAGE()" },
+  { id: 12, question: "What does the MIN function do?", options: ["Returns the average", "Finds the smallest number", "Returns the largest number", "Counts all text values"], correctAnswer: "Finds the smallest number" },
+  { id: 13, question: "Which function counts the number of numeric values?", options: ["=COUNT()", "=NUMBER()", "=SUM()", "=COUNTA()"], correctAnswer: "=COUNT()" },
+  { id: 14, question: "Which of the following is a valid use of the MAX function?", options: ["=MAX(A1:A5)", "=LARGEST(A1:A5)", "=HIGH(A1:A5)", "=TOP(A1:A5)"], correctAnswer: "=MAX(A1:A5)" },
+  { id: 15, question: "How do you select a range of cells?", options: ["Click each one", "Use the arrow keys only", "Click and drag across the cells", "Press Enter on each"], correctAnswer: "Click and drag across the cells" },
+
+  { id: 16, question: "How do you insert a new row in Excel?", options: ["Right-click row number and select 'Insert'", "Click on File > Insert Row", "Type INSERT in a cell", "Double-click the column"], correctAnswer: "Right-click row number and select 'Insert'" },
+  { id: 17, question: "What is the purpose of resizing columns?", options: ["To change the color", "To fit data within the cells", "To add formulas", "To delete cells"], correctAnswer: "To fit data within the cells" },
+  { id: 18, question: "Which of the following applies formatting to numbers as currency?", options: ["=MONEY()", "Number Format > Currency", "Text Wrap", "Style Sheet"], correctAnswer: "Number Format > Currency" },
+  { id: 19, question: "What does 'Merge & Center' do?", options: ["Merges worksheets", "Centers text only", "Combines cells and centers text", "Adds borders"], correctAnswer: "Combines cells and centers text" },
+  { id: 20, question: "How do you make text bold in Excel?", options: ["Use the 'B' button in the toolbar", "Type **text**", "Insert special characters", "Use the Enter key"], correctAnswer: "Use the 'B' button in the toolbar" },
+
+  { id: 21, question: "What is the purpose of sorting data?", options: ["To add images", "To format text", "To arrange data in a specific order", "To remove formulas"], correctAnswer: "To arrange data in a specific order" },
+  { id: 22, question: "What does filtering data do?", options: ["Deletes unwanted rows", "Displays only specific data based on criteria", "Highlights the row", "Adds up all numbers"], correctAnswer: "Displays only specific data based on criteria" },
+  { id: 23, question: "Which feature removes repeated entries in a column?", options: ["AutoSum", "Data Validation", "Remove Duplicates", "Filter View"], correctAnswer: "Remove Duplicates" },
+  { id: 24, question: "What is the formula to subtract values in Excel?", options: ["=SUBTRACT(A1,B1)", "=A1-B1", "=MINUS(A1,B1)", "=LESS(A1,B1)"], correctAnswer: "=A1-B1" },
+  { id: 25, question: "Which formula is used for division?", options: ["=DIV(A1,B1)", "=A1/B1", "=QUOTIENT(A1,B1)", "=A1:B1"], correctAnswer: "=A1/B1" },
+
+  { id: 26, question: "What does the error code ####### mean in Excel?", options: ["Wrong function", "Division by zero", "Column too narrow to display value", "Invalid formula syntax"], correctAnswer: "Column too narrow to display value" },
+  { id: 27, question: "What causes the #DIV/0! error?", options: ["Incorrect spelling", "Merging cells", "Dividing a number by zero", "Inserting text in a number field"], correctAnswer: "Dividing a number by zero" },
+  { id: 28, question: "What does the #NAME! error indicate?", options: ["Cell too full", "Wrong worksheet name", "Incorrect function name or spelling", "Invalid number format"], correctAnswer: "Incorrect function name or spelling" },
+  { id: 29, question: "What does #REF! mean in a spreadsheet?", options: ["Repeated values", "Duplicate formulas", "Invalid cell reference", "Empty column"], correctAnswer: "Invalid cell reference" },
+  { id: 30, question: "Which formula multiplies two cells?", options: ["=MULTIPLY(A1,B1)", "=A1*B1", "=A1xB1", "=PRODUCT(A1,B1)"], correctAnswer: "=A1*B1" }
+],
+// Grade 10
+"Advanced Spreadsheet Functions & Data Analysis": [
+  { id: 1, question: "What does the IF function do in a spreadsheet?", options: ["Adds values", "Counts empty cells", "Checks a condition and returns different values for TRUE or FALSE", "Formats cells"], correctAnswer: "Checks a condition and returns different values for TRUE or FALSE" },
+  { id: 2, question: "What is the correct syntax for the IF function?", options: ["=IF(A1<50, 'Fail', 'Pass')", "=IF(A1,50)", "=IF>50('Pass','Fail')", "=IF(A1:50)"], correctAnswer: "=IF(A1<50, 'Fail', 'Pass')" },
+  { id: 3, question: "What does VLOOKUP do?", options: ["Calculates totals", "Looks up data vertically in a table", "Finds errors", "Sorts data"], correctAnswer: "Looks up data vertically in a table" },
+  { id: 4, question: "Which function searches for data horizontally in a row?", options: ["VLOOKUP", "HLOOKUP", "MATCH", "INDEX"], correctAnswer: "HLOOKUP" },
+  { id: 5, question: "Which function extracts the first few characters from a text?", options: ["RIGHT", "MID", "LEFT", "FIND"], correctAnswer: "LEFT" },
+
+  { id: 6, question: "What does the RIGHT function do?", options: ["Finds matching values", "Extracts characters from the right side of text", "Adds text strings", "Deletes characters"], correctAnswer: "Extracts characters from the right side of text" },
+  { id: 7, question: "What does the MID function require?", options: ["Start position and number of characters to extract", "A column label", "Only the text length", "The row number"], correctAnswer: "Start position and number of characters to extract" },
+  { id: 8, question: "Which function would best be used to search a table for a price based on product code?", options: ["IF", "SUM", "VLOOKUP", "RIGHT"], correctAnswer: "VLOOKUP" },
+  { id: 9, question: "Which function would extract 'Joh' from the name 'Johnathan'?", options: ["=LEFT('Johnathan',3)", "=RIGHT('Johnathan',3)", "=MID('Johnathan',5,3)", "=IF('Johnathan')"], correctAnswer: "=LEFT('Johnathan',3)" },
+  { id: 10, question: "What is data validation used for?", options: ["Creating charts", "Adding functions", "Restricting the type of data entered in a cell", "Sorting cells"], correctAnswer: "Restricting the type of data entered in a cell" },
+
+  { id: 11, question: "Which of the following is an example of data validation?", options: ["Changing fonts", "Creating a drop-down list", "Adding borders", "Copying formulas"], correctAnswer: "Creating a drop-down list" },
+  { id: 12, question: "What can data validation prevent?", options: ["Saving the file", "Editing text", "Entering duplicates", "Closing the worksheet"], correctAnswer: "Entering duplicates" },
+  { id: 13, question: "What is conditional formatting used for?", options: ["Adding headers", "Automatically changing the appearance of cells based on conditions", "Copying formulas", "Changing file formats"], correctAnswer: "Automatically changing the appearance of cells based on conditions" },
+  { id: 14, question: "Which is an example of conditional formatting?", options: ["Setting margins", "Highlighting values above 80% in green", "Sorting alphabetically", "Filtering by text"], correctAnswer: "Highlighting values above 80% in green" },
+  { id: 15, question: "What formatting would best highlight failing scores in red?", options: ["Manual formatting", "Conditional formatting", "Font styling", "Header formatting"], correctAnswer: "Conditional formatting" },
+
+  { id: 16, question: "What is sorting used for in spreadsheets?", options: ["Highlighting data", "Changing themes", "Arranging data alphabetically or numerically", "Making charts"], correctAnswer: "Arranging data alphabetically or numerically" },
+  { id: 17, question: "What does filtering do?", options: ["Deletes rows", "Displays only specific rows based on criteria", "Adds colors", "Duplicates data"], correctAnswer: "Displays only specific rows based on criteria" },
+  { id: 18, question: "Which chart type is best for showing trends over time?", options: ["Pie Chart", "Column Chart", "Line Chart", "Bar Chart"], correctAnswer: "Line Chart" },
+  { id: 19, question: "What is a Pie Chart best used for?", options: ["Comparing values", "Showing percentages of a whole", "Showing trends", "Sorting values"], correctAnswer: "Showing percentages of a whole" },
+  { id: 20, question: "What is the best chart to compare student marks?", options: ["Pie Chart", "Line Chart", "Column Chart", "Area Chart"], correctAnswer: "Column Chart" },
+
+  { id: 21, question: "What activity would require sorting a class register?", options: ["Importing CSV files", "Exporting a chart", "Alphabetizing names", "Creating drop-down menus"], correctAnswer: "Alphabetizing names" },
+  { id: 22, question: "What is the first step to create a chart?", options: ["Sort data", "Select data range", "Add a formula", "Print the sheet"], correctAnswer: "Select data range" },
+  { id: 23, question: "How do you import data into Excel?", options: ["Type it manually", "Use the 'Import' option to load a CSV file", "Copy from Notepad", "Print the sheet"], correctAnswer: "Use the 'Import' option to load a CSV file" },
+  { id: 24, question: "Which file format is commonly used to save spreadsheets for other programs?", options: ["TXT", "JPG", "CSV", "MP3"], correctAnswer: "CSV" },
+  { id: 25, question: "Which format is best for sharing a read-only version of a spreadsheet?", options: ["XLSX", "PDF", "CSV", "DOCX"], correctAnswer: "PDF" },
+
+  { id: 26, question: "What does XLSX stand for?", options: ["Excel Spreadsheet File", "XML Slide Format", "Text Document", "Compressed File"], correctAnswer: "Excel Spreadsheet File" },
+  { id: 27, question: "What must you set to avoid cut-off tables when printing?", options: ["Formula bar", "Zoom", "Print area", "Cell borders"], correctAnswer: "Print area" },
+  { id: 28, question: "Where can you add a header to a spreadsheet before printing?", options: ["In the ribbon", "Print preview settings", "Cell A1", "Chart options"], correctAnswer: "Print preview settings" },
+  { id: 29, question: "How do you save a spreadsheet for online collaboration?", options: ["Print it", "Send via email", "Export to Google Sheets", "Convert to image"], correctAnswer: "Export to Google Sheets" },
+  { id: 30, question: "What feature should you adjust for correct spacing on printed pages?", options: ["Theme", "Margins", "Sorting", "Data Validation"], correctAnswer: "Margins" }
+],
+// GRADE 10
+"Information Management & Social Implications": [
+  { id: 1, question: "What does problem-solving in ICT involve?", options: ["Just writing code", "Copying data", "Using technology to identify and solve problems", "Building websites only"], correctAnswer: "Using technology to identify and solve problems" },
+  { id: 2, question: "What is the first step in the problem-solving process?", options: ["Implement the solution", "Review & Adjust", "Identify the problem", "Gather information"], correctAnswer: "Identify the problem" },
+  { id: 3, question: "What do you do after gathering information?", options: ["Delete it", "Forget it", "Process the information", "Ignore the problem"], correctAnswer: "Process the information" },
+  { id: 4, question: "Which step comes after evaluating possible solutions?", options: ["Process the information", "Implement the solution", "Gather information", "Identify the problem"], correctAnswer: "Implement the solution" },
+  { id: 5, question: "What should you do if your solution does not work as expected?", options: ["Try a different problem", "Ignore it", "Review and adjust the solution", "Restart your computer"], correctAnswer: "Review and adjust the solution" },
+
+  { id: 6, question: "Why are questions important in research?", options: ["They make surveys longer", "They confuse people", "They guide information gathering and decision-making", "They replace data"], correctAnswer: "They guide information gathering and decision-making" },
+  { id: 7, question: "Which question is closed-ended?", options: ["What is your favorite app?", "Why do you like smartphones?", "Do you use social media?", "How has social media affected you?"], correctAnswer: "Do you use social media?" },
+  { id: 8, question: "Which question type asks for a personal opinion?", options: ["Fact-based", "Closed-ended", "Open-ended", "Opinion-based"], correctAnswer: "Opinion-based" },
+  { id: 9, question: "What is an example of a fact-based question?", options: ["Do you enjoy games?", "What is your favorite website?", "How many people own smartphones?", "Do you use the internet?"], correctAnswer: "How many people own smartphones?" },
+  { id: 10, question: "Which type of question requires a detailed answer?", options: ["Closed-ended", "Open-ended", "Yes/No", "True/False"], correctAnswer: "Open-ended" },
+
+  { id: 11, question: "Which is an advantage of using books as information sources?", options: ["They're always up to date", "Easily edited", "Reliable and well-researched", "Interactive"], correctAnswer: "Reliable and well-researched" },
+  { id: 12, question: "What is a disadvantage of websites as sources?", options: ["Too expensive", "Hard to access", "May contain false information", "Too short"], correctAnswer: "May contain false information" },
+  { id: 13, question: "Which source provides first-hand data?", options: ["Books", "Websites", "Surveys", "Encyclopedias"], correctAnswer: "Surveys" },
+  { id: 14, question: "What is a disadvantage of interviews?", options: ["They are too accurate", "They require websites", "They can be biased", "They are anonymous"], correctAnswer: "They can be biased" },
+  { id: 15, question: "Which data collection tool involves watching and recording behavior?", options: ["Interviews", "Surveys", "Questionnaires", "Observations"], correctAnswer: "Observations" },
+
+  { id: 16, question: "What tool includes a set of predefined questions for many people?", options: ["Observation", "Interview", "Questionnaire", "Chart"], correctAnswer: "Questionnaire" },
+  { id: 17, question: "Which source type is Wikipedia?", options: ["Primary source", "Official government report", "Secondary website source", "Hard copy"], correctAnswer: "Secondary website source" },
+  { id: 18, question: "Which of the following is a reliable source?", options: ["Blog post", "Academic journal", "Random YouTube comment", "Anonymous tweet"], correctAnswer: "Academic journal" },
+  { id: 19, question: "What is digital security mainly meant to protect?", options: ["Files only", "Passwords only", "Personal and financial data", "Apps"], correctAnswer: "Personal and financial data" },
+  { id: 20, question: "Which of the following prevents identity theft and cybercrime?", options: ["Simple passwords", "No login system", "Strong digital security", "Open Wi-Fi"], correctAnswer: "Strong digital security" },
+
+  { id: 21, question: "What is a strong password made of?", options: ["Just letters", "Common names", "A mix of letters, numbers, and symbols", "Only numbers"], correctAnswer: "A mix of letters, numbers, and symbols" },
+  { id: 22, question: "What does 2FA stand for?", options: ["Two-Factor Authentication", "Two-Faced App", "Total File Access", "Two-Firewall Application"], correctAnswer: "Two-Factor Authentication" },
+  { id: 23, question: "What is the function of antivirus software?", options: ["Design graphics", "Remove formatting", "Protect against malware", "Increase internet speed"], correctAnswer: "Protect against malware" },
+  { id: 24, question: "What does a firewall do?", options: ["Burn viruses", "Allow public access", "Block unauthorized access to networks", "Play videos"], correctAnswer: "Block unauthorized access to networks" },
+  { id: 25, question: "How do you know a website is secure?", options: ["It loads quickly", "It says 'HTTP'", "It has HTTPS in the URL", "It has lots of ads"], correctAnswer: "It has HTTPS in the URL" },
+
+  { id: 26, question: "Which of these is a risk on public Wi-Fi?", options: ["Slow speed", "Data tracking", "Increased signal strength", "Bluetooth pairing"], correctAnswer: "Data tracking" },
+  { id: 27, question: "What is phishing?", options: ["Fishing games online", "Secure browsing", "Tricking users into giving personal information", "Fixing a printer"], correctAnswer: "Tricking users into giving personal information" },
+  { id: 28, question: "Which online behavior can threaten your privacy?", options: ["Using antivirus software", "Accepting unknown friend requests", "Using HTTPS", "Enabling 2FA"], correctAnswer: "Accepting unknown friend requests" },
+  { id: 29, question: "Which of the following is a privacy concern on social media?", options: ["Custom emojis", "Friend lists", "Data tracking and profiling", "Likes and shares"], correctAnswer: "Data tracking and profiling" },
+  { id: 30, question: "What is the purpose of reviewing and adjusting a solution in problem-solving?", options: ["Delete everything", "Improve the solution", "Forget the problem", "Start a new problem"], correctAnswer: "Improve the solution" }
+],
+// GRADE 10
+"Networks & Internet Technology": [
+  { id: 1, question: "What is a computer network?", options: ["A single device", "An app for sharing videos", "A system of connected devices sharing resources", "A video game system"], correctAnswer: "A system of connected devices sharing resources" },
+  { id: 2, question: "Which type of network is confined to a single location?", options: ["WAN", "LAN", "HAN", "PAN"], correctAnswer: "LAN" },
+  { id: 3, question: "What is an example of a WAN?", options: ["A home Wi-Fi", "The internet", "A printer setup", "A school computer lab"], correctAnswer: "The internet" },
+  { id: 4, question: "What is a HAN primarily used for?", options: ["City-wide internet", "Factory automation", "Connecting home devices", "Public Wi-Fi sharing"], correctAnswer: "Connecting home devices" },
+  { id: 5, question: "What is one of the main objectives of networks?", options: ["Reduce communication", "Increase costs", "Facilitate resource sharing", "Promote isolation"], correctAnswer: "Facilitate resource sharing" },
+
+  { id: 6, question: "Which network device directs data between different networks?", options: ["Switch", "Router", "Hub", "Repeater"], correctAnswer: "Router" },
+  { id: 7, question: "What device connects multiple computers in a LAN and intelligently routes data?", options: ["Hub", "Router", "Switch", "Modem"], correctAnswer: "Switch" },
+  { id: 8, question: "Which device converts digital signals to analog for internet access?", options: ["Switch", "Router", "Hub", "Modem"], correctAnswer: "Modem" },
+  { id: 9, question: "What is the function of a hub?", options: ["Manages traffic smartly", "Filters content", "Connects devices without intelligent traffic control", "Secures connections"], correctAnswer: "Connects devices without intelligent traffic control" },
+  { id: 10, question: "Which cable type provides the fastest internet connection?", options: ["Coaxial cable", "Ethernet cable", "USB cable", "Fiber optic cable"], correctAnswer: "Fiber optic cable" },
+
+  { id: 11, question: "What is Wi-Fi used for?", options: ["Connecting printers only", "Making voice calls", "Wireless network communication", "Only wired network access"], correctAnswer: "Wireless network communication" },
+  { id: 12, question: "Which device is most important for a wireless home network?", options: ["Switch", "Hub", "Router", "Scanner"], correctAnswer: "Router" },
+  { id: 13, question: "Which device would you use to split an internet signal for multiple computers?", options: ["Monitor", "Modem", "Hub", "Keyboard"], correctAnswer: "Hub" },
+  { id: 14, question: "Which network device often combines functions of modem and router?", options: ["Firewall", "Server", "All-in-one router", "Hub"], correctAnswer: "All-in-one router" },
+  { id: 15, question: "What is the primary difference between a hub and a switch?", options: ["Speed", "Cable type", "Traffic management", "Price"], correctAnswer: "Traffic management" },
+
+  { id: 16, question: "What is the internet?", options: ["A software application", "A LAN", "A global network of networks", "A company"], correctAnswer: "A global network of networks" },
+  { id: 17, question: "Which of these is an internet service?", options: ["Bluetooth", "Web browsing", "CD burning", "Wi-Fi"], correctAnswer: "Web browsing" },
+  { id: 18, question: "What is cloud computing?", options: ["Sharing games online", "Saving data on USB drives", "Storing and accessing data online", "Designing a website"], correctAnswer: "Storing and accessing data online" },
+  { id: 19, question: "Which protocol governs how data is sent over the internet?", options: ["HTML", "FTP", "TCP/IP", "Wi-Fi"], correctAnswer: "TCP/IP" },
+  { id: 20, question: "What does HTTPS ensure on a website?", options: ["Faster speed", "Better design", "Secure data transmission", "Less advertising"], correctAnswer: "Secure data transmission" },
+
+  { id: 21, question: "Which of these is NOT a web browser?", options: ["Google Chrome", "Firefox", "Excel", "Safari"], correctAnswer: "Excel" },
+  { id: 22, question: "Which of the following is a social media platform?", options: ["Google Drive", "Twitter", "Dropbox", "Outlook"], correctAnswer: "Twitter" },
+  { id: 23, question: "Which is a key difference between HTTP and HTTPS?", options: ["HTTPS is older", "HTTPS is more secure", "HTTPS is faster", "HTTPS uses less data"], correctAnswer: "HTTPS is more secure" },
+  { id: 24, question: "Which protocol is used for accessing web pages?", options: ["IPX", "SMTP", "HTTP", "POP3"], correctAnswer: "HTTP" },
+  { id: 25, question: "Which of the following allows users to send and receive emails?", options: ["Web browser", "Cloud storage", "Email service", "Social media"], correctAnswer: "Email service" },
+
+  { id: 26, question: "What is plagiarism?", options: ["Editing a video", "Using software legally", "Copying work without credit", "Creating your own idea"], correctAnswer: "Copying work without credit" },
+  { id: 27, question: "What does software piracy involve?", options: ["Using open-source tools", "Downloading free apps", "Using illegal software copies", "Making your own app"], correctAnswer: "Using illegal software copies" },
+  { id: 28, question: "How can you protect your privacy online?", options: ["Share passwords", "Click random links", "Avoid giving personal information", "Always use public Wi-Fi"], correctAnswer: "Avoid giving personal information" },
+  { id: 29, question: "Why is it important to use licensed software?", options: ["To save time", "To avoid updates", "To ensure safety and legality", "To reduce internet usage"], correctAnswer: "To ensure safety and legality" },
+  { id: 30, question: "Which of these is a sign of ethical technology use?", options: ["Ignoring copyrights", "Respecting intellectual property", "Pirating music", "Using fake apps"], correctAnswer: "Respecting intellectual property" }
+],
+// GRADE 10
+"Word Processing & Social Implications": [
+  { id: 1, question: "What is word processing?", options: ["Using software to draw graphics", "Creating and editing text documents", "Programming a website", "Making spreadsheets"], correctAnswer: "Creating and editing text documents" },
+  { id: 2, question: "Which of these is a word processing software?", options: ["Google Sheets", "Microsoft Word", "Photoshop", "PowerPoint"], correctAnswer: "Microsoft Word" },
+  { id: 3, question: "What is the primary function of a word processor?", options: ["Edit videos", "Format spreadsheets", "Type and edit text", "Manage databases"], correctAnswer: "Type and edit text" },
+  { id: 4, question: "Which feature checks grammar and spelling in a document?", options: ["Text wrapping", "Spell Check", "Line spacing", "Table formatting"], correctAnswer: "Spell Check" },
+  { id: 5, question: "Which file format is commonly used to save a word document?", options: [".MP4", ".JPG", ".DOCX", ".EXE"], correctAnswer: ".DOCX" },
+
+  { id: 6, question: "Which of the following changes the look of the text?", options: ["Spell Check", "Alignment", "Text formatting", "Margins"], correctAnswer: "Text formatting" },
+  { id: 7, question: "What does bold text indicate?", options: ["Text is italic", "Text is large", "Text is dark and strong", "Text is centered"], correctAnswer: "Text is dark and strong" },
+  { id: 8, question: "Which text style leans the letters to the right?", options: ["Bold", "Underline", "Italics", "Highlight"], correctAnswer: "Italics" },
+  { id: 9, question: "What are headers used for?", options: ["Adding text at the bottom", "Inserting images", "Text at the top of each page", "Changing font size"], correctAnswer: "Text at the top of each page" },
+  { id: 10, question: "What is the purpose of saving a document?", options: ["To print it immediately", "To share it on social media", "To store your work for future access", "To delete it"], correctAnswer: "To store your work for future access" },
+
+  { id: 11, question: "What do margins affect?", options: ["Text size", "Distance between text and page edges", "Line spacing", "Page color"], correctAnswer: "Distance between text and page edges" },
+  { id: 12, question: "Which page orientation is vertical?", options: ["Wide", "Landscape", "Portrait", "Flat"], correctAnswer: "Portrait" },
+  { id: 13, question: "What is the default page size in most word processors?", options: ["A3", "Legal", "A4", "Letter"], correctAnswer: "A4" },
+  { id: 14, question: "Which alignment centers text on the page?", options: ["Left", "Justify", "Right", "Center"], correctAnswer: "Center" },
+  { id: 15, question: "What does line spacing control?", options: ["Font color", "Space between lines of text", "Page margins", "Header location"], correctAnswer: "Space between lines of text" },
+
+  { id: 16, question: "Which feature is used to create bullet points?", options: ["Spell Check", "Bullets and Numbering", "Headers", "Margins"], correctAnswer: "Bullets and Numbering" },
+  { id: 17, question: "Where do footers appear?", options: ["At the top of a page", "In the table", "In the margins", "At the bottom of each page"], correctAnswer: "At the bottom of each page" },
+  { id: 18, question: "Which command is used to indent the first line of a paragraph?", options: ["Alignment", "Page setup", "Indentation", "Wrap text"], correctAnswer: "Indentation" },
+  { id: 19, question: "What is the main use of tables in word processing?", options: ["Add images", "Organize data in rows and columns", "Check spelling", "Insert margins"], correctAnswer: "Organize data in rows and columns" },
+  { id: 20, question: "Which tool lets you combine cells in a table?", options: ["Split cells", "Merge cells", "Insert row", "Align text"], correctAnswer: "Merge cells" },
+
+  { id: 21, question: "How can you adjust the number of rows in a table?", options: ["Change font", "Insert or delete rows", "Change page orientation", "Insert header"], correctAnswer: "Insert or delete rows" },
+  { id: 22, question: "How do you insert a picture into a document?", options: ["Use font styles", "Use page layout", "Use the Insert Image tool", "Use the save command"], correctAnswer: "Use the Insert Image tool" },
+  { id: 23, question: "What does text wrapping do?", options: ["Changes font color", "Adds lines to the document", "Controls how text flows around images", "Checks spelling"], correctAnswer: "Controls how text flows around images" },
+  { id: 24, question: "Which option lets you move an image on the page?", options: ["Resize", "Alignment", "Wrap text", "Drag and drop"], correctAnswer: "Drag and drop" },
+  { id: 25, question: "Which type of text wrapping places text tightly around the image?", options: ["In-line", "Top and bottom", "Tight", "Through"], correctAnswer: "Tight" },
+
+  { id: 26, question: "Which feature helps you correct misspelled words automatically?", options: ["Thesaurus", "Grammar Check", "Spell Check", "Track Changes"], correctAnswer: "Spell Check" },
+  { id: 27, question: "What should you do before finalizing a document?", options: ["Delete images", "Remove formatting", "Proofread for errors", "Increase font size"], correctAnswer: "Proofread for errors" },
+  { id: 28, question: "Which of the following improves the appearance of a document?", options: ["Random fonts", "Consistent formatting and layout", "Copying content", "Using only capital letters"], correctAnswer: "Consistent formatting and layout" },
+  { id: 29, question: "Which feature helps align tables and images properly?", options: ["Zoom", "Undo", "Alignment tools", "Margins"], correctAnswer: "Alignment tools" },
+  { id: 30, question: "What should a well-formatted final document include?", options: ["Only images", "Tables and inconsistent fonts", "Proper formatting, tables, and images", "Only text"], correctAnswer: "Proper formatting, tables, and images" }
+],
+// GRADE 10
+"Spreadsheet Review & Consolidation": [
+  { id: 1, question: "What is a spreadsheet used for?", options: ["Writing essays", "Creating animations", "Organizing, calculating, and analyzing data", "Sending emails"], correctAnswer: "Organizing, calculating, and analyzing data" },
+  { id: 2, question: "Which of these is NOT a spreadsheet software?", options: ["Microsoft Excel", "Google Sheets", "LibreOffice Calc", "Adobe Photoshop"], correctAnswer: "Adobe Photoshop" },
+  { id: 3, question: "What is a cell in a spreadsheet?", options: ["A type of chart", "An individual box formed by rows and columns", "A data filter", "A menu option"], correctAnswer: "An individual box formed by rows and columns" },
+  { id: 4, question: "How are cells referenced?", options: ["By color", "By font", "By column and row", "By shape"], correctAnswer: "By column and row" },
+  { id: 5, question: "What does the SUM function do?", options: ["Sorts text alphabetically", "Adds up values in selected cells", "Draws a line chart", "Converts text to numbers"], correctAnswer: "Adds up values in selected cells" },
+
+  { id: 6, question: "What are rows in a spreadsheet?", options: ["Vertical sections", "Horizontal sections", "Formulas", "Graphs"], correctAnswer: "Horizontal sections" },
+  { id: 7, question: "What does the AVERAGE function calculate?", options: ["The total", "The middle value", "The smallest number", "The average of selected values"], correctAnswer: "The average of selected values" },
+  { id: 8, question: "Which formula finds the highest value in a range?", options: ["=MIN()", "=MAX()", "=AVERAGE()", "=COUNT()"], correctAnswer: "=MAX()" },
+  { id: 9, question: "What does =COUNT(A1:A5) do?", options: ["Counts the total words", "Counts only the empty cells", "Counts the numeric values in the range", "Counts characters"], correctAnswer: "Counts the numeric values in the range" },
+  { id: 10, question: "Which of the following represents an absolute reference?", options: ["=A1+B1", "=$A$1+$B$1", "=A$1+B$1", "=$A1+$B1"], correctAnswer: "=$A$1+$B$1" },
+
+  { id: 11, question: "Which chart type is best for showing parts of a whole?", options: ["Bar chart", "Pie chart", "Line chart", "Scatter plot"], correctAnswer: "Pie chart" },
+  { id: 12, question: "Which chart shows trends over time?", options: ["Bar chart", "Line chart", "Pie chart", "Histogram"], correctAnswer: "Line chart" },
+  { id: 13, question: "What does merging cells do?", options: ["Deletes content", "Splits cells", "Combines multiple cells into one", "Formats numbers"], correctAnswer: "Combines multiple cells into one" },
+  { id: 14, question: "What is a column?", options: ["A horizontal section", "A graph type", "A vertical section of a spreadsheet", "A header style"], correctAnswer: "A vertical section of a spreadsheet" },
+  { id: 15, question: "Which menu is typically used to insert a chart?", options: ["View", "Format", "Insert", "File"], correctAnswer: "Insert" },
+
+  { id: 16, question: "What can you use to visually enhance a spreadsheet?", options: ["Keyboard shortcuts", "Cell formatting", "File compression", "Printer settings"], correctAnswer: "Cell formatting" },
+  { id: 17, question: "What feature changes how numbers are displayed (like currency or date)?", options: ["Text alignment", "Number formats", "Borders", "Font style"], correctAnswer: "Number formats" },
+  { id: 18, question: "Which alignment centers text in a cell?", options: ["Left", "Right", "Justify", "Center"], correctAnswer: "Center" },
+  { id: 19, question: "What is one use of background color in cells?", options: ["To delete content", "To protect cells", "For visual clarity", "To move data"], correctAnswer: "For visual clarity" },
+  { id: 20, question: "Which task adjusts the size of rows to fit content?", options: ["Sort data", "Change orientation", "Row height adjustment", "Wrap text"], correctAnswer: "Row height adjustment" },
+
+  { id: 21, question: "Which formula adds cells A1 through A5?", options: ["=ADD(A1:A5)", "=TOTAL(A1:A5)", "=SUM(A1:A5)", "=PLUS(A1:A5)"], correctAnswer: "=SUM(A1:A5)" },
+  { id: 22, question: "Which cell reference changes when copied?", options: ["Absolute", "Static", "Relative", "Constant"], correctAnswer: "Relative" },
+  { id: 23, question: "What is the purpose of customizing chart titles and labels?", options: ["To hide data", "To enhance clarity and presentation", "To make data unreadable", "To add formulas"], correctAnswer: "To enhance clarity and presentation" },
+  { id: 24, question: "Which of the following is NOT a chart type?", options: ["Bar", "Pie", "Grid", "Line"], correctAnswer: "Grid" },
+  { id: 25, question: "Which chart type is best for comparing values between categories?", options: ["Line", "Pie", "Bar", "Area"], correctAnswer: "Bar" },
+
+  { id: 26, question: "How do you start a formula in a spreadsheet?", options: ["Using 'AND'", "Using '='", "Using '+'", "Using 'START'"], correctAnswer: "Using '='" },
+  { id: 27, question: "Which option would change font size in a cell?", options: ["Cell format", "Column width", "Insert", "Wrap text"], correctAnswer: "Cell format" },
+  { id: 28, question: "What is the purpose of using charts in spreadsheets?", options: ["To calculate totals", "To sort data", "To visualize data", "To hide data"], correctAnswer: "To visualize data" },
+  { id: 29, question: "What should be done before inserting a chart?", options: ["Delete empty rows", "Protect the sheet", "Select the data", "Merge all cells"], correctAnswer: "Select the data" },
+  { id: 30, question: "What is a feature of Google Sheets?", options: ["Offline-only editing", "No collaboration tools", "Real-time collaboration", "Built-in animations"], correctAnswer: "Real-time collaboration" }
+],
+// GRADE 10
+"Consolidation & Control Test Preparation": [
+  { id: 1, question: "What is the primary function of the SUM formula in a spreadsheet?", options: ["Subtracting numbers", "Multiplying values", "Adding values", "Dividing numbers"], correctAnswer: "Adding values" },
+  { id: 2, question: "Which of the following is NOT a spreadsheet function?", options: ["SUM", "AVERAGE", "PRINT", "COUNT"], correctAnswer: "PRINT" },
+  { id: 3, question: "What is the purpose of absolute references in a formula?", options: ["To change the reference when copied", "To keep the reference fixed when copied", "To ignore the reference", "To create a chart"], correctAnswer: "To keep the reference fixed when copied" },
+  { id: 4, question: "Which of the following is a valid format for numbers in a spreadsheet?", options: ["Currency", "Date", "Percentage", "All of the above"], correctAnswer: "All of the above" },
+  { id: 5, question: "In Word Processing, what is the purpose of headers and footers?", options: ["To add page numbers, document titles, or dates", "To insert images", "To organize paragraphs", "To format cells"], correctAnswer: "To add page numbers, document titles, or dates" },
+
+  { id: 6, question: "Which chart is best for showing trends over time?", options: ["Bar chart", "Pie chart", "Line chart", "Area chart"], correctAnswer: "Line chart" },
+  { id: 7, question: "What does merging cells do in a spreadsheet?", options: ["Deletes the cells", "Combines multiple cells into one", "Changes the font", "Formats data"], correctAnswer: "Combines multiple cells into one" },
+  { id: 8, question: "What is a digital divide?", options: ["The difference in technology prices", "The gap between those who have access to technology and those who don't", "The difference between public and private internet", "The speed of internet connections"], correctAnswer: "The gap between those who have access to technology and those who don't" },
+  { id: 9, question: "How can privacy be maintained while using technology?", options: ["By sharing personal information", "By using secure passwords and encryption", "By avoiding updates", "By disabling firewalls"], correctAnswer: "By using secure passwords and encryption" },
+  { id: 10, question: "What is the function of a footer in a Word document?", options: ["To insert images", "To add page numbers and document titles", "To change font size", "To create a chart"], correctAnswer: "To add page numbers and document titles" },
+
+  { id: 11, question: "Which of the following is an example of cyberbullying?", options: ["Sending an email", "Sharing a social media post", "Posting threatening messages online", "Making a phone call"], correctAnswer: "Posting threatening messages online" },
+  { id: 12, question: "Which of the following can help reduce the digital divide?", options: ["Providing internet access to underserved areas", "Charging for all online content", "Limiting access to digital devices", "Requiring expensive devices for education"], correctAnswer: "Providing internet access to underserved areas" },
+  { id: 13, question: "What is the purpose of spell check in Word Processing?", options: ["To track changes", "To correct spelling mistakes", "To insert images", "To format text"], correctAnswer: "To correct spelling mistakes" },
+  { id: 14, question: "Which tool in Word Processing helps in collaboration?", options: ["Comments and track changes", "Spell check", "Insert table", "Insert hyperlink"], correctAnswer: "Comments and track changes" },
+  { id: 15, question: "What is the correct function to calculate the average of values in cells A1 through A5?", options: ["=SUM(A1:A5)", "=AVERAGE(A1:A5)", "=MIN(A1:A5)", "=COUNT(A1:A5)"], correctAnswer: "=AVERAGE(A1:A5)" },
+
+  { id: 16, question: "What is the difference between absolute and relative references in formulas?", options: ["Absolute references change when copied, relative references stay the same", "Absolute references stay the same, relative references change when copied", "Both references are the same", "Neither reference is used in formulas"], correctAnswer: "Absolute references stay the same, relative references change when copied" },
+  { id: 17, question: "Which of the following is an example of ethical use of technology?", options: ["Sharing pirated software", "Respecting privacy and protecting personal information", "Spreading fake news", "Engaging in cyberbullying"], correctAnswer: "Respecting privacy and protecting personal information" },
+  { id: 18, question: "What should you do before inserting an image in a Word document?", options: ["Delete all text", "Format the image", "Insert the image", "Resize the page"], correctAnswer: "Insert the image" },
+  { id: 19, question: "What is a typical function of a spreadsheet chart?", options: ["To format text", "To organize data into tables", "To visualize data trends", "To print documents"], correctAnswer: "To visualize data trends" },
+  { id: 20, question: "How can technology contribute to reducing privacy risks?", options: ["By increasing data collection", "By using encryption and secure systems", "By collecting more data on users", "By tracking online behavior"], correctAnswer: "By using encryption and secure systems" },
+
+  { id: 21, question: "In a Word document, how can you create a table?", options: ["Insert menu", "Home menu", "Layout menu", "View menu"], correctAnswer: "Insert menu" },
+  { id: 22, question: "What should be done when proofreading a document?", options: ["Check formatting only", "Ignore spelling errors", "Use spell check and read for grammar", "Only review images"], correctAnswer: "Use spell check and read for grammar" },
+  { id: 23, question: "Which of the following is NOT a feature of spreadsheet formatting?", options: ["Changing font style", "Inserting images", "Adjusting row height", "Using cell references"], correctAnswer: "Inserting images" },
+  { id: 24, question: "Which of the following helps to make a Word document more professional?", options: ["Using a large font size", "Consistent formatting, headers, and footers", "Adding random images", "Typing in all caps"], correctAnswer: "Consistent formatting, headers, and footers" },
+  { id: 25, question: "What is the role of a footer in a document?", options: ["Display page numbers or document titles", "Change the font size", "Insert pictures", "Edit text alignment"], correctAnswer: "Display page numbers or document titles" },
+
+  { id: 26, question: "Which of the following is a valid ethical concern in technology?", options: ["Illegal software downloads", "Using encryption", "Using strong passwords", "Avoiding social media"], correctAnswer: "Illegal software downloads" },
+  { id: 27, question: "Which function is used to calculate the smallest number in a range of cells?", options: ["=MIN()", "=MAX()", "=SUM()", "=AVERAGE()"], correctAnswer: "=MIN()" },
+  { id: 28, question: "What does the COUNT function do?", options: ["Counts the number of cells with data", "Counts the number of empty cells", "Counts the number of numerical values", "Counts the number of formulas"], correctAnswer: "Counts the number of numerical values" },
+  { id: 29, question: "What should you do when preparing for a Control Test?", options: ["Practice only one topic", "Review all major concepts and skills", "Focus only on practical tasks", "Skip theory review"], correctAnswer: "Review all major concepts and skills" },
+  { id: 30, question: "What is a key benefit of using charts in a spreadsheet?", options: ["To hide data", "To organize text", "To visually represent data", "To delete cells"], correctAnswer: "To visually represent data" }
+],
+
+
+
+//######################################################################################################################################################################################################################################################################################
+//######################################################################################################################################################################################################################################################################################
+// ############################################################################################################################################################################################################################################################################################
   // GRADE 11 EXAMS
 
 "SPREADSHEETS - Grade 11": [
@@ -200,6 +509,311 @@ export const questions = {
   { "id": 29, "question": "Which of these is used to access websites on the WWW?", "options": ["IP address", "ISP", "Web Browser", "DNS"], "correctAnswer": "Web Browser" },
   { "id": 30, "question": "Which technology helps convert domain names into IP addresses?", "options": ["HTML", "DNS", "URL", "ISP"], "correctAnswer": "DNS" }
 ],
+"Social Implications": [
+  { id: 1, question: "What is unauthorized access?", options: ["Accessing data with permission", "Accessing data without permission", "Hacking into networks legally", "Accessing public data"], correctAnswer: "Accessing data without permission" },
+  { id: 2, question: "What is phishing?", options: ["A type of virus", "A method of social engineering", "A type of firewall", "A method of secure encryption"], correctAnswer: "A method of social engineering" },
+  { id: 3, question: "What does ethical hacking involve?", options: ["Illegally testing security", "Breaking into systems for personal gain", "Testing security systems legally to find vulnerabilities", "Using malware to test systems"], correctAnswer: "Testing security systems legally to find vulnerabilities" },
+  { id: 4, question: "What is ransomware?", options: ["A type of social engineering", "A virus that locks files until a ransom is paid", "A firewall", "A phishing attack"], correctAnswer: "A virus that locks files until a ransom is paid" },
+  { id: 5, question: "What is the main purpose of a firewall?", options: ["To protect personal data", "To filter traffic between networks and block unauthorized access", "To encrypt data", "To manage passwords"], correctAnswer: "To filter traffic between networks and block unauthorized access" },
+
+  { id: 6, question: "What is a VPN used for?", options: ["To protect privacy on public Wi-Fi", "To access unauthorized data", "To detect malware", "To filter network traffic"], correctAnswer: "To protect privacy on public Wi-Fi" },
+  { id: 7, question: "Which of the following is an example of malware?", options: ["Antivirus software", "Ransomware", "VPN", "Firewall"], correctAnswer: "Ransomware" },
+  { id: 8, question: "What does Two-Factor Authentication (2FA) add to the login process?", options: ["A stronger password", "A second security step (e.g., SMS code)", "Encryption of data", "Firewall protection"], correctAnswer: "A second security step (e.g., SMS code)" },
+  { id: 9, question: "What does BYOD stand for?", options: ["Bring Your Own Device", "Buy Your Own Device", "Bring Your Online Device", "Business Your Own Device"], correctAnswer: "Bring Your Own Device" },
+  { id: 10, question: "What is one disadvantage of BYOD?", options: ["Cost savings", "Improved productivity", "Security risks", "Flexibility"], correctAnswer: "Security risks" },
+
+  { id: 11, question: "What is Big Data?", options: ["A small data set", "Large and complex data collected from multiple sources", "Data collected from one source", "Data stored on personal devices"], correctAnswer: "Large and complex data collected from multiple sources" },
+  { id: 12, question: "How do companies use Big Data?", options: ["For entertainment", "To improve marketing strategies", "For gaming", "For designing personal devices"], correctAnswer: "To improve marketing strategies" },
+  { id: 13, question: "What is one of the advantages of BYOD in schools?", options: ["Increased security risks", "Cost savings", "Limited compatibility", "Data leaks"], correctAnswer: "Cost savings" },
+  { id: 14, question: "Which technology does Bitcoin use?", options: ["Blockchain", "Social Engineering", "Phishing", "Ransomware"], correctAnswer: "Blockchain" },
+  { id: 15, question: "What is a smart contract?", options: ["A contract that is stored on paper", "A contract that executes automatically when conditions are met", "A contract signed by a lawyer", "A contract that only exists digitally"], correctAnswer: "A contract that executes automatically when conditions are met" },
+
+  { id: 16, question: "What is decentralization in cryptocurrency?", options: ["The absence of encryption", "The absence of a central authority", "The use of firewalls", "The presence of a central bank"], correctAnswer: "The absence of a central authority" },
+  { id: 17, question: "Which of the following is an example of social engineering?", options: ["Phishing", "Ransomware", "Antivirus software", "Firewall protection"], correctAnswer: "Phishing" },
+  { id: 18, question: "Which of the following is a potential consequence of unauthorized access?", options: ["Protection of personal data", "Data theft or damage", "Legal consequences", "Increased productivity"], correctAnswer: "Data theft or damage" },
+  { id: 19, question: "What is a key benefit of BYOD in schools?", options: ["Security risks", "Cost savings", "Data leaks", "Limited internet access"], correctAnswer: "Cost savings" },
+  { id: 20, question: "Which type of attack locks files until a ransom is paid?", options: ["Malware", "Phishing", "Ransomware", "Social Engineering"], correctAnswer: "Ransomware" },
+
+  { id: 21, question: "What is the role of antivirus software?", options: ["To manage network traffic", "To detect and remove malware", "To encrypt data", "To create smart contracts"], correctAnswer: "To detect and remove malware" },
+  { id: 22, question: "What is one of the key features of blockchain?", options: ["Centralized control", "Decentralized and secure digital ledger", "Viral spreading", "Traditional bank control"], correctAnswer: "Decentralized and secure digital ledger" },
+  { id: 23, question: "What is the key purpose of Two-Factor Authentication (2FA)?", options: ["To encrypt data", "To prevent unauthorized access by requiring a second login step", "To hide your IP address", "To track activity on a network"], correctAnswer: "To prevent unauthorized access by requiring a second login step" },
+  { id: 24, question: "What is the main advantage of using a VPN?", options: ["To increase speed of internet", "To hide a user’s IP address and secure internet traffic", "To install malware", "To increase hacking capabilities"], correctAnswer: "To hide a user’s IP address and secure internet traffic" },
+  { id: 25, question: "What is a key security concern with BYOD?", options: ["Flexibility", "Cost savings", "Security risks", "Productivity"], correctAnswer: "Security risks" },
+
+  { id: 26, question: "Which of the following is NOT an example of ethical behavior in network usage?", options: ["Using firewalls", "Sharing passwords", "Encrypting sensitive data", "Using antivirus software"], correctAnswer: "Sharing passwords" },
+  { id: 27, question: "Which of the following is NOT a potential risk of unauthorized access?", options: ["Data theft", "Financial losses", "Increased privacy", "System damage"], correctAnswer: "Increased privacy" },
+  { id: 28, question: "Which of the following technologies helps to secure data on public Wi-Fi?", options: ["Ransomware", "Antivirus software", "VPN", "Malware"], correctAnswer: "VPN" },
+  { id: 29, question: "Which of the following is an example of a real-world use of blockchain technology?", options: ["Healthcare", "Social Media", "Education", "Video Streaming"], correctAnswer: "Healthcare" },
+  { id: 30, question: "What is the main concern with using personal devices (BYOD) in the workplace?", options: ["Flexibility", "Cost savings", "Security and compatibility issues", "Data management"], correctAnswer: "Security and compatibility issues" }
+],
+"Information Management": [
+  { id: 1, question: "What is the difference between data and information?", options: ["Data is processed; information is raw", "Data is raw; information is processed and meaningful", "Data and information are the same", "Information is unorganized; data is organized"], correctAnswer: "Data is raw; information is processed and meaningful" },
+  { id: 2, question: "Which of the following is an example of data?", options: ["A report on total sales", "The statement 'Total sales for March: R600'", "100, 200, 300 (random numbers)", "A news article on sales trends"], correctAnswer: "100, 200, 300 (random numbers)" },
+  { id: 3, question: "What is a primary source?", options: ["Books and websites", "Research papers and articles", "Interviews, surveys, and experiments", "News articles"], correctAnswer: "Interviews, surveys, and experiments" },
+  { id: 4, question: "What is a secondary source?", options: ["A survey you conduct yourself", "A government report", "A research paper about social media trends", "An experiment you perform"], correctAnswer: "A research paper about social media trends" },
+  { id: 5, question: "What is task definition in research?", options: ["Collecting data", "Clearly stating what needs to be researched or solved", "Evaluating sources", "Formulating questions"], correctAnswer: "Clearly stating what needs to be researched or solved" },
+
+  { id: 6, question: "What does accuracy mean in evaluating information?", options: ["The information is up-to-date", "The information is free from errors", "The information comes from a reliable source", "The information is relevant"], correctAnswer: "The information is free from errors" },
+  { id: 7, question: "Which of the following is a reliable source?", options: ["A social media post", "A government report on unemployment", "A blog post about current events", "A Wikipedia article"], correctAnswer: "A government report on unemployment" },
+  { id: 8, question: "What does relevance mean in evaluating information?", options: ["The information must be free of bias", "The information must relate to the research topic", "The information must be published recently", "The information must be easy to understand"], correctAnswer: "The information must relate to the research topic" },
+  { id: 9, question: "What is currency in the context of evaluating sources?", options: ["How accurate the information is", "How up-to-date the information is", "How detailed the information is", "How relevant the information is"], correctAnswer: "How up-to-date the information is" },
+  { id: 10, question: "What is bias in information?", options: ["Objectivity in presenting facts", "A source that only presents one side of an issue", "A neutral source", "A balanced and fair source"], correctAnswer: "A source that only presents one side of an issue" },
+
+  { id: 11, question: "Which of the following is a good example of cross-checking information?", options: ["Only using one source", "Comparing facts from multiple credible sources", "Ignoring conflicting sources", "Using a source that you agree with"], correctAnswer: "Comparing facts from multiple credible sources" },
+  { id: 12, question: "Which of the following is a good open-ended research question?", options: ["Do you use Facebook? Yes/No", "How has online learning impacted students' academic performance?", "How many people use Facebook?", "Is Facebook the best social media platform?"], correctAnswer: "How has online learning impacted students' academic performance?" },
+  { id: 13, question: "What makes a question biased?", options: ["It is neutral and objective", "It leads the respondent toward a specific answer", "It asks for specific facts", "It allows for a wide range of answers"], correctAnswer: "It leads the respondent toward a specific answer" },
+  { id: 14, question: "Which of the following is an example of a closed-ended question?", options: ["How do you feel about social media?", "What is your opinion on online learning?", "Do you use Facebook? Yes/No", "What impact does online learning have on students?"], correctAnswer: "Do you use Facebook? Yes/No" },
+  { id: 15, question: "What is an example of cross-checking information?", options: ["Reading only one website", "Comparing statistics from WHO, government sites, and news outlets", "Believing the first result that appears in Google", "Using data from a biased source"], correctAnswer: "Comparing statistics from WHO, government sites, and news outlets" },
+
+  { id: 16, question: "Which of the following is a red flag for an unreliable website?", options: ["It has a .gov or .edu domain", "It has too many pop-up ads", "It has credible author information", "It has a clear source for all facts"], correctAnswer: "It has too many pop-up ads" },
+  { id: 17, question: "What is a domain extension .gov usually associated with?", options: [".gov → Government websites", ".edu → Educational institutions", ".org → Non-profit organizations", ".com → Commercial websites"], correctAnswer: ".gov → Government websites" },
+  { id: 18, question: "What is one example of a sign of a credible website?", options: ["Too many ads", "No contact information", "Well-written content and reliable sources", "Suspiciously shocking headlines"], correctAnswer: "Well-written content and reliable sources" },
+  { id: 19, question: "What is a key feature of a commercial website (.com)?", options: ["It is always reliable", "It may be biased or unreliable", "It is a government-funded website", "It is always written by an expert"], correctAnswer: "It may be biased or unreliable" },
+  { id: 20, question: "What is a fake news article likely to include?", options: ["Reliable sources", "Clear references", "Clickbait headlines", "Balanced opinions"], correctAnswer: "Clickbait headlines" },
+
+  { id: 21, question: "What is one danger of relying on social media posts for information?", options: ["They are always reliable", "They may spread misinformation quickly", "They are peer-reviewed", "They are written by experts"], correctAnswer: "They may spread misinformation quickly" },
+  { id: 22, question: "What is an example of an unreliable website?", options: ["A blog post without sources claiming a miracle cure", "A research paper published in a journal", "A health article from the WHO", "An educational article from a university site"], correctAnswer: "A blog post without sources claiming a miracle cure" },
+  { id: 23, question: "What should be included in a credible website?", options: ["No contact information", "Too many pop-up ads", "Reliable sources and author information", "Clickbait headlines"], correctAnswer: "Reliable sources and author information" },
+  { id: 24, question: "What is the purpose of task definition in research?", options: ["To decide what data to collect", "To clearly state the research problem or goal", "To evaluate the credibility of sources", "To ask closed-ended questions"], correctAnswer: "To clearly state the research problem or goal" },
+  { id: 25, question: "Why is it important to evaluate sources for bias?", options: ["To ensure the information is free from errors", "To make sure the information is relevant", "To ensure the information is objective and balanced", "To ensure the source is up-to-date"], correctAnswer: "To ensure the information is objective and balanced" },
+
+  { id: 26, question: "What does authority mean in the context of evaluating sources?", options: ["The source must be easy to read", "The source must be a credible expert or institution", "The source must be popular", "The source must be entertaining"], correctAnswer: "The source must be a credible expert or institution" },
+  { id: 27, question: "What is one way to identify a fake news article?", options: ["It has proper references", "It is from a reliable website", "It has sensationalist headlines", "It is written by an expert"], correctAnswer: "It has sensationalist headlines" },
+  { id: 28, question: "Which of the following is an example of a reliable source?", options: ["A social media post from an unknown person", "A health article from the WHO", "A biased blog post", "A news story with no author information"], correctAnswer: "A health article from the WHO" },
+  { id: 29, question: "What is the purpose of cross-checking information?", options: ["To verify facts and ensure accuracy", "To make the research easier", "To save time", "To ignore conflicting views"], correctAnswer: "To verify facts and ensure accuracy" },
+  { id: 30, question: "Which of the following is an example of a credible domain extension?", options: [".gov", ".com", ".org", ".edu"], correctAnswer: ".edu" }
+],
+"Word Processing": [
+  { id: 1, question: "What is a style in word processing?", options: ["A set of formatting choices applied to text", "A type of document layout", "A color scheme for a document", "A font size"], correctAnswer: "A set of formatting choices applied to text" },
+  { id: 2, question: "What is the Quick Style Gallery?", options: ["A collection of pre-designed styles", "A group of fonts", "A list of themes", "A tool for creating custom styles"], correctAnswer: "A collection of pre-designed styles" },
+  { id: 3, question: "What does modifying a style involve?", options: ["Changing the content of the document", "Changing an existing style’s properties", "Deleting a style", "Inserting images into the document"], correctAnswer: "Changing an existing style’s properties" },
+  { id: 4, question: "How do you create a new style in a word processor?", options: ["By copying an existing style", "By customizing styles for specific document needs", "By changing the font size only", "By inserting a table"], correctAnswer: "By customizing styles for specific document needs" },
+  { id: 5, question: "Which of the following is an example of a predefined style?", options: ["Heading 1", "Legal Style", "Marketing Brochure", "Custom Header"], correctAnswer: "Heading 1" },
+
+  { id: 6, question: "What is the purpose of using consistent styling in documents?", options: ["To make documents look unique", "To ensure uniformity and readability", "To add more content", "To make documents more colorful"], correctAnswer: "To ensure uniformity and readability" },
+  { id: 7, question: "What does the Navigation Pane allow users to do?", options: ["Navigate through the document by styled sections", "Change the font of the document", "Create custom styles", "Insert images into a document"], correctAnswer: "Navigate through the document by styled sections" },
+  { id: 8, question: "How is a Table of Contents (TOC) generated?", options: ["Manually by adding a list of headings", "Automatically from heading styles", "Using a specific font style", "By selecting themes"], correctAnswer: "Automatically from heading styles" },
+  { id: 9, question: "What is the difference between a theme and a style?", options: ["A theme applies formatting to specific text, while a style applies to the whole document", "A theme applies formatting to the whole document, while a style applies to specific text", "A style applies to the whole document, while a theme applies to specific text", "A theme is used for images, while a style is used for text"], correctAnswer: "A theme applies formatting to the whole document, while a style applies to specific text" },
+  { id: 10, question: "Which of the following is an example of using a custom style?", options: ["A company letterhead using a specific font and color", "A Table of Contents automatically generated", "A Heading 1 style for the document title", "A predefined style applied to text"], correctAnswer: "A company letterhead using a specific font and color" },
+
+  { id: 11, question: "What does consistency in styling ensure?", options: ["Confusing document appearance", "Uniform look throughout the document", "No text formatting", "Color changes throughout the document"], correctAnswer: "Uniform look throughout the document" },
+  { id: 12, question: "What tool can be used to check the structure of a document?", options: ["Navigation Pane", "Text effects", "Multilevel lists", "Font size"], correctAnswer: "Navigation Pane" },
+  { id: 13, question: "Which of the following styles could be used for a legal document?", options: ["Times New Roman, Size: 12, Double Spacing", "Calibri, Size: 14, Bold", "Arial, Size: 16, Blue", "Verdana, Size: 10, Italic"], correctAnswer: "Times New Roman, Size: 12, Double Spacing" },
+  { id: 14, question: "How would you create a custom style for a newsletter?", options: ["By selecting a predefined style", "By modifying an existing style", "By creating a new style with desired formatting", "By using the Navigation Pane"], correctAnswer: "By creating a new style with desired formatting" },
+  { id: 15, question: "What is the function of multilevel lists in word processing?", options: ["To apply text effects", "To create a hierarchical list with bullet points or numbers", "To change the color of text", "To format headings"], correctAnswer: "To create a hierarchical list with bullet points or numbers" },
+
+  { id: 16, question: "Which of the following is an example of text effects?", options: ["Font size change", "Bold or italic text", "Glow, shadow, reflection, or other visual enhancements", "Bullet points"], correctAnswer: "Glow, shadow, reflection, or other visual enhancements" },
+  { id: 17, question: "What is linking styles used for?", options: ["To connect heading styles with automatic numbering", "To change the font size", "To format tables", "To modify a theme"], correctAnswer: "To connect heading styles with automatic numbering" },
+  { id: 18, question: "What is an example of applying multilevel lists?", options: ["Using numbered sections like 1.1, 1.2, 1.3", "Applying bold and underline text effects", "Changing the font size", "Creating a Table of Contents"], correctAnswer: "Using numbered sections like 1.1, 1.2, 1.3" },
+  { id: 19, question: "Which of the following would you use for highlighting key points in a report?", options: ["Text effects like bold, underline, and color", "Font size changes", "Changing the page orientation", "Using bullet points"], correctAnswer: "Text effects like bold, underline, and color" },
+  { id: 20, question: "What is a common use of a style for a marketing brochure?", options: ["Calibri, Size: 14, Bold, Green Color", "Arial, Size: 16, Blue", "Times New Roman, Size: 12", "Verdana, Size: 10, Italic"], correctAnswer: "Calibri, Size: 14, Bold, Green Color" },
+
+  { id: 21, question: "How can you modify a style?", options: ["By changing its font and size", "By deleting the style", "By creating a new document", "By using a predefined template"], correctAnswer: "By changing its font and size" },
+  { id: 22, question: "What is one way to delete a style?", options: ["By selecting 'Delete Style' from the style menu", "By removing all text from the document", "By changing the font size", "By applying a new theme"], correctAnswer: "By selecting 'Delete Style' from the style menu" },
+  { id: 23, question: "What does the 'Theme' option affect in a document?", options: ["It affects the colors, fonts, and effects for the whole document", "It affects the text size only", "It affects the font for headings", "It changes the page layout"], correctAnswer: "It affects the colors, fonts, and effects for the whole document" },
+  { id: 24, question: "What does applying a predefined style to headings allow you to do?", options: ["Automatically generate a Table of Contents", "Change the entire font of the document", "Modify the page layout", "Change the color of the background"], correctAnswer: "Automatically generate a Table of Contents" },
+  { id: 25, question: "What can the Navigation Pane help you do?", options: ["Quickly move through the document", "Insert a Table of Contents", "Change text color", "Format paragraphs"], correctAnswer: "Quickly move through the document" },
+
+  { id: 26, question: "How do you ensure a uniform look for a document?", options: ["By using a custom theme", "By applying consistent styles throughout the document", "By selecting a different font for each paragraph", "By inserting images randomly"], correctAnswer: "By applying consistent styles throughout the document" },
+  { id: 27, question: "What is the main benefit of using styles in word processing?", options: ["Consistency and ease of formatting", "Makes documents look more colorful", "Helps in organizing images", "Makes text more complicated to read"], correctAnswer: "Consistency and ease of formatting" },
+  { id: 28, question: "What style might you use for a formal business letter?", options: ["Times New Roman, Size: 12", "Arial, Size: 14, Bold", "Comic Sans, Size: 10", "Calibri, Size: 16, Green"], correctAnswer: "Times New Roman, Size: 12" },
+  { id: 29, question: "What type of document would use a numbered list like 1.1, 1.2, 1.3?", options: ["A legal document", "A marketing brochure", "A letterhead", "A newsletter"], correctAnswer: "A legal document" },
+  { id: 30, question: "What is an example of advanced text effects?", options: ["Glow, shadow, and reflection", "Bold, italic, and underline", "Changing the font size", "Changing the page orientation"], correctAnswer: "Glow, shadow, and reflection" }
+],
+"Spreadsheets (Advanced Functions and Charts)": [
+  { id: 1, question: "What does the COUNTIF function do?", options: ["Counts all cells", "Counts the number of cells that meet a specific condition", "Adds values in a range", "Looks up a value in a table"], correctAnswer: "Counts the number of cells that meet a specific condition" },
+  { id: 2, question: "What is the purpose of the SUMIF function?", options: ["Counts cells with a specific condition", "Adds values in a range based on a condition", "Returns an error message", "Compares two values"], correctAnswer: "Adds values in a range based on a condition" },
+  { id: 3, question: "How does the VLOOKUP function work?", options: ["It sums values in a range", "It looks up a value in the first column and returns a corresponding value from another column", "It counts the number of cells in a range", "It applies data validation to a range of cells"], correctAnswer: "It looks up a value in the first column and returns a corresponding value from another column" },
+  { id: 4, question: "What does the IFERROR function do?", options: ["Returns a specified value if a formula returns an error", "Changes the font of a cell", "Looks up a value in a table", "Filters data based on a condition"], correctAnswer: "Returns a specified value if a formula returns an error" },
+  { id: 5, question: "Which of the following is an example of the VLOOKUP function?", options: ["=VLOOKUP('Apple', A1:B10, 2, FALSE)", "=SUMIF(A1:A10, '>50')", "=COUNTIF(A1:A10, '>10')", "=IFERROR(A1/B1, 'Error')"], correctAnswer: "=VLOOKUP('Apple', A1:B10, 2, FALSE)" },
+
+  { id: 6, question: "What is the purpose of data validation in spreadsheets?", options: ["To restrict data entry in cells", "To sort data", "To add charts to a sheet", "To filter data by criteria"], correctAnswer: "To restrict data entry in cells" },
+  { id: 7, question: "Which function allows you to restrict cell entries to only certain types of data?", options: ["Data Validation", "VLOOKUP", "IFERROR", "COUNTIF"], correctAnswer: "Data Validation" },
+  { id: 8, question: "Which of the following is a valid sorting option in spreadsheets?", options: ["Sort by value or alphabetical order", "Sort by font color", "Sort by background color", "Sort by chart type"], correctAnswer: "Sort by value or alphabetical order" },
+  { id: 9, question: "What does the AutoFilter feature do?", options: ["Filters data based on specific conditions", "Sorts data alphabetically", "Changes the font style", "Creates new columns"], correctAnswer: "Filters data based on specific conditions" },
+  { id: 10, question: "How do you apply a filter to a column?", options: ["By using the AutoFilter feature", "By manually sorting the data", "By adding conditional formatting", "By using the VLOOKUP function"], correctAnswer: "By using the AutoFilter feature" },
+
+  { id: 11, question: "What type of chart is best used for comparing quantities across different categories?", options: ["Column Chart", "Pie Chart", "Line Chart", "Area Chart"], correctAnswer: "Column Chart" },
+  { id: 12, question: "Which chart type is used to show trends over time?", options: ["Line Chart", "Pie Chart", "Column Chart", "Radar Chart"], correctAnswer: "Line Chart" },
+  { id: 13, question: "What is the purpose of a Pie Chart?", options: ["To show proportions of a whole", "To compare quantities", "To display data trends", "To visualize hierarchical data"], correctAnswer: "To show proportions of a whole" },
+  { id: 14, question: "What chart element shows the names of the categories in a chart?", options: ["Legend", "Data Labels", "Titles", "Gridlines"], correctAnswer: "Legend" },
+  { id: 15, question: "What does a trendline represent in a chart?", options: ["It shows trends over time", "It adds color to the chart", "It labels the data", "It filters the data in the chart"], correctAnswer: "It shows trends over time" },
+
+  { id: 16, question: "What is the purpose of using a combination chart?", options: ["To combine multiple chart types in one", "To create a pie chart", "To add more data labels", "To display trends only"], correctAnswer: "To combine multiple chart types in one" },
+  { id: 17, question: "How do you add a trendline to a chart?", options: ["By selecting the chart and choosing 'Add Trendline' from the chart tools", "By applying a filter", "By using the SUMIF function", "By adding data validation"], correctAnswer: "By selecting the chart and choosing 'Add Trendline' from the chart tools" },
+  { id: 18, question: "Which of the following is not a valid chart type in spreadsheets?", options: ["Radar Chart", "Column Chart", "Pie Chart", "Summary Chart"], correctAnswer: "Summary Chart" },
+  { id: 19, question: "What does customizing a chart’s appearance involve?", options: ["Changing colors, fonts, and chart styles", "Sorting data alphabetically", "Applying filters", "Creating a new chart"], correctAnswer: "Changing colors, fonts, and chart styles" },
+  { id: 20, question: "What is an example of customizing a chart?", options: ["Changing the chart’s color to match the document theme", "Changing the data labels", "Adding a trendline", "Changing the data values"], correctAnswer: "Changing the chart’s color to match the document theme" },
+
+  { id: 21, question: "What type of chart is best suited for visualizing data proportions?", options: ["Pie Chart", "Line Chart", "Column Chart", "Scatter Chart"], correctAnswer: "Pie Chart" },
+  { id: 22, question: "Which function allows you to sum values based on a specific condition?", options: ["SUMIF", "VLOOKUP", "COUNTIF", "IFERROR"], correctAnswer: "SUMIF" },
+  { id: 23, question: "Which of the following is a valid use of the COUNTIF function?", options: ["=COUNTIF(A1:A10, '>50')", "=SUMIF(A1:A10, '>50')", "=VLOOKUP(A1, B1:C10, 2, FALSE)", "=IFERROR(A1/B1, 'Error')"], correctAnswer: "=COUNTIF(A1:A10, '>50')" },
+  { id: 24, question: "What is one of the primary uses of a Line Chart?", options: ["To show trends over time", "To display proportions of a whole", "To compare different categories", "To represent hierarchical data"], correctAnswer: "To show trends over time" },
+  { id: 25, question: "What feature allows you to restrict the data type entered into a cell?", options: ["Data Validation", "AutoFilter", "VLOOKUP", "IFERROR"], correctAnswer: "Data Validation" },
+
+  { id: 26, question: "Which of the following is an example of sorting data?", options: ["Arranging student names alphabetically", "Adding a trendline to a chart", "Applying a filter to data", "Changing the font size of cells"], correctAnswer: "Arranging student names alphabetically" },
+  { id: 27, question: "What does the SUMIF function return?", options: ["The sum of values in a range that meet a condition", "The count of cells that meet a condition", "The value from another column", "An error message"], correctAnswer: "The sum of values in a range that meet a condition" },
+  { id: 28, question: "What is the purpose of adding data labels to a chart?", options: ["To display values for each data point", "To change the chart title", "To adjust the font of the chart", "To change the chart type"], correctAnswer: "To display values for each data point" },
+  { id: 29, question: "What does the VLOOKUP function return if the value is not found?", options: ["#N/A", "0", "Blank", "Error"], correctAnswer: "#N/A" },
+  { id: 30, question: "Which of the following chart types is best for comparing quantities across categories?", options: ["Column Chart", "Line Chart", "Pie Chart", "Scatter Chart"], correctAnswer: "Column Chart" }
+],
+"Database (Advanced Functions)": [
+  { id: 1, question: "What is a database?", options: ["A type of computer software", "A collection of organized data that can be easily accessed, managed, and updated", "A storage device for data", "A programming language"], correctAnswer: "A collection of organized data that can be easily accessed, managed, and updated" },
+  { id: 2, question: "Which of the following is an example of a data type?", options: ["Text", "Primary Key", "Query", "Database"], correctAnswer: "Text" },
+  { id: 3, question: "What does the 'Number' data type store?", options: ["Numeric data", "Alphanumeric characters", "Dates and times", "Monetary values"], correctAnswer: "Numeric data" },
+  { id: 4, question: "What is the purpose of a primary key in a database?", options: ["To link tables", "To store unique data in a table", "To create queries", "To restrict data input"], correctAnswer: "To store unique data in a table" },
+  { id: 5, question: "What is a foreign key?", options: ["A key that uniquely identifies a record", "A field that links to the primary key in another table", "A type of query", "A field used for storing date values"], correctAnswer: "A field that links to the primary key in another table" },
+
+  { id: 6, question: "What does the SELECT command do in SQL?", options: ["Deletes data from a table", "Retrieves data from a database", "Updates records", "Sorts data"], correctAnswer: "Retrieves data from a database" },
+  { id: 7, question: "Which SQL operator is used to combine two conditions, where both conditions must be true?", options: ["AND", "OR", "NOT", "IN"], correctAnswer: "AND" },
+  { id: 8, question: "What does the SQL operator OR do?", options: ["Returns results only when both conditions are true", "Excludes data based on a condition", "Returns results if either condition is true", "Combines data from multiple tables"], correctAnswer: "Returns results if either condition is true" },
+  { id: 9, question: "Which SQL operator is used to exclude data based on a specific condition?", options: ["NOT", "AND", "OR", "IN"], correctAnswer: "NOT" },
+  { id: 10, question: "Which of the following is an example of using the AND operator in SQL?", options: ["SELECT * FROM Books WHERE Genre = 'Fiction' AND Year > 2000;", "SELECT * FROM Books WHERE Genre = 'Fiction' OR Genre = 'Non-fiction';", "SELECT * FROM Books WHERE NOT Genre = 'Fiction';", "SELECT * FROM Books WHERE Genre IN ('Fiction', 'Non-fiction');"], correctAnswer: "SELECT * FROM Books WHERE Genre = 'Fiction' AND Year > 2000;" },
+
+  { id: 11, question: "What does the ORDER BY clause in SQL do?", options: ["Sorts data", "Filters data", "Groups data", "Deletes records"], correctAnswer: "Sorts data" },
+  { id: 12, question: "Which SQL clause is used to group rows that have the same values?", options: ["GROUP BY", "ORDER BY", "SELECT", "WHERE"], correctAnswer: "GROUP BY" },
+  { id: 13, question: "What is the HAVING clause used for in SQL?", options: ["To filter records after grouping", "To sort data", "To combine data from two tables", "To delete data from a table"], correctAnswer: "To filter records after grouping" },
+  { id: 14, question: "Which of the following is an example of the GROUP BY clause?", options: ["SELECT Genre, COUNT(*) FROM Books GROUP BY Genre;", "SELECT * FROM Books ORDER BY Year DESC;", "SELECT * FROM Books WHERE Genre = 'Fiction';", "SELECT * FROM Books WHERE NOT Genre = 'Fiction';"], correctAnswer: "SELECT Genre, COUNT(*) FROM Books GROUP BY Genre;" },
+  { id: 15, question: "What does the ORDER BY clause allow you to do?", options: ["Sort data in ascending or descending order", "Group similar data together", "Create queries to filter data", "Link tables"], correctAnswer: "Sort data in ascending or descending order" },
+
+  { id: 16, question: "What type of SQL join returns records that have matching values in both tables?", options: ["INNER JOIN", "LEFT JOIN", "RIGHT JOIN", "FULL JOIN"], correctAnswer: "INNER JOIN" },
+  { id: 17, question: "Which SQL join returns all records from the left table and matching records from the right table?", options: ["LEFT JOIN", "INNER JOIN", "RIGHT JOIN", "FULL JOIN"], correctAnswer: "LEFT JOIN" },
+  { id: 18, question: "What is a subquery in SQL?", options: ["A query within another query", "A type of SQL join", "A way to filter data", "A function to sort data"], correctAnswer: "A query within another query" },
+  { id: 19, question: "Which of the following is an example of using a subquery?", options: ["SELECT * FROM Books WHERE AuthorID IN (SELECT AuthorID FROM Authors WHERE Country = 'USA');", "SELECT * FROM Books LEFT JOIN Authors ON Books.AuthorID = Authors.AuthorID;", "SELECT Genre, COUNT(*) FROM Books GROUP BY Genre;", "SELECT * FROM Books WHERE Genre = 'Fiction';"], correctAnswer: "SELECT * FROM Books WHERE AuthorID IN (SELECT AuthorID FROM Authors WHERE Country = 'USA');" },
+  { id: 20, question: "What does an INNER JOIN in SQL do?", options: ["Returns matching records from both tables", "Returns all records from the left table", "Returns records from both tables even if they don't match", "Joins records from a single table"], correctAnswer: "Returns matching records from both tables" },
+
+  { id: 21, question: "What is the purpose of a primary key in a database?", options: ["It is used to link tables", "It uniquely identifies each record", "It stores numeric data", "It stores date and time information"], correctAnswer: "It uniquely identifies each record" },
+  { id: 22, question: "Which SQL command retrieves all columns from the Books table?", options: ["SELECT * FROM Books;", "SELECT Books FROM *;", "GET * FROM Books;", "FETCH * FROM Books;"], correctAnswer: "SELECT * FROM Books;" },
+  { id: 23, question: "Which of the following operators is used in SQL to combine multiple conditions?", options: ["AND", "NOT", "EXCLUDE", "IN"], correctAnswer: "AND" },
+  { id: 24, question: "What data type is best for storing monetary values?", options: ["Currency", "Text", "Number", "Date/Time"], correctAnswer: "Currency" },
+  { id: 25, question: "What type of relationship does a foreign key represent between tables?", options: ["It links two tables together", "It stores a primary key value", "It specifies the type of data stored", "It groups records from different tables"], correctAnswer: "It links two tables together" },
+
+  { id: 26, question: "What is the SELECT statement used for in SQL?", options: ["To delete data", "To retrieve data from a table", "To update data", "To group records"], correctAnswer: "To retrieve data from a table" },
+  { id: 27, question: "What is the primary purpose of the HAVING clause in SQL?", options: ["To filter results after grouping", "To sort data", "To update data", "To filter results before grouping"], correctAnswer: "To filter results after grouping" },
+  { id: 28, question: "Which of the following SQL clauses is used to arrange query results in ascending or descending order?", options: ["ORDER BY", "GROUP BY", "SELECT", "FROM"], correctAnswer: "ORDER BY" },
+  { id: 29, question: "Which type of SQL join will return all records from both tables?", options: ["FULL JOIN", "INNER JOIN", "LEFT JOIN", "RIGHT JOIN"], correctAnswer: "FULL JOIN" },
+  { id: 30, question: "What is an example of a query that uses the GROUP BY clause?", options: ["SELECT Genre, COUNT(*) FROM Books GROUP BY Genre;", "SELECT * FROM Books WHERE Genre = 'Fiction';", "SELECT * FROM Books WHERE Year > 2000;", "SELECT AuthorID, COUNT(*) FROM Books WHERE Genre = 'Fiction';"], correctAnswer: "SELECT Genre, COUNT(*) FROM Books GROUP BY Genre;" }
+],
+"HTML & Web Design": [
+  { "id": 1, "question": "What does HTML stand for?", "options": ["HighText Machine Language", "HyperText Markup Language", "HyperTransfer Markup Language", "Hyperlink Text Management Language"], "correctAnswer": "HyperText Markup Language" },
+  { "id": 2, "question": "Which tag is used for the main content of an HTML document?", "options": ["<head>", "<main>", "<body>", "<html>"], "correctAnswer": "<body>" },
+  { "id": 3, "question": "Which of the following is an example of an empty tag?", "options": ["<p>", "<h1>", "<img>", "<div>"], "correctAnswer": "<img>" },
+  { "id": 4, "question": "What is the correct syntax for a closing tag?", "options": ["<tag/>", "<tag>", "</tag>", "<closing>tag</closing>"], "correctAnswer": "</tag>" },
+  { "id": 5, "question": "Which tag contains metadata and the page title?", "options": ["<body>", "<head>", "<html>", "<meta>"], "correctAnswer": "<head>" },
+
+  { "id": 6, "question": "What is the purpose of the <title> tag?", "options": ["It sets the background color", "It creates a heading", "It displays the page title in the browser tab", "It links to an external page"], "correctAnswer": "It displays the page title in the browser tab" },
+  { "id": 7, "question": "Which tag defines the largest heading?", "options": ["<h6>", "<heading>", "<h1>", "<head>"], "correctAnswer": "<h1>" },
+  { "id": 8, "question": "Which tag is used to define a paragraph?", "options": ["<text>", "<paragraph>", "<p>", "<para>"], "correctAnswer": "<p>" },
+  { "id": 9, "question": "What does the <a> tag define?", "options": ["An anchor point", "An audio file", "A hyperlink", "An article section"], "correctAnswer": "A hyperlink" },
+  { "id": 10, "question": "Which attribute specifies the URL in an anchor tag?", "options": ["src", "href", "link", "url"], "correctAnswer": "href" },
+
+  { "id": 11, "question": "Which tag creates a list with bullet points?", "options": ["<ol>", "<ul>", "<li>", "<dl>"], "correctAnswer": "<ul>" },
+  { "id": 12, "question": "Which tag is used for items in both ordered and unordered lists?", "options": ["<item>", "<list>", "<li>", "<ul>"], "correctAnswer": "<li>" },
+  { "id": 13, "question": "Which HTML tag is used to embed an image?", "options": ["<img>", "<image>", "<pic>", "<src>"], "correctAnswer": "<img>" },
+  { "id": 14, "question": "What is the purpose of the 'alt' attribute in an image tag?", "options": ["To align the image", "To define the image type", "To specify alternate text", "To link the image"], "correctAnswer": "To specify alternate text" },
+  { "id": 15, "question": "Which tag defines a table in HTML?", "options": ["<table>", "<tab>", "<tr>", "<td>"], "correctAnswer": "<table>" },
+
+  { "id": 16, "question": "Which tag defines a table row?", "options": ["<tr>", "<td>", "<row>", "<th>"], "correctAnswer": "<tr>" },
+  { "id": 17, "question": "Which tag defines a table cell?", "options": ["<td>", "<th>", "<cell>", "<tr>"], "correctAnswer": "<td>" },
+  { "id": 18, "question": "What is the correct way to embed an image?", "options": ["<image source='image.jpg'>", "<img href='image.jpg'>", "<img src='image.jpg' alt='description'>", "<picture src='image.jpg'>"], "correctAnswer": "<img src='image.jpg' alt='description'>" },
+  { "id": 19, "question": "Which list type uses numbers?", "options": ["<ul>", "<dl>", "<ol>", "<list>"], "correctAnswer": "<ol>" },
+  { "id": 20, "question": "What does <li> stand for?", "options": ["Line Item", "List Instruction", "List Item", "Link Item"], "correctAnswer": "List Item" },
+
+  { "id": 21, "question": "What tag is used to create a form in HTML?", "options": ["<form>", "<input>", "<fieldset>", "<submit>"], "correctAnswer": "<form>" },
+  { "id": 22, "question": "What does the 'action' attribute in a form tag specify?", "options": ["The page title", "The database name", "Where to send the form data", "What kind of data the form accepts"], "correctAnswer": "Where to send the form data" },
+  { "id": 23, "question": "Which input type allows users to select only one option?", "options": ["text", "checkbox", "submit", "radio"], "correctAnswer": "radio" },
+  { "id": 24, "question": "Which input type is used for yes/no or multiple selections?", "options": ["radio", "text", "checkbox", "button"], "correctAnswer": "checkbox" },
+  { "id": 25, "question": "Which tag creates a text input field?", "options": ["<text>", "<input type='text'>", "<textfield>", "<textarea>"], "correctAnswer": "<input type='text'>" },
+
+  { "id": 26, "question": "What input type is used to submit a form?", "options": ["<input type='button'>", "<submit>", "<input type='submit'>", "<button submit>"], "correctAnswer": "<input type='submit'>" },
+  { "id": 27, "question": "Which tag is used to group metadata like the title and link to CSS?", "options": ["<metadata>", "<head>", "<body>", "<script>"], "correctAnswer": "<head>" },
+  { "id": 28, "question": "What is the correct DOCTYPE declaration for HTML5?", "options": ["<!HTML>", "<doctype html>", "<!DOCTYPE html>", "<!HTML5>"], "correctAnswer": "<!DOCTYPE html>" },
+  { "id": 29, "question": "Which of the following is correct syntax for a hyperlink?", "options": ["<link src='url'>Visit</link>", "<a href='url'>Visit</a>", "<href='url'>Visit</href>", "<url>Visit</url>"], "correctAnswer": "<a href='url'>Visit</a>" },
+  { "id": 30, "question": "Which element is used to create a line break in HTML?", "options": ["<lb>", "<break>", "<br>", "<line>"], "correctAnswer": "<br>" }
+],
+"Information Management & PAT 1": [
+  { "id": 1, "question": "What does PAT stand for in this context?", "options": ["Professional Analysis Tool", "Practical Assessment Task", "Project Assignment Test", "Personal Academic Test"], "correctAnswer": "Practical Assessment Task" },
+  { "id": 2, "question": "Which of the following is a key aspect of processing data?", "options": ["Deleting old files", "Summarizing information from sources", "Creating animations", "Printing reports"], "correctAnswer": "Summarizing information from sources" },
+  { "id": 3, "question": "Why is ethical use of digital content important?", "options": ["To improve graphic quality", "To avoid system crashes", "To ensure legality and fairness", "To reduce file size"], "correctAnswer": "To ensure legality and fairness" },
+  { "id": 4, "question": "Which action helps avoid plagiarism?", "options": ["Writing in bold", "Deleting sources", "Crediting authors", "Using animations"], "correctAnswer": "Crediting authors" },
+  { "id": 5, "question": "Which tag is used in HTML to cite a reference?", "options": ["<ref>", "<quote>", "<cite>", "<source>"], "correctAnswer": "<cite>" },
+
+  { "id": 6, "question": "What is the correct use of the <cite> tag?", "options": ["<cite>Author's Name</cite>", "<cite>Reference Title</cite>", "<cite>Web URL</cite>", "<cite>Page Number</cite>"], "correctAnswer": "<cite>Reference Title</cite>" },
+  { "id": 7, "question": "How does citing sources provide credibility?", "options": ["It lengthens the report", "It fills space", "It supports facts with trusted references", "It adds color to the report"], "correctAnswer": "It supports facts with trusted references" },
+  { "id": 8, "question": "What is a pivot table used for in a spreadsheet?", "options": ["Creating charts", "Storing passwords", "Summarizing data", "Formatting fonts"], "correctAnswer": "Summarizing data" },
+  { "id": 9, "question": "Which spreadsheet feature highlights data based on specific conditions?", "options": ["Pivot table", "Conditional formatting", "Data validation", "Charts"], "correctAnswer": "Conditional formatting" },
+  { "id": 10, "question": "Which tool would you use to quickly see trends or patterns in spreadsheet data?", "options": ["Text editor", "Conditional formatting", "Presentation software", "Paint"], "correctAnswer": "Conditional formatting" },
+
+  { "id": 11, "question": "When creating a PAT report, which section introduces the topic?", "options": ["Conclusion", "Body", "Abstract", "Introduction"], "correctAnswer": "Introduction" },
+  { "id": 12, "question": "Where should your analysis and findings appear in a report?", "options": ["Footer", "Body", "Appendix", "Title page"], "correctAnswer": "Body" },
+  { "id": 13, "question": "What should be included at the end of a PAT report?", "options": ["A joke", "Conclusion", "More sources", "Index"], "correctAnswer": "Conclusion" },
+  { "id": 14, "question": "Which method is NOT a correct way to cite sources?", "options": ["Using <cite> tags in HTML", "Listing references in a bibliography", "Quoting without attribution", "Footnotes"], "correctAnswer": "Quoting without attribution" },
+  { "id": 15, "question": "When should you cite a source in your PAT?", "options": ["Only in the introduction", "When using someone else’s ideas or information", "Only if asked", "Never—original work doesn’t need citations"], "correctAnswer": "When using someone else’s ideas or information" },
+
+  { "id": 16, "question": "Which software is most suitable for creating pivot tables?", "options": ["Notepad", "Paint", "Spreadsheet software", "Browser"], "correctAnswer": "Spreadsheet software" },
+  { "id": 17, "question": "Which date range does Lesson 1 of the PAT span?", "options": ["28-29 May", "3-4 June", "26-27 May", "30 May – 2 June"], "correctAnswer": "26-27 May" },
+  { "id": 18, "question": "What is one key reason for organizing data before presenting it?", "options": ["To confuse readers", "To increase file size", "To ensure clarity and understanding", "To reduce content"], "correctAnswer": "To ensure clarity and understanding" },
+  { "id": 19, "question": "Why is plagiarism considered unethical?", "options": ["It makes work too long", "It gives credit to others", "It misrepresents original ownership", "It reduces internet speed"], "correctAnswer": "It misrepresents original ownership" },
+  { "id": 20, "question": "When was HTML integration into the PAT scheduled?", "options": ["26-27 May", "30 May – 2 June", "3-4 June", "28-29 May"], "correctAnswer": "28-29 May" },
+
+  { "id": 21, "question": "Which section of the report provides a final summary?", "options": ["Introduction", "Conclusion", "Abstract", "References"], "correctAnswer": "Conclusion" },
+  { "id": 22, "question": "How does a well-structured report improve communication?", "options": ["By hiding weak points", "By making it longer", "By improving clarity", "By using more images"], "correctAnswer": "By improving clarity" },
+  { "id": 23, "question": "Which of the following is a benefit of using digital citations in HTML?", "options": ["Improved SEO", "Legal protection", "Clarity for readers and credit to sources", "Better formatting"], "correctAnswer": "Clarity for readers and credit to sources" },
+  { "id": 24, "question": "What is the correct format for a pivot table function?", "options": ["=PIVOT()", "=CREATEPIVOT()", "No specific function; it's created via menu", "=TABLE(PIVOT)"], "correctAnswer": "No specific function; it's created via menu" },
+  { "id": 25, "question": "When is the finalization of the PAT scheduled?", "options": ["28-29 May", "26-27 May", "3-4 June", "30 May – 2 June"], "correctAnswer": "3-4 June" },
+
+  { "id": 26, "question": "Which feature helps visualize data variations using color codes?", "options": ["Charts", "Text formatting", "Conditional formatting", "Hyperlinks"], "correctAnswer": "Conditional formatting" },
+  { "id": 27, "question": "Which part of a report should contain references to cited materials?", "options": ["Title page", "Conclusion", "Body", "Reference section"], "correctAnswer": "Reference section" },
+  { "id": 28, "question": "Which element is used to credit the source of a quote in HTML?", "options": ["<source>", "<credit>", "<cite>", "<meta>"], "correctAnswer": "<cite>" },
+  { "id": 29, "question": "Why should you summarize information from sources in the PAT?", "options": ["To make it look shorter", "To avoid reading full texts", "To show understanding and avoid copying", "To skip citations"], "correctAnswer": "To show understanding and avoid copying" },
+  { "id": 30, "question": "What is the primary goal of the PAT?", "options": ["Learning spreadsheet shortcuts", "Practicing programming", "Demonstrating practical understanding and ethical data use", "Creating digital games"], "correctAnswer": "Demonstrating practical understanding and ethical data use" }
+],
+"Information Management & PAT 2": [
+  { "id": 1, "question": "What is one of the first tasks when starting the PAT?", "options": ["Coding a website", "Creating a PowerPoint", "Summarizing data sources", "Printing a report"], "correctAnswer": "Summarizing data sources" },
+  { "id": 2, "question": "Ethical data use involves:", "options": ["Editing others' work", "Copying exact text without citing", "Giving proper credit to sources", "Ignoring copyrights"], "correctAnswer": "Giving proper credit to sources" },
+  { "id": 3, "question": "Which HTML element helps give credit to reference material?", "options": ["<ref>", "<cite>", "<source>", "<footer>"], "correctAnswer": "<cite>" },
+  { "id": 4, "question": "What is a consequence of not crediting authors?", "options": ["More web traffic", "Extra marks", "Plagiarism", "Faster typing"], "correctAnswer": "Plagiarism" },
+  { "id": 5, "question": "Where is the <cite> tag typically placed in a web page?", "options": ["In the body near the referenced content", "In the head section", "After the footer", "Only in meta tags"], "correctAnswer": "In the body near the referenced content" },
+
+  { "id": 6, "question": "How can digital citations improve your PAT?", "options": ["They replace the need for a report", "They help avoid formatting", "They demonstrate source credibility", "They increase word count"], "correctAnswer": "They demonstrate source credibility" },
+  { "id": 7, "question": "Which feature of spreadsheets helps detect outliers visually?", "options": ["Basic charts", "Pivot tables", "Conditional formatting", "Data labels"], "correctAnswer": "Conditional formatting" },
+  { "id": 8, "question": "Which spreadsheet feature allows grouping and counting similar data entries?", "options": ["Sort & Filter", "Pivot tables", "Macros", "Paste Special"], "correctAnswer": "Pivot tables" },
+  { "id": 9, "question": "When applying conditional formatting, which of these can you highlight?", "options": ["Only text cells", "Only image cells", "Cells meeting a condition", "Header rows only"], "correctAnswer": "Cells meeting a condition" },
+  { "id": 10, "question": "Why is it important to organize your data before making a report?", "options": ["It reduces internet use", "It allows easier data analysis", "It removes errors automatically", "It shortens writing time"], "correctAnswer": "It allows easier data analysis" },
+
+  { "id": 11, "question": "Which of these should always appear in the conclusion of a PAT report?", "options": ["Raw data", "Formulas", "A summary of findings", "HTML tags"], "correctAnswer": "A summary of findings" },
+  { "id": 12, "question": "What should the introduction of a report provide?", "options": ["Final results", "Graphical analysis", "Purpose and overview", "Code samples"], "correctAnswer": "Purpose and overview" },
+  { "id": 13, "question": "Which is the correct order for structuring a PAT report?", "options": ["Conclusion > Body > Introduction", "Body > Conclusion > Introduction", "Introduction > Body > Conclusion", "References > Conclusion > Body"], "correctAnswer": "Introduction > Body > Conclusion" },
+  { "id": 14, "question": "What makes a report professional and credible?", "options": ["Funny memes", "Unverified opinions", "Clear structure and citations", "Bright colors"], "correctAnswer": "Clear structure and citations" },
+  { "id": 15, "question": "Why is it helpful to use headings in your report?", "options": ["They reduce file size", "They help navigate and organize content", "They replace citations", "They work better on mobile"], "correctAnswer": "They help navigate and organize content" },
+
+  { "id": 16, "question": "Which spreadsheet tool is best for summarizing large amounts of data?", "options": ["Chart wizard", "Find and Replace", "Pivot table", "Cell merge"], "correctAnswer": "Pivot table" },
+  { "id": 17, "question": "What is the main function of the 'alt' attribute in HTML?", "options": ["To change font size", "To describe an image", "To link to a spreadsheet", "To create citations"], "correctAnswer": "To describe an image" },
+  { "id": 18, "question": "Which part of the PAT report presents the detailed findings?", "options": ["Cover page", "Body", "Table of contents", "Index"], "correctAnswer": "Body" },
+  { "id": 19, "question": "When summarizing data, which skill is most important?", "options": ["Memorizing facts", "Quoting entire articles", "Extracting relevant points", "Changing file formats"], "correctAnswer": "Extracting relevant points" },
+  { "id": 20, "question": "How should sources be cited in a digital report?", "options": ["With emojis", "With the <cite> tag or a reference list", "By copying URLs into the title", "By using bold text"], "correctAnswer": "With the <cite> tag or a reference list" },
+
+  { "id": 21, "question": "Which lesson focuses on pivot tables and conditional formatting?", "options": ["Lesson 1", "Lesson 2", "Lesson 3", "Lesson 4"], "correctAnswer": "Lesson 3" },
+  { "id": 22, "question": "Which lesson involves writing and finalizing the report?", "options": ["Lesson 1", "Lesson 2", "Lesson 3", "Lesson 4"], "correctAnswer": "Lesson 4" },
+  { "id": 23, "question": "Which HTML tag is used specifically for hyperlinks?", "options": ["<p>", "<link>", "<href>", "<a>"], "correctAnswer": "<a>" },
+  { "id": 24, "question": "Which of these is a reason to structure your PAT properly?", "options": ["So it looks like a website", "To show creativity", "To clearly communicate your analysis", "To reduce workload"], "correctAnswer": "To clearly communicate your analysis" },
+  { "id": 25, "question": "Which of the following best describes a pivot table?", "options": ["It filters out all data", "It visually hides content", "It reorganizes and summarizes data", "It generates HTML reports"], "correctAnswer": "It reorganizes and summarizes data" },
+
+  { "id": 26, "question": "When are you expected to work on HTML integration in the PAT?", "options": ["26-27 May", "28-29 May", "3-4 June", "30 May – 2 June"], "correctAnswer": "28-29 May" },
+  { "id": 27, "question": "What is a key benefit of using conditional formatting?", "options": ["It locks the spreadsheet", "It decorates the title", "It visually highlights important data", "It hides data permanently"], "correctAnswer": "It visually highlights important data" },
+  { "id": 28, "question": "Which HTML tag should you avoid using for citation?", "options": ["<cite>", "<a>", "<ref>", "<meta>"], "correctAnswer": "<ref>" },
+  { "id": 29, "question": "What type of task is the PAT?", "options": ["Theoretical only", "Entirely creative", "Hands-on and research-based", "Only programming"], "correctAnswer": "Hands-on and research-based" },
+  { "id": 30, "question": "What is a good sign that your PAT meets ethical standards?", "options": ["Includes jokes", "Uses creative fonts", "Has properly cited all sources", "Has no references at all"], "correctAnswer": "Has properly cited all sources" }
+],
+
+
+
+
+
+
+// ######################################################################################################################################################################################################################################################################################
+// ######################################################################################################################################################################################################################################################################################
+//######################################################################################################################################################################################################################################################################################
 // GRADE 12 EXAMS
 "Networks & Internet Technologies": [
   { id: 1, question: "Which of the following is an example of cloud computing?", options: ["Gmail", "Google Drive", "Google Maps", "WhatsApp"], correctAnswer: "Google Drive" },

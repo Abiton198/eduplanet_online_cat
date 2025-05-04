@@ -17,7 +17,7 @@ export default function ExamPage({ studentInfo, addResult }) {
   const navigate = useNavigate();
   const [selectedExam, setSelectedExam] = useState(null);
   const [authenticated, setAuthenticated] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(1800);
+  const [timeLeft, setTimeLeft] = useState(1500);
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const currentQuestions = selectedExam && questions[selectedExam.title] ? questions[selectedExam.title] : [];
@@ -35,19 +35,35 @@ export default function ExamPage({ studentInfo, addResult }) {
       { id: 4, title: "Spreadsheets & Word Processing", password: "grade12pass4" },
       { id: 5, title: "Spreadsheets", password: "grade12pass5" },
       { id: 6, title: "Word Processing & Databases", password: "grade12pass5" },
-      
+      { id: 7, title: "Information Management & PAT 1", password: "grade12pass5" },
+      { id: 8, title: "Information Management & PAT 2", password: "grade12pass5" },
     ],
     "Grade 11": [
       { id: 1, title: "Databases - Grade 11", password: "grade11pass" },
       { id: 2, title: "SPREADSHEETS - Grade 11", password: "grade11pass1" },
       { id: 3, title: "NETWORKS - Grade 11", password: "grade11pass1" },
-      { id: 4, title: "Internet & WWW - Grade 11", password: "grade11pass1" }
+      { id: 4, title: "Internet & WWW - Grade 11", password: "grade11pass1" },
+      {id: 5, title: "Social Implications", password: "grade11pass1" },
+      { id: 6, title: "Information Management", password: "grade11pass1" },
+      { id: 7, title: "Word Processing", password: "grade11pass1" },
+      { id: 8, title: "Spreadsheets (Advanced Functions and Charts)", password: "grade11pass1" },
+      { id: 9, title: "Database (Advanced Functions)", password: "grade11pass1" },
+      { id: 10, title: "HTML & Web Design", password: "grade11pass1" },
+      
 
       
     ],
     "Grade 10": [
       { id: 1, title: "NETWORK TECHNOLOGIES - Grade 10", password: "grade10pass" },
-      { id: 2, title: "SOCIAL IMPLICATIONS & INFORMATION MANAGEMENT - Grade 10", password: "grade10pass1" }
+      { id: 2, title: "SOCIAL IMPLICATIONS & INFORMATION MANAGEMENT - Grade 10", password: "grade10pass1" },
+      { id: 3, title: "Introduction to Networks - Grade 10", password: "grade10pass1" },
+      { id: 4, title: "Solution Development - Spreadsheets", password: "grade10pass1" },
+      { id: 5, title: "Advanced Spreadsheet Functions & Data Analysis", password: "grade10pass1" },
+      { id: 6, title: "Information Management & Social Implications", password: "grade10pass1" },
+      { id: 7, title: "Networks & Internet Technology", password: "grade10pass1" },
+      { id: 8, title: "Word Processing & Social Implications", password: "grade10pass1" },
+      { id: 9, title: "Spreadsheet Review & Consolidation", password: "grade10pass1" },
+      { id: 10, title: "Consolidation & Control Test Preparation", password: "grade10pass1" },
     ]
   };
 
@@ -232,6 +248,7 @@ const handleSubmitExam = async () => {
             icon: 'info',
             title: 'Attempt Allowed',
             text: `This is your attempt #${attempts + 1}. You have ${2 - attempts} more after this.`,
+            confirmButtonColor: '#28a745' 
           });
   
           return true;
