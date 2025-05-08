@@ -21,7 +21,7 @@ export default function PasswordPage({ setStudentInfo }) {
       hasError = true;
     }
 
-    if (!['12A', '12B', '11', '10'].includes(grade)) {
+    if (!['12A', '12B', '11', '10', 'Admin'].includes(grade)) {
       newErrors.grade = true;
       hasError = true;
     }
@@ -71,7 +71,8 @@ export default function PasswordPage({ setStudentInfo }) {
           <option value="12A">Grade 12A</option>
           <option value="12B">Grade 12B</option>
           <option value="11">Grade 11</option>
-          <option value="10">Grade 10</option>
+          <option value="10A">Grade 10A</option>
+          <option value="Admin">Admin</option>
         </select>
         {errors.grade && (
           <p className="text-red-500 text-sm mb-2">Please select a valid grade.</p>
