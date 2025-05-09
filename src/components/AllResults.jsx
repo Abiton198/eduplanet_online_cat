@@ -54,45 +54,6 @@ export default function AllResults() {
       console.error("Error saving result:", error);
     }
   }
-
-  // useEffect(() => {
-  //   const checkAdminPassword = async () => {
-  //     const { value: password, isConfirmed } = await Swal.fire({
-  //       title: 'Admin Access Required',
-  //       input: 'password',
-  //       inputLabel: 'Enter admin password',
-  //       inputPlaceholder: 'Password',
-  //       showCancelButton: true,
-  //       confirmButtonText: 'Enter',
-  //       allowOutsideClick: false
-  //     });
-  
-  //     if (isConfirmed && password === 'admin123') {
-        
-  //       setAccessGranted(true);
-  
-  //       // ✅ Listen to Firestore collection
-  //       const unsubscribe = onSnapshot(collection(db, "examResults"), (snapshot) => {
-  //         const fetchedResults = snapshot.docs.map(doc => {
-  //           const data = doc.data();
-  //           const dateObj = new Date(data.completedTime);
-  //           return {
-  //             ...data,
-  //             completedDate: !isNaN(dateObj.getTime()) ? dateObj.toISOString().split("T")[0] : '',
-  //             completedTimeOnly: !isNaN(dateObj.getTime()) ? dateObj.toTimeString().split(" ")[0] : ''
-  //           };
-  //         });
-  //         setResults(fetchedResults);
-  //       });
-  
-  //       return () => unsubscribe();
-  //     }
-  
-  //     setAccessChecked(true);
-  //   };
-  
-  //   checkAdminPassword();
-  // }, []);
   
   useEffect(() => {
     let unsubscribe = null;

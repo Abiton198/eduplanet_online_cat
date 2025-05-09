@@ -30,7 +30,7 @@ export default function ExamPage({ studentInfo, addResult }) {
   const gradeExams = {
     "Grade 12": [
       { id: 1, title: "Networks & Internet Technologies", password: "grade12pass" },
-      { id: 2, title: "HTML & Web Designs", password: "grade12pass2" },
+      { id: 2, title: "HTML & Web Design", password: "grade12pass2" },
       { id: 3, title: "HTML & Web Design 2", password: "grade12pass3" }, 
       { id: 4, title: "Spreadsheets & Word Processing", password: "grade12pass4" },
       { id: 5, title: "Spreadsheets", password: "grade12pass5" },
