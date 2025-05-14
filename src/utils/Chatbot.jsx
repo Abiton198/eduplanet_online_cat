@@ -6,7 +6,7 @@ export default function Chatbot() {
   const location = useLocation();
   const navigate = useNavigate();
   const [showChat, setShowChat] = useState(false);
-  const [showPopup, setShowPopup] = useState(true); // control for the popup
+  const [showPopup, setShowPopup] = useState(true);
 
   const isExamPage = location.pathname === '/exam';
 
@@ -67,7 +67,7 @@ export default function Chatbot() {
   };
 
   return (
-    <>
+    <div>
       {showPopup && !isExamPage && (
         <div
           style={{
@@ -97,7 +97,8 @@ export default function Chatbot() {
               Welcome to Eduplanet School CAT Online
             </h2>
             <p style={{ marginBottom: '1.5rem', color: '#4a5568' }}>
-            "Success is calling — and it says you're awesome! Review the week's lessons, then show that exam who's the boss."            </p>
+              "Success is calling — and it says you're awesome! Review the week's lessons, then show that exam who's the boss."
+            </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
               <button
                 onClick={handleStudy}
@@ -147,8 +148,27 @@ export default function Chatbot() {
             boxShadow: '0 0 10px rgba(0,0,0,0.2)',
             overflow: 'hidden',
           }}
-        />
+        >
+          {/* Close Button */}
+          <button
+            onClick={() => setShowChat(false)}
+            style={{
+              position: 'absolute',
+              top: '5px',
+              right: '10px',
+              background: 'transparent',
+              border: 'none',
+              fontSize: '1.5rem',
+              cursor: 'pointer',
+              color: '#999',
+              zIndex: 10000,
+            }}
+            aria-label="Close Chat"
+          >
+            ×
+          </button>
+        </div>
       )}
-    </>
+    </div>
   );
 }
