@@ -8,6 +8,7 @@ import ProtectedRoute from './utils/ProtectedRoute';
 import ReviewPage from './components/ReviewPage';
 import AllResults from './components/AllResults';
 import logo from './img/edu_logo.jpg';
+import Chatbot from './utils/Chatbot'
 
 function App() {
   const [studentInfo, setStudentInfo] = useState(null);
@@ -56,6 +57,7 @@ function App() {
   </div>
 )}
 
+          <Chatbot/>
 
       {/* Main Content Section */}
       <div className="pt-28">
