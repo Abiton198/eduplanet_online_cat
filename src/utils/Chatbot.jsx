@@ -1,13 +1,13 @@
 // utils/Chatbot.jsx
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import logo from '../img/edu_logo.jpg';
 
 export default function Chatbot() {
   const location = useLocation();
   const navigate = useNavigate();
   const [showChat, setShowChat] = useState(false);
   const [showPopup, setShowPopup] = useState(true);
-
   const isExamPage = location.pathname === '/exam';
 
   useEffect(() => {
@@ -15,9 +15,9 @@ export default function Chatbot() {
       setShowChat(false);
       setShowPopup(false);
       const webchatEl = document.getElementById('webchat');
-      if (webchatEl) {
-        webchatEl.innerHTML = '';
-      }
+      if (webchatEl) webchatEl.innerHTML = '';
+      const root = document.getElementById('root');
+      if (root) root.classList.remove('hide-everything-except-chat');
     }
   }, [isExamPage]);
 
@@ -30,11 +30,8 @@ export default function Chatbot() {
     const script = document.createElement('script');
     script.id = 'botpress-script';
     script.src = 'https://cdn.botpress.cloud/webchat/v2.4/inject.js';
+    script.async = true;
     script.onload = () => {
-      window.botpress.on('webchat:ready', () => {
-        window.botpress.open();
-      });
-
       window.botpress.init({
         botId: '8f1fd171-6783-4645-a335-f92c6b1aafb8',
         clientId: '2ddf09b2-2eac-4542-add4-9fdd64391d83',
@@ -51,13 +48,16 @@ export default function Chatbot() {
         },
       });
     };
-
     document.body.appendChild(script);
   }, [showChat, isExamPage]);
 
   const handleStudy = () => {
     setShowPopup(false);
     setShowChat(true);
+    const root = document.getElementById('root');
+    if (root) {
+      root.classList.add('hide-everything-except-chat');
+    }
   };
 
   const handleExit = () => {
@@ -66,8 +66,19 @@ export default function Chatbot() {
     navigate('/exam');
   };
 
+  const handleBackHome = () => {
+    setShowChat(false);
+    const root = document.getElementById('root');
+    if (root) {
+      root.classList.remove('hide-everything-except-chat');
+    }
+    navigate('/');
+  };
+
+
   return (
-    <div>
+    <>
+      {/* Welcome Popup */}
       {showPopup && !isExamPage && (
         <div
           style={{
@@ -97,7 +108,7 @@ export default function Chatbot() {
               Welcome to Eduplanet School CAT Online
             </h2>
             <p style={{ marginBottom: '1.5rem', color: '#4a5568' }}>
-              "Success is calling — and it says you're awesome! Review the week's lessons, then show that exam who's the boss."
+              Success is calling — and it says you're awesome! Review the week's lessons, then show that exam who's the boss.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
               <button
@@ -133,42 +144,48 @@ export default function Chatbot() {
         </div>
       )}
 
-      {!isExamPage && showChat && (
+      {/* Chat Container */}
+      {showChat && !isExamPage && (
         <div
-          id="webchat"
           style={{
-            width: '360px',
-            height: '520px',
+            width: '100vw',
+            height: '100vh',
             position: 'fixed',
-            bottom: '20px',
-            right: '20px',
+            top: 0,
+            left: 0,
             zIndex: 9999,
             backgroundColor: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 0 10px rgba(0,0,0,0.2)',
-            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          {/* Close Button */}
+        <div className='mt-52'>
+          <img src={logo} alt="Eduplanet Logo" className="h-14 w-auto rounded-md shadow-md" />
+
+        </div>
+
+          <p className='mt-5'>Click the chatbox to start!</p>
+          <div id="webchat" style={{ width: '90%', maxWidth: '420px', height: '520px' }} />
+
           <button
-            onClick={() => setShowChat(false)}
+            onClick={handleBackHome}
             style={{
-              position: 'absolute',
-              top: '5px',
-              right: '10px',
-              background: 'transparent',
+              marginTop: '1.5rem',
+              backgroundColor: '#2b6cb0',
+              color: 'white',
+              padding: '0.6rem 1.25rem',
               border: 'none',
-              fontSize: '1.5rem',
+              borderRadius: '8px',
+             
               cursor: 'pointer',
-              color: '#999',
-              zIndex: 10000,
             }}
-            aria-label="Close Chat"
           >
-            ×
+            Back to Home
           </button>
         </div>
       )}
-    </div>
+    </>
   );
 }
