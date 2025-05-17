@@ -175,6 +175,26 @@ export default function AllResults() {
   if (!accessChecked) return <div className="text-center pt-28 text-lg text-gray-500">Checking admin access...</div>;
   if (!accessGranted) return <div className="text-center pt-28 text-red-600 text-lg">Access denied. Admin password is required.</div>;
 
+  const filteredResults = results.filter(r =>
+    (selectedGrade === 'All' || r.grade === selectedGrade) &&
+    (selectedName === '' || r.name?.toLowerCase().includes(selectedName.toLowerCase())) &&
+    (selectedMonth === '' || new Date(r.completedDate).toLocaleString('default', { month: 'long' }) === selectedMonth) &&
+    (selectedTopic === '' || r.answers?.some(a => a.topic === selectedTopic)) &&
+    (selectedDate === '' || r.completedDate === selectedDate)
+  );
+  
+  // Count how many *unique* students wrote tests on selected topic
+  const topicStudentCount = selectedTopic
+    ? new Set(
+        filteredResults
+          .filter(r => r.answers?.some(a => a.topic === selectedTopic))
+          .map(r => r.studentId || r.name)
+      ).size
+    : 0;
+
+    
+
+
   return (
     <div className="max-w-6xl mx-auto pt-18 px-4">
       <h2 className="text-2xl font-bold text-center mb-6">All Student Results</h2>
@@ -302,3 +322,4 @@ export default function AllResults() {
     </div>
   );
 }
+
