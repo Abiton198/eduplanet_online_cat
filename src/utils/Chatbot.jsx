@@ -107,7 +107,7 @@ export default function Chatbot() {
             <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a202c', marginBottom: '1rem' }}>
               Welcome to Eduplanet School CAT Online
             </h2>
-            <p style={{ marginBottom: '1.5rem', color: '#4a5568' }}>
+            <p style={{ marginBottom: '1.5rem', color: '#4a5568' }}> Only Grade 12 can chose Study!
               Success is calling — and it says you're awesome! Review the week's lessons, then show that exam who's the boss.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>

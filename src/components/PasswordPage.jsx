@@ -1,9 +1,11 @@
+// PasswordPage.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { studentList } from '../data/studentData';
 
 export default function PasswordPage({ setStudentInfo }) {
-  const [name, setName] = useState('');
   const [grade, setGrade] = useState('');
+  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -16,17 +18,19 @@ export default function PasswordPage({ setStudentInfo }) {
     const newErrors = { name: false, grade: false, password: false };
     setError('');
 
-    if (name.length < 5) {
-      newErrors.name = true;
-      hasError = true;
-    }
-
-    if (!['12A', '12B', '11', '10', 'Admin'].includes(grade)) {
+    if (!grade || !studentList[grade]) {
       newErrors.grade = true;
       hasError = true;
     }
 
-    if (password !== 'student123') {
+    if (!name) {
+      newErrors.name = true;
+      hasError = true;
+    }
+
+    const selectedStudent = studentList[grade]?.find(student => student.name === name);
+
+    if (!selectedStudent || selectedStudent.password !== password) {
       newErrors.password = true;
       setError('Incorrect password. Please try again.');
       hasError = true;
@@ -35,7 +39,7 @@ export default function PasswordPage({ setStudentInfo }) {
     setErrors(newErrors);
 
     if (!hasError) {
-      setStudentInfo({ name, grade, password });
+      setStudentInfo({ name, grade });
       navigate('/exam');
     }
   };
@@ -47,36 +51,38 @@ export default function PasswordPage({ setStudentInfo }) {
           Welcome to EduPlanet CAT Exams
         </h1>
 
-        <input
-          type="text"
-          placeholder="Enter your full name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className={`w-full p-3 mb-2 border ${
-            errors.name ? 'border-red-500' : 'border-gray-300'
-          } rounded`}
-        />
-        {errors.name && (
-          <p className="text-red-500 text-sm mb-2">Name must be at least 5 characters.</p>
-        )}
-
         <select
           value={grade}
-          onChange={(e) => setGrade(e.target.value)}
+          onChange={(e) => {
+            setGrade(e.target.value);
+            setName('');
+          }}
           className={`w-full p-3 mb-2 border ${
             errors.grade ? 'border-red-500' : 'border-gray-300'
           } rounded text-black`}
         >
           <option value="">Select your grade</option>
-          <option value="12A">Grade 12A</option>
-          <option value="12B">Grade 12B</option>
-          <option value="11">Grade 11</option>
-          <option value="10A">Grade 10A</option>
-          <option value="Admin">Admin</option>
+          {Object.keys(studentList).map((g) => (
+            <option key={g} value={g}>Grade {g}</option>
+          ))}
         </select>
-        {errors.grade && (
-          <p className="text-red-500 text-sm mb-2">Please select a valid grade.</p>
+        {errors.grade && <p className="text-red-500 text-sm mb-2">Please select a valid grade.</p>}
+
+        {grade && studentList[grade] && (
+          <select
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={`w-full p-3 mb-2 border ${
+              errors.name ? 'border-red-500' : 'border-gray-300'
+            } rounded text-black`}
+          >
+            <option value="">Select your name</option>
+            {studentList[grade].map((student) => (
+              <option key={student.name} value={student.name}>{student.name}</option>
+            ))}
+          </select>
         )}
+        {errors.name && <p className="text-red-500 text-sm mb-2">Please select your name.</p>}
 
         <div className="relative mb-2">
           <input
