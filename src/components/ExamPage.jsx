@@ -31,12 +31,12 @@ export default function ExamPage({ studentInfo, addResult }) {
     "Grade 12": [
       { id: 1, title: "Networks & Internet Technologies", password: "grade12pass" },
       { id: 2, title: "HTML & Web Design", password: "grade12pass2" },
-      { id: 3, title: "HTML & Web Design 2", password: "grade12pass3" }, 
-      { id: 4, title: "Spreadsheets & Word Processing", password: "grade12pass4" },
-      { id: 5, title: "Spreadsheets", password: "grade12pass5" },
-      { id: 6, title: "Word Processing & Databases", password: "grade12pass5" },
-      { id: 7, title: "Information Management & PAT 1", password: "grade12pass5" },
-      { id: 8, title: "Information Management & PAT 2", password: "grade12pass5" },
+      { id: 3, title: "HTML & Web Design 2", password: "grade12pass2" }, 
+      { id: 4, title: "Spreadsheets & Word Processing", password: "grade12pass2" },
+      { id: 5, title: "Spreadsheets", password: "grade12pass2" },
+      { id: 6, title: "Word Processing & Databases", password: "grade12pass2" },
+      { id: 7, title: "Information Management & PAT 1", password: "grade12pass2" },
+      { id: 8, title: "Information Management & PAT 2", password: "grade12pass2" },
     ],
     "Grade 11": [
       { id: 1, title: "Databases - Grade 11", password: "grade11pass" },
