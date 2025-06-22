@@ -62,7 +62,7 @@ export default function TeacherDashboard() {
   };
   
   const totalScore = rows.reduce((sum, r) => sum + Number(r.score || 0), 0);
-  const possibleTotal = examType === 'theory' ? 150 : 50; // practical possible mark can differ
+  const possibleTotal = examType === 'theory' ? 150 : 150; // practical possible mark can differ
   const percent = ((totalScore / possibleTotal) * 100).toFixed(2);
 
   const grade12Students = [...(studentList['12A'] || []), ...(studentList['12B'] || [])];
