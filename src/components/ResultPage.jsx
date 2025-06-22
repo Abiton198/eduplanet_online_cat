@@ -1,86 +1,104 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { db } from '../utils/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
-export default function ResultsPage() {
-  const [result, setResult] = useState(null);
-  const [timePassed, setTimePassed] = useState(false);
-  const navigate = useNavigate();
+export default function ResultPage({ studentInfo }) {
+  const [teacherResult, setTeacherResult] = useState(null);
 
   useEffect(() => {
-    const savedResult = localStorage.getItem('examResult');
-    if (savedResult) {
-      const parsedResult = JSON.parse(savedResult); // Correct
-      setResult(parsedResult);
-
-      const completedTime = new Date(parsedResult.time); // Correct
-      const currentTime = new Date();
-
-      const timeDiff = currentTime - completedTime;
-
-      if (timeDiff >= 48 * 60 * 60 * 1000) {
-        setTimePassed(true);
+    const fetch = async () => {
+      if (studentInfo?.name) {
+        const ref = doc(db, 'studentResults', studentInfo.name);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          setTeacherResult(snap.data());
+        }
       }
-    }
-  }, []);
+    };
+    fetch();
+  }, [studentInfo]);
 
-  if (!result) {
-    return (
-      <div className="text-center mt-10 text-xl">
-        No result found. Please complete the exam first.
-      </div>
-    );
-  }
-
-  const percentage = parseFloat(result.percentage);
-  const resultColor = percentage >= 50 ? 'bg-green-100' : 'bg-red-100';
-
-  const renderComments = (percentage) => {
-    if (percentage < 50) {
-      return (
-        <div className="text-red-500 mt-4">
-          <p>Oh no, it looks like you're struggling 😞. Don't worry, keep going and you'll improve! 💪</p>
-          <p>Remember: "Success is the sum of small efforts, repeated day in and day out." 🌟</p>
-        </div>
-      );
-    }
-    return (
-      <div className="text-green-500 mt-4">
-        <p>Great job! 🎉 You've done well! Keep up the hard work. 😊</p>
-        <p>You're on the right track! 🚀</p>
-      </div>
-    );
-  };
+  const sum = (rows) => rows.reduce((a, b) => a + Number(b.score || 0), 0);
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 rounded shadow bg-white">
-      <h2 className="text-2xl font-bold text-center mb-6">Exam Results</h2>
+    <div className="max-w-4xl mx-auto mt-10 p-6 space-y-10 bg-white rounded shadow">
+      <h2 className="text-2xl font-bold mb-4">Hello {studentInfo?.name}</h2>
 
-      <div className={`p-4 rounded ${resultColor}`}>
-        <p><b>Name:</b> {result.name}</p>
-        <p><b>Score:</b> {result.score}</p>
-        <p><b>Percentage:</b> {result.percentage}%</p>
-        <p><b>Unanswered Questions:</b> {result.unanswered}</p>
-        <p><b>Completed On:</b> {result.time}</p>
-      </div>
+      {/* === THEORY === */}
+      {teacherResult?.theory ? (
+        <div>
+          <h3 className="text-xl font-bold mb-2">{teacherResult.theory.examTitle}</h3>
+          <p>Date: {teacherResult.theory.examDate}</p>
+          <table className="w-full border my-4">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="border p-2">Question</th>
+                <th className="border p-2">Type</th>
+                <th className="border p-2">Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teacherResult.theory.results.map((r, i) => (
+                <tr key={i}>
+                  <td className="border p-2">{r.question}</td>
+                  <td className="border p-2">{r.type}</td>
+                  <td className="border p-2">{r.score}</td>
+                </tr>
+              ))}
+              <tr className="font-bold bg-gray-50">
+                <td className="border p-2">TOTAL</td>
+                <td className="border p-2">-</td>
+                <td className="border p-2">{sum(teacherResult.theory.results)}</td>
+              </tr>
+              <tr className="font-bold bg-gray-100">
+                <td className="border p-2">PERCENTAGE</td>
+                <td className="border p-2">-</td>
+                <td className="border p-2">{((sum(teacherResult.theory.results) / 150) * 100).toFixed(2)}%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="text-gray-500">Theory results not available yet, please be patient...</p>
+      )}
 
-      {renderComments(percentage)}
-
-      <div className="flex flex-col space-y-4 mt-8">
-        {timePassed ? (
-          <button
-            onClick={() => {
-              localStorage.removeItem('examResult');
-              localStorage.removeItem('examAnswers');
-              navigate('/');
-            }}
-            className="bg-blue-500 text-white py-2 px-4 rounded-full hover:bg-blue-600 transition"
-          >
-            Retake Exam
-          </button>
-        ) : (
-          <p className="text-center text-gray-500">You can retake the exam after 48 hours ⏳</p>
-        )}
-      </div>
+      {/* === PRACTICAL === */}
+      {teacherResult?.practical ? (
+        <div>
+          <h3 className="text-xl font-bold mb-2">{teacherResult.practical.examTitle}</h3>
+          <p>Date: {teacherResult.practical.examDate}</p>
+          <table className="w-full border my-4">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="border p-2">Question</th>
+                <th className="border p-2">Type</th>
+                <th className="border p-2">Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teacherResult.practical.results.map((r, i) => (
+                <tr key={i}>
+                  <td className="border p-2">{r.question}</td>
+                  <td className="border p-2">{r.type}</td>
+                  <td className="border p-2">{r.score}</td>
+                </tr>
+              ))}
+              <tr className="font-bold bg-gray-50">
+                <td className="border p-2">TOTAL</td>
+                <td className="border p-2">-</td>
+                <td className="border p-2">{sum(teacherResult.practical.results)}</td>
+              </tr>
+              <tr className="font-bold bg-gray-100">
+                <td className="border p-2">PERCENTAGE</td>
+                <td className="border p-2">-</td>
+                <td className="border p-2">{((sum(teacherResult.practical.results) / 50) * 100).toFixed(2)}%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="text-gray-500">Practical results not available yet, please be patient...</p>
+      )}
     </div>
   );
 }

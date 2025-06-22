@@ -8,7 +8,8 @@ import ProtectedRoute from './utils/ProtectedRoute';
 import ReviewPage from './components/ReviewPage';
 import AllResults from './components/AllResults';
 import logo from './img/edu_logo.jpg';
-import Chatbot from './utils/Chatbot'
+import Chatbot from './utils/Chatbot';
+import TeacherDashboard from './components/TeacherDashboard';
 
 function App() {
   const [studentInfo, setStudentInfo] = useState(null);
@@ -44,26 +45,29 @@ function App() {
           <Link to="/exam" className="hover:text-gray-300 transition">Exam</Link>
           <Link to="/results" className="hover:text-gray-300 transition">Results</Link>
           <Link to="/all-results" className="hover:text-gray-300 transition">All Results</Link>
+          <Link to="/teacher-dashboard" className="hover:text-gray-300 transition">Teacher</Link>
         </nav>
       </header>
 
-      {/* Mobile Menu (when open) */}
+      {/* Mobile Menu */}
       {menuOpen && (
-  <div className="md:hidden absolute top-20 left-0 w-full bg-white/90 text-blue-900 px-4 py-4 space-y-3 shadow-xl z-50 backdrop-blur-md">
-    <Link to="/exam-rules" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Exam Rules</Link>
-    <Link to="/exam" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Exam</Link>
-    <Link to="/results" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Results</Link>
-    <Link to="/all-results" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">All Results</Link>
-  </div>
-)}
+        <div className="md:hidden absolute top-20 left-0 w-full bg-white/90 text-blue-900 px-4 py-4 space-y-3 shadow-xl z-50 backdrop-blur-md">
+          <Link to="/exam-rules" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Exam Rules</Link>
+          <Link to="/exam" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Exam</Link>
+          <Link to="/results" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Results</Link>
+          <Link to="/all-results" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">All Results</Link>
+          <Link to="/teacher-dashboard" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Teacher</Link>
+        </div>
+      )}
 
-          <Chatbot/>
+      <Chatbot />
 
-      {/* Main Content Section */}
+      {/* Main Content */}
       <div className="pt-28">
         <Routes>
           <Route path="/" element={<PasswordPage setStudentInfo={setStudentInfo} />} />
           <Route path="/review" element={<ReviewPage />} />
+
           <Route
             path="/exam"
             element={
@@ -72,18 +76,21 @@ function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/results"
             element={
               <ProtectedRoute studentInfo={studentInfo}>
-                <ResultPage results={results} />
+                <ResultPage results={results} studentInfo={studentInfo} />
               </ProtectedRoute>
             }
           />
-         
-          <Route path="/all-results" element={<AllResults />} />
 
+          <Route path="/all-results" element={<AllResults />} />
           <Route path="/exam-rules" element={<ExamRules />} />
+
+          {/* Teacher Route */}
+          <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
         </Routes>
       </div>
     </div>

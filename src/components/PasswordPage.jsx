@@ -18,19 +18,38 @@ export default function PasswordPage({ setStudentInfo }) {
     const newErrors = { name: false, grade: false, password: false };
     setError('');
 
+    // Validate grade
     if (!grade || !studentList[grade]) {
       newErrors.grade = true;
       hasError = true;
     }
 
+    // Validate name
     if (!name) {
       newErrors.name = true;
       hasError = true;
     }
 
-    const selectedStudent = studentList[grade]?.find(student => student.name === name);
+    // Find the student safely: trim + case-insensitive match
+    const selectedStudent = studentList[grade]?.find(
+      student =>
+        student.name.trim().toLowerCase() === name.trim().toLowerCase()
+    );
 
-    if (!selectedStudent || selectedStudent.password !== password) {
+    console.log({
+      grade,
+      nameInput: name,
+      selectedStudent,
+      enteredPassword: password,
+      studentPassword: selectedStudent?.password
+    });
+
+    // Check student and password
+    if (!selectedStudent) {
+      newErrors.name = true;
+      setError('Student not found. Please check your name.');
+      hasError = true;
+    } else if (String(selectedStudent.password).trim() !== password.trim()) {
       newErrors.password = true;
       setError('Incorrect password. Please try again.');
       hasError = true;
@@ -38,8 +57,9 @@ export default function PasswordPage({ setStudentInfo }) {
 
     setErrors(newErrors);
 
+    // All good → proceed
     if (!hasError) {
-      setStudentInfo({ name, grade });
+      setStudentInfo({ name: selectedStudent.name, grade });
       navigate('/exam');
     }
   };
@@ -51,11 +71,12 @@ export default function PasswordPage({ setStudentInfo }) {
           Welcome to EduPlanet CAT Exams
         </h1>
 
+        {/* Grade selector */}
         <select
           value={grade}
           onChange={(e) => {
             setGrade(e.target.value);
-            setName('');
+            setName(''); // reset name if grade changes
           }}
           className={`w-full p-3 mb-2 border ${
             errors.grade ? 'border-red-500' : 'border-gray-300'
@@ -63,11 +84,18 @@ export default function PasswordPage({ setStudentInfo }) {
         >
           <option value="">Select your grade</option>
           {Object.keys(studentList).map((g) => (
-            <option key={g} value={g}>Grade {g}</option>
+            <option key={g} value={g}>
+              Grade {g}
+            </option>
           ))}
         </select>
-        {errors.grade && <p className="text-red-500 text-sm mb-2">Please select a valid grade.</p>}
+        {errors.grade && (
+          <p className="text-red-500 text-sm mb-2">
+            Please select a valid grade.
+          </p>
+        )}
 
+        {/* Name selector */}
         {grade && studentList[grade] && (
           <select
             value={name}
@@ -78,12 +106,19 @@ export default function PasswordPage({ setStudentInfo }) {
           >
             <option value="">Select your name</option>
             {studentList[grade].map((student) => (
-              <option key={student.name} value={student.name}>{student.name}</option>
+              <option key={student.name} value={student.name}>
+                {student.name}
+              </option>
             ))}
           </select>
         )}
-        {errors.name && <p className="text-red-500 text-sm mb-2">Please select your name.</p>}
+        {errors.name && (
+          <p className="text-red-500 text-sm mb-2">
+            {error || 'Please select your name.'}
+          </p>
+        )}
 
+        {/* Password input */}
         <div className="relative mb-2">
           <input
             type={showPassword ? 'text' : 'password'}
@@ -108,6 +143,7 @@ export default function PasswordPage({ setStudentInfo }) {
           <p className="text-red-500 text-sm mb-4">{error}</p>
         )}
 
+        {/* Submit button */}
         <button
           onClick={handleLogin}
           className="w-full bg-blue-500 hover:bg-blue-600 text-white p-3 rounded font-semibold"
