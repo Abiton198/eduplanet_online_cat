@@ -1,150 +1,137 @@
-import React, { useState, useEffect } from 'react';
-import { db } from '../utils/firebase';
+import React, { useEffect, useState } from 'react';
+import { db } from './firebase'; 
 import { doc, getDoc } from 'firebase/firestore';
 
 export default function ExamResultsCard({ studentName }) {
-  const [teacherResult, setTeacherResult] = useState(null);
-  const [showDetails, setShowDetails] = useState(false);
+  const [data, setData] = useState({ theory: null, practical: null });
+  const [expanded, setExpanded] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchTeacherResult = async () => {
-      if (studentName) {
-        const ref = doc(db, 'studentResults', studentName);
-        const snap = await getDoc(ref);
+    const load = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'studentResults', studentName));
         if (snap.exists()) {
-          setTeacherResult(snap.data());
+          setData({
+            theory: snap.data().theory || null,
+            practical: snap.data().practical || null,
+          });
         }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchTeacherResult();
+    if (studentName) load();
   }, [studentName]);
 
-  const sum = (rows) => rows.reduce((acc, r) => acc + Number(r.score || 0), 0);
+  const calcPercent = (rows, possible) =>
+    rows ? ((rows.reduce((sum, r) => sum + Number(r.score || 0), 0) / possible) * 100).toFixed(2) : null;
 
-  const theoryScore = teacherResult?.theory ? sum(teacherResult.theory.results) : 0;
-  const practicalScore = teacherResult?.practical ? sum(teacherResult.practical.results) : 0;
+  const theoryPercent = data.theory ? calcPercent(data.theory.results, 150) : null;
+  const practicalPercent = data.practical ? calcPercent(data.practical.results, 150) : null;
+  const grandTotal = theoryPercent && practicalPercent
+    ? ((Number(theoryPercent) + Number(practicalPercent)) / 2).toFixed(2)
+    : null;
 
-  const theoryPercent = teacherResult?.theory ? (theoryScore / 150) * 100 : null;
-  const practicalPercent = teacherResult?.practical ? (practicalScore / 150) * 100 : null;
-
-  let grandPercent = null;
-  if (theoryPercent !== null && practicalPercent !== null) {
-    grandPercent = ((theoryPercent + practicalPercent) / 2).toFixed(2);
-  } else if (theoryPercent !== null) {
-    grandPercent = theoryPercent.toFixed(2);
-  } else if (practicalPercent !== null) {
-    grandPercent = practicalPercent.toFixed(2);
-  }
-
-  const grandColor = grandPercent >= 50 ? 'bg-green-600' : 'bg-red-600';
-
-  if (!teacherResult) return null;
+  const toggleExpand = () => setExpanded(!expanded);
 
   return (
-    <div className="max-w-3xl mx-auto mb-10">
-      {/* === Card header === */}
+    <div className="max-w-xl mx-auto mb-8">
       <div
-        onClick={() => setShowDetails(!showDetails)}
-        className="cursor-pointer bg-gradient-to-r from-green-400 to-blue-500 rounded-xl p-6 shadow-lg text-white transition hover:scale-105"
+        className="p-6 rounded shadow-lg bg-gradient-to-br from-blue-200 to-blue-400 cursor-pointer transition hover:scale-105"
+        onClick={toggleExpand}
       >
-        <h3 className="text-2xl font-bold mb-1">📊 Exam Results</h3>
-        <p className="text-sm">Click to {showDetails ? 'hide' : 'view'} your detailed teacher-marked results.</p>
+        <h3 className="text-xl font-bold mb-2 text-white">📊 JUNE Exam Results</h3>
+        <p className="text-white">Click to {expanded ? 'hide' : 'view'} details</p>
+
+        {loading && <p className="mt-2 text-white">Loading...</p>}
+        {!loading && !data.theory && !data.practical && (
+          <p className="mt-2 text-white italic">No results posted yet. Please wait for your teacher.</p>
+        )}
       </div>
 
-      {showDetails && (
-        <div className="mt-6 bg-white p-6 rounded-lg shadow-md text-gray-800">
-          {/* === GRAND TOTAL === */}
-          {grandPercent && (
-            <div className="flex justify-center mb-6">
-              <button
-                className={`animate-pulse ${grandColor} text-white text-3xl font-extrabold px-10 py-6 rounded-full shadow-lg transition`}
-              >
-                🎓 GRAND TOTAL: {grandPercent}% <br/>
-              <p className='text-sm'>Result for both exams</p>
-              </button>
-            </div>
-          )}
-
-          {/* === THEORY === */}
-          {teacherResult.theory ? (
-            <div className="mb-10">
-              <h4 className="text-xl font-bold mb-2">{teacherResult.theory.examTitle}</h4>
-              <p className="text-sm text-gray-600 mb-2">Date: {teacherResult.theory.examDate}</p>
-              <table className="w-full border mb-2">
-                <thead className="bg-gray-100">
-                  <tr>
+      {expanded && (data.theory || data.practical) && (
+        <div className="bg-white shadow border p-6 mt-2 rounded">
+          {data.theory && (
+            <div className="mb-6">
+              <h4 className="font-bold text-blue-700 mb-2">Theory Exam - {data.theory.examDate}</h4>
+              <table className="w-full border mb-2 text-sm">
+                <thead>
+                  <tr className="bg-gray-100">
                     <th className="border p-2">Question</th>
                     <th className="border p-2">Type</th>
                     <th className="border p-2">Score</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {teacherResult.theory.results.map((r, i) => (
-                    <tr key={i}>
-                      <td className="border p-2">{r.question}</td>
-                      <td className="border p-2">{r.type}</td>
-                      <td className="border p-2">{r.score}</td>
+                  {data.theory.results.map((r, idx) => (
+                    <tr key={idx}>
+                      <td className="border p-1 text-center">{r.question}</td>
+                      <td className="border p-1 text-center">{r.type}</td>
+                      <td className="border p-1 text-center">{r.score}</td>
                     </tr>
                   ))}
                   <tr className="font-bold bg-gray-50">
-                    <td className="border p-2">TOTAL</td>
-                    <td className="border p-2">-</td>
-                    <td className="border p-2">{theoryScore}</td>
+                    <td className="border p-1">TOTAL</td>
+                    <td className="border p-1">-</td>
+                    <td className="border p-1 text-center">
+                      {data.theory.results.reduce((sum, r) => sum + Number(r.score || 0), 0)}
+                    </td>
                   </tr>
                   <tr className="font-bold bg-gray-100">
-                    <td className="border p-2">PERCENTAGE</td>
-                    <td className="border p-2">-</td>
-                    <td className="border p-2">{theoryPercent.toFixed(2)}%</td>
+                    <td className="border p-1">PERCENTAGE</td>
+                    <td className="border p-1">-</td>
+                    <td className="border p-1 text-center">{theoryPercent}%</td>
                   </tr>
                 </tbody>
               </table>
-              <p className="italic text-green-700 mt-1">
-                📝 <b>Teacher's Comment:</b> {teacherResult.theory.comment || 'No comment provided.'}
-              </p>
+              <p className="italic text-sm text-gray-600">💬 {data.theory.comment}</p>
             </div>
-          ) : (
-            <p className="text-gray-600">Theory results not available yet. Please be patient.</p>
           )}
 
-          {/* === PRACTICAL === */}
-          {teacherResult.practical ? (
-            <div className="mb-4">
-              <h4 className="text-xl font-bold mb-2">{teacherResult.practical.examTitle}</h4>
-              <p className="text-sm text-gray-600 mb-2">Date: {teacherResult.practical.examDate}</p>
-              <table className="w-full border mb-2">
-                <thead className="bg-gray-100">
-                  <tr>
+          {data.practical && (
+            <div>
+              <h4 className="font-bold text-green-700 mb-2">Practical Exam - {data.practical.examDate}</h4>
+              <table className="w-full border mb-2 text-sm">
+                <thead>
+                  <tr className="bg-gray-100">
                     <th className="border p-2">Question</th>
                     <th className="border p-2">Type</th>
                     <th className="border p-2">Score</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {teacherResult.practical.results.map((r, i) => (
-                    <tr key={i}>
-                      <td className="border p-2">{r.question}</td>
-                      <td className="border p-2">{r.type}</td>
-                      <td className="border p-2">{r.score}</td>
+                  {data.practical.results.map((r, idx) => (
+                    <tr key={idx}>
+                      <td className="border p-1 text-center">{r.question}</td>
+                      <td className="border p-1 text-center">{r.type}</td>
+                      <td className="border p-1 text-center">{r.score}</td>
                     </tr>
                   ))}
                   <tr className="font-bold bg-gray-50">
-                    <td className="border p-2">TOTAL</td>
-                    <td className="border p-2">-</td>
-                    <td className="border p-2">{practicalScore}</td>
+                    <td className="border p-1">TOTAL</td>
+                    <td className="border p-1">-</td>
+                    <td className="border p-1 text-center">
+                      {data.practical.results.reduce((sum, r) => sum + Number(r.score || 0), 0)}
+                    </td>
                   </tr>
                   <tr className="font-bold bg-gray-100">
-                    <td className="border p-2">PERCENTAGE</td>
-                    <td className="border p-2">-</td>
-                    <td className="border p-2">{practicalPercent.toFixed(2)}%</td>
+                    <td className="border p-1">PERCENTAGE</td>
+                    <td className="border p-1">-</td>
+                    <td className="border p-1 text-center">{practicalPercent}%</td>
                   </tr>
                 </tbody>
               </table>
-              <p className="italic text-blue-700 mt-1">
-                📝 <b>Teacher's Comment:</b> {teacherResult.practical.comment || 'No comment provided.'}
-              </p>
+              <p className="italic text-sm text-gray-600">💬 {data.practical.comment}</p>
             </div>
-          ) : (
-            <p className="text-gray-600">Practical results not available yet. Please be patient.</p>
+          )}
+
+          {grandTotal && (
+            <div className={`mt-6 p-4 text-center font-bold rounded ${grandTotal >= 50 ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
+              🎓 Grand Total: {grandTotal}%
+            </div>
           )}
         </div>
       )}
