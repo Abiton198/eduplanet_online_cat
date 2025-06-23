@@ -3,12 +3,11 @@ import { studentList } from '../data/studentData';
 import { db } from '../utils/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
-
 export default function TeacherDashboard() {
   const [selectedStudent, setSelectedStudent] = useState('');
   const [examType, setExamType] = useState('theory'); // theory or practical
   const [examDate, setExamDate] = useState('');
-  const [comment, setComment] = useState(''); // ✅ NEW comment input
+  const [comment, setComment] = useState('');
   const [rows, setRows] = useState([{ question: '', type: '', score: '' }]);
 
   const typeOptions = ['WORD PROCESSING', 'SPREADSHEETS', 'DATABASES', 'HTML', 'GENERAL'];
@@ -29,40 +28,41 @@ export default function TeacherDashboard() {
       alert('Please select student and exam type.');
       return;
     }
-  
+
     try {
       const docRef = doc(db, 'studentResults', selectedStudent);
-  
-      // 1️⃣ Get current data for this exam type
-      const currentDataSnap = await getDoc(docRef);
-      let existing = {};
-      if (currentDataSnap.exists()) {
-        existing = currentDataSnap.data()[examType] || {};
-      }
-  
-      // 2️⃣ Use existing rows & date if not re-provided
+
+      // Get existing doc data
+      const snap = await getDoc(docRef);
+      const existing = snap.exists() ? snap.data()[examType] || {} : {};
+
+      // ✅ Try to extract student grade from your list (adjust if needed)
+      const studentEntry =
+        (studentList['12A'] || []).concat(studentList['12B'] || []).find(s => s.name === selectedStudent);
+      const grade = studentEntry?.grade || existing.grade || 'Grade 12'; // fallback to Grade 12
+
       const payload = {
         examTitle: examType === 'theory' ? 'Theory Exam' : 'Practical Exam',
         examDate: examDate || existing.examDate || '',
-        results: rows.length && rows[0].question ? rows : existing.results || [],
+        results: rows.filter(r => r.question) || existing.results || [],
         comment: comment.trim() || existing.comment || '',
+        grade, // ✅ Always store grade here!
       };
-  
-      // 3️⃣ Save
+
       await setDoc(docRef, { [examType]: payload }, { merge: true });
-  
-      alert(`${examType} results & comment updated!`);
-      // Reset form
+
+      alert(`${examType} results & comment saved!`);
       setRows([{ question: '', type: '', score: '' }]);
       setComment('');
+      setExamDate('');
     } catch (err) {
       console.error(err);
-      alert('Error saving. See console.');
+      alert('Error saving. Check console.');
     }
   };
-  
+
   const totalScore = rows.reduce((sum, r) => sum + Number(r.score || 0), 0);
-  const possibleTotal = examType === 'theory' ? 150 : 150; // practical possible mark can differ
+  const possibleTotal = 150;
   const percent = ((totalScore / possibleTotal) * 100).toFixed(2);
 
   const grade12Students = [...(studentList['12A'] || []), ...(studentList['12B'] || [])];
