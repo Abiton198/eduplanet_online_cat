@@ -8,3 +8,4 @@ export { default as ReviewPage } from "./ReviewPage";
 export { default as ResultsListPage } from "./ResultsListPage";
 export { default as AllResults } from "./AllResults";
 export { default as TeacherDashboard } from "./TeacherDashboard";
+export { default as AnalysisComponent } from "./AnalysisComponent";

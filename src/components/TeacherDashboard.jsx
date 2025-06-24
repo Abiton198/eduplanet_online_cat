@@ -10,8 +10,8 @@ export default function TeacherDashboard() {
   const [comment, setComment] = useState('');
   const [rows, setRows] = useState([{ question: '', type: '', score: '' }]);
 
-  const typeOptions = ['WORD PROCESSING', 'SPREADSHEETS', 'DATABASES', 'HTML', 'GENERAL'];
-  const questionOptions = Array.from({ length: 7 }, (_, i) => (i + 1).toString());
+  const typeOptions = ['MCQ','MATCHING ITEMS','T/F', 'WORD PROCESSING', 'SPREADSHEETS', 'DATABASES', 'HTML','SYSTEMS TECHNOLOGIES','INTERNET & NETWORK TECH','INFORMATION MANAGEMENT','SOCIAL IMPLICATIONS','SOLUTION DEVELOPMENT','SCENARIO 1','SCENARIO 2', 'GENERAL'];
+  const questionOptions = Array.from({ length: 10 }, (_, i) => (i + 1).toString());
 
   const addRow = () => {
     setRows([...rows, { question: '', type: '', score: '' }]);
