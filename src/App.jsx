@@ -11,9 +11,11 @@ import logo from './img/edu_logo.jpg';
 import Chatbot from './utils/Chatbot';
 import TeacherDashboard from './components/TeacherDashboard';
 import { AnalysisComponent } from './components';
+import StudentGoogleLogin from './components/StudentGoogleLogin';
 
 function App() {
-  const [studentInfo, setStudentInfo] = useState(null);
+  const [studentInfo, setStudentInfo] = useState(null);   // Student session
+  const [adminInfo, setAdminInfo] = useState(null);       // Admin session
   const [results, setResults] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -23,14 +25,14 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header Section */}
+      {/* Header */}
       <header className="fixed top-0 left-0 w-full flex justify-between items-center p-4 bg-blue-600 text-white shadow-md z-50">
         <Link to="/" className="flex items-center space-x-2">
           <img src={logo} alt="Eduplanet Logo" className="h-14 w-auto rounded-md shadow-md" />
           <span className="text-xl font-bold">CAT Online</span>
         </Link>
 
-        {/* Hamburger Menu (mobile only) */}
+        {/* Mobile Menu Button */}
         <div className="md:hidden">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
@@ -58,42 +60,57 @@ function App() {
           <Link to="/results" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Results</Link>
           <Link to="/all-results" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">All Results</Link>
           <Link to="/teacher-dashboard" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Teacher</Link>
-
         </div>
       )}
 
       <Chatbot />
 
-      {/* Main Content */}
+      {/* Routes */}
       <div className="pt-28">
         <Routes>
+          {/* Login Page: student selects grade & name */}
           <Route path="/" element={<PasswordPage setStudentInfo={setStudentInfo} />} />
+
+          {/* Review Page (open access) */}
           <Route path="/review" element={<ReviewPage />} />
 
+          {/* Protected Student Exam Route */}
           <Route
             path="/exam"
             element={
-              <ProtectedRoute studentInfo={studentInfo}>
+              <ProtectedRoute studentInfo={studentInfo} adminInfo={adminInfo}>
                 <ExamPage studentInfo={studentInfo} addResult={addResult} />
               </ProtectedRoute>
             }
           />
 
+          {/* Protected Results Route */}
           <Route
             path="/results"
             element={
-              <ProtectedRoute studentInfo={studentInfo}>
+              <ProtectedRoute studentInfo={studentInfo} adminInfo={adminInfo}>
                 <ResultPage results={results} studentInfo={studentInfo} />
               </ProtectedRoute>
             }
           />
 
-          <Route path="/all-results" element={<AllResults />} />
+          {/* Open Routes */}
           <Route path="/exam-rules" element={<ExamRules />} />
+          <Route path="/all-results" element={<AllResults />} />
           <Route path="/analysis-component" element={<AnalysisComponent />} />
 
-          {/* Teacher Route */}
-          <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
+          {/* Protected Teacher Dashboard (admin only) */}
+          <Route
+            path="/teacher-dashboard"
+            element={
+              <ProtectedRoute studentInfo={studentInfo} adminInfo={adminInfo}>
+                <TeacherDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+<Route path="/" element={<StudentGoogleLogin setStudentInfo={setStudentInfo} />} />
+
         </Routes>
       </div>
     </div>

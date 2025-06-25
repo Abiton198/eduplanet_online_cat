@@ -1,12 +1,12 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 
-const ProtectedRoute = ({ studentInfo, children }) => {
-  if (!studentInfo) {
-    return <Navigate to="/" />;  // Redirect to login page if no student info (password not entered)
+const ProtectedRoute = ({ studentInfo, adminInfo, children }) => {
+  if (!studentInfo && !adminInfo) {
+    return <Navigate to="/" />;  // Redirect if no one is logged in
   }
 
-  return children;  // Show protected content if student info exists
+  return children;  // Allow access if student or admin is authenticated
 };
 
 export default ProtectedRoute;

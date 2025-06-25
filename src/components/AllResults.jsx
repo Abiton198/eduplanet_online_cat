@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, getDocs } from "firebase/firestore";
 import { db } from "../utils/firebase";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
@@ -9,9 +9,11 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun } from "docx";
 import { saveAs } from "file-saver";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 export default function AllResults() {
   const [mainExamData, setMainExamData] = useState({});
+  const [taskTable, setTaskTable] = useState([]);
   const [generalExamData, setGeneralExamData] = useState([]);
   const [accessChecked, setAccessChecked] = useState(false);
   const [accessGranted, setAccessGranted] = useState(false);
@@ -20,7 +22,6 @@ export default function AllResults() {
   const [generalDate, setGeneralDate] = useState("");
   const [generalExam, setGeneralExam] = useState("");
   const [generalName, setGeneralName] = useState("");
-
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,32 +29,67 @@ export default function AllResults() {
     let unsubscribeGeneral = null;
 
     const checkAccess = async () => {
-      const { value: password, isConfirmed } = await Swal.fire({
-        title: "Admin Access Required",
-        input: "password",
-        inputLabel: "Enter admin password",
-        showCancelButton: true,
-        confirmButtonText: "Enter",
-      });
+      try {
+        const auth = getAuth();
+        onAuthStateChanged(auth, async (user) => {
+          if (user?.email) {
+            const snapshot = await getDocs(collection(db, "admins"));
+            const adminEmails = snapshot.docs.map((doc) => doc.data().email);
 
-      if (isConfirmed && password === "admin123") {
-        setAccessGranted(true);
+            // ✅ Auto-access if Google email is in admin list
+            if (adminEmails.includes(user.email)) {
+              setAccessGranted(true);
+              setAccessChecked(true);
 
-        unsubscribeMain = onSnapshot(collection(db, "studentResults"), (snap) => {
-          const temp = {};
-          snap.forEach((doc) => (temp[doc.id] = doc.data()));
-          setMainExamData(temp);
+              unsubscribeMain = onSnapshot(collection(db, "studentResults"), (snap) => {
+                const temp = {};
+                snap.forEach((doc) => (temp[doc.id] = doc.data()));
+                setMainExamData(temp);
+              });
+
+              unsubscribeGeneral = onSnapshot(collection(db, "examResults"), (snap) => {
+                const sorted = snap.docs.map((doc) => doc.data()).sort((a, b) => (b.percentage || 0) - (a.percentage || 0));
+                setGeneralExamData(sorted);
+              });
+
+              return;
+            }
+          }
+
+          // ❌ Fallback password prompt
+          const { value: password, isConfirmed } = await Swal.fire({
+            title: "Admin Access Required",
+            input: "password",
+            inputLabel: "Enter admin password",
+            showCancelButton: true,
+            confirmButtonText: "Enter",
+          });
+
+          if (isConfirmed && password === "admin123") {
+            setAccessGranted(true);
+
+            unsubscribeMain = onSnapshot(collection(db, "studentResults"), (snap) => {
+              const temp = {};
+              snap.forEach((doc) => (temp[doc.id] = doc.data()));
+              setMainExamData(temp);
+            });
+
+            unsubscribeGeneral = onSnapshot(collection(db, "examResults"), (snap) => {
+              const sorted = snap.docs.map((doc) => doc.data()).sort((a, b) => (b.percentage || 0) - (a.percentage || 0));
+              setGeneralExamData(sorted);
+            });
+          }
+
+          setAccessChecked(true);
         });
-
-        unsubscribeGeneral = onSnapshot(collection(db, "examResults"), (snap) => {
-          setGeneralExamData(snap.docs.map((doc) => doc.data()));
-        });
+      } catch (err) {
+        console.error("Error during access check:", err);
+        setAccessChecked(true);
       }
-
-      setAccessChecked(true);
     };
 
-    checkAccess();
+    checkAccess(); 
+
     return () => {
       if (unsubscribeMain) unsubscribeMain();
       if (unsubscribeGeneral) unsubscribeGeneral();
@@ -63,19 +99,85 @@ export default function AllResults() {
   if (!accessChecked) return <div className="text-center pt-28 text-lg text-gray-500">Checking admin access...</div>;
   if (!accessGranted) return <div className="text-center pt-28 text-red-600 text-lg">Access denied.</div>;
 
-  const mainStudents = Object.keys(mainExamData).map((name) => {
-    const entry = mainExamData[name];
-    const grade = entry?.grade || entry?.theory?.grade || entry?.practical?.grade || "Unknown";
-    const practical = entry.practical?.results?.reduce((sum, r) => sum + Number(r.score || 0), 0) || 0;
-    const theory = entry.theory?.results?.reduce((sum, r) => sum + Number(r.score || 0), 0) || 0;
-    const practicalPercent = ((practical / 150) * 100).toFixed(2);
-    const theoryPercent = ((theory / 150) * 100).toFixed(2);
-    const grand = ((Number(practicalPercent) + Number(theoryPercent)) / 2).toFixed(2);
-    return { name, grade, practical, practicalPercent, theory, theoryPercent, grand };
-  });
+  // 🔢 Format and sort main results by grand % descending
+  const mainStudents = Object.keys(mainExamData)
+    .map((name) => {
+      const entry = mainExamData[name];
+      const grade = entry?.grade || entry?.theory?.grade || entry?.practical?.grade || "Unknown";
+      const practical = entry.practical?.results?.reduce((sum, r) => sum + Number(r.score || 0), 0) || 0;
+      const theory = entry.theory?.results?.reduce((sum, r) => sum + Number(r.score || 0), 0) || 0;
+      const practicalPercent = ((practical / 150) * 100).toFixed(2);
+      const theoryPercent = ((theory / 150) * 100).toFixed(2);
+      const grand = Math.round((Number(practicalPercent) + Number(theoryPercent)) / 2);
+
+      return { name, grade, practical, practicalPercent, theory, theoryPercent, grand: Number(grand) };
+    })
+    .sort((a, b) => b.grand - a.grand); // 🔽 Sort by descending grand %
 
   const grades = ["Grade 10", "Grade 11", "Grade 12"];
 
+  // student tasks
+  const exportTaskResults = (format) => {
+    const rows = taskTable.map((r) => ({
+      Date: r.latest,
+      Name: r.name,
+      "Task Mark (%)": r.avg,
+    }));
+  
+    if (format === "excel" || format === "csv") {
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "TaskResults");
+      XLSX.writeFile(wb, `TaskResults.${format === "csv" ? "csv" : "xlsx"}`);
+    } else if (format === "pdf") {
+      const doc = new jsPDF();
+      doc.text(`Task Results`, 14, 20);
+      doc.autoTable({
+        head: [["Date", "Name", "Task Mark"]],
+        body: rows.map((r) => [r.Date, r.Name, r["Task Mark (%)"]]),
+        startY: 30,
+      });
+      doc.save(`TaskResults.pdf`);
+    } else if (format === "word") {
+      const tableRows = [
+        new TableRow({
+          children: ["Date", "Name", "Task Mark (%)"].map((col) =>
+            new TableCell({
+              children: [new Paragraph({ children: [new TextRun({ text: col, bold: true })] })],
+            })
+          ),
+        }),
+        ...taskTable.map((r) =>
+          new TableRow({
+            children: [
+              new TableCell({ children: [new Paragraph(r.latest)] }),
+              new TableCell({ children: [new Paragraph(r.name)] }),
+              new TableCell({ children: [new Paragraph(r.avg + "%")] }),
+            ],
+          })
+        ),
+      ];
+  
+      const docx = new Document({
+        sections: [
+          {
+            children: [
+              new Paragraph({
+                children: [new TextRun({ text: `Task Results`, bold: true, size: 28 })],
+                spacing: { after: 400 },
+              }),
+              new Table({ rows: tableRows }),
+            ],
+          },
+        ],
+      });
+  
+      Packer.toBlob(docx).then((blob) => saveAs(blob, `TaskResults.docx`));
+    }
+  };
+  
+
+  // 📤 Export Main Exam Results
   const exportMainResults = (format) => {
     const rows = mainStudents.filter((s) => s.grade === selectedGrade);
 
@@ -104,9 +206,7 @@ export default function AllResults() {
       const tableRows = [
         new TableRow({
           children: ["Name", "Theory %", "Practical %", "Grand Total %"].map((col) =>
-            new TableCell({
-              children: [new Paragraph({ children: [new TextRun({ text: col, bold: true })] })],
-            })
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: col, bold: true })] })] })
           ),
         }),
         ...rows.map(
@@ -138,14 +238,17 @@ export default function AllResults() {
     }
   };
 
+  // 📤 Export General Results
   const exportGeneralResults = (format) => {
-    const rows = generalExamData.filter(
-      (r) =>
-        r.grade?.toLowerCase().includes(selectedGrade.split(" ")[1].toLowerCase()) &&
-        (generalDate === "" || r.completedDate === generalDate) &&
-        (generalExam === "" || r.exam?.toLowerCase().includes(generalExam.toLowerCase())) &&
-        (generalName === "" || r.name?.toLowerCase().includes(generalName.toLowerCase()))
-    );
+    const rows = generalExamData
+      .filter(
+        (r) =>
+          r.grade?.toLowerCase().includes(selectedGrade.split(" ")[1].toLowerCase()) &&
+          (generalDate === "" || r.completedDate === generalDate) &&
+          (generalExam === "" || r.exam?.toLowerCase().includes(generalExam.toLowerCase())) &&
+          (generalName === "" || r.name?.toLowerCase().includes(generalName.toLowerCase()))
+      )
+      .sort((a, b) => (b.percentage || 0) - (a.percentage || 0));
 
     if (format === "excel" || format === "csv") {
       const ws = XLSX.utils.json_to_sheet(
@@ -227,6 +330,7 @@ export default function AllResults() {
 
       {activeSection && (
         <div className="mt-8">
+
           <h4 className="text-xl font-bold mb-4">{activeSection === "main" ? "Select Grade for Main Exams" : "Select Grade for General Exams"}</h4>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {grades.map((g, i) => (
@@ -241,6 +345,18 @@ export default function AllResults() {
 
       {activeSection === "main" && selectedGrade && (
         <div className="mt-6 bg-white shadow p-6 rounded-xl overflow-x-auto">
+          {/* return button */}
+                          <div className="mt-6">
+                    <button
+                      onClick={() => {
+                        setActiveSection(null);
+                        setSelectedGrade(null);
+                      }}
+                      className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                    >
+                      ← Return
+                    </button>
+                  </div>
           <h4 className="text-lg font-bold mb-4">{selectedGrade} - Main Exams</h4>
           <div className="my-4 flex flex-wrap gap-4">
             <button onClick={() => exportMainResults("excel")} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Download Excel</button>
@@ -264,10 +380,10 @@ export default function AllResults() {
                 <tr key={idx} className="text-center hover:bg-gray-50">
                   <td className="border p-2">{s.name}</td>
                   <td className="border p-2">{s.theory}</td>
-                  <td className={`border p-2 ${s.theoryPercent >= 50 ? "text-green-600" : "text-red-600"}`}>{s.theoryPercent}%</td>
+                  <td className={`border p-2 ${s.theoryPercent >= 30 ? "text-green-600" : "text-red-600"}`}>{s.theoryPercent}%</td>
                   <td className="border p-2">{s.practical}</td>
-                  <td className={`border p-2 ${s.practicalPercent >= 35 ? "text-green-600" : "text-red-600"}`}>{s.practicalPercent}%</td>
-                  <td className={`border p-2 font-bold ${s.grand >= 50 ? "text-green-700" : "text-red-700"}`}>{s.grand}%</td>
+                  <td className={`border p-2 ${s.practicalPercent >= 30 ? "text-green-600" : "text-red-600"}`}>{s.practicalPercent}%</td>
+                  <td className={`border p-2 font-bold ${s.grand >= 30 ? "text-green-700" : "text-red-700"}`}>{s.grand}%</td>
                 </tr>
               ))}
             </tbody>
@@ -276,7 +392,20 @@ export default function AllResults() {
       )}
 
       {activeSection === "general" && selectedGrade && (
-        <div className="mt-6 bg-white shadow p-6 rounded-xl overflow-x-auto">
+        
+        // return button
+                <div className="mt-6 bg-white shadow p-6 rounded-xl overflow-x-auto">
+                  <div className="mt-6">
+            <button
+              onClick={() => {
+                setActiveSection(null);
+                setSelectedGrade(null);
+              }}
+              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+            >
+              ← Return
+            </button>
+          </div>
           <h4 className="text-lg font-bold mb-4">{selectedGrade} - General Exams</h4>
           <div className="flex flex-wrap gap-4 mb-4">
             <div>
@@ -322,7 +451,7 @@ export default function AllResults() {
                   <td className="border p-2">{r.name}</td>
                   <td className="border p-2">{r.exam}</td>
                   <td className="border p-2">{r.score}</td>
-                  <td className={`border p-2 ${r.percentage >= 50 ? "text-green-600" : "text-red-600"}`}>{r.percentage}%</td>
+                  <td className={`border p-2 ${r.percentage >= 35 ? "text-green-600" : "text-red-600"}`}>{r.percentage}%</td>
                 </tr>
               ))}
             </tbody>
@@ -332,3 +461,4 @@ export default function AllResults() {
     </div>
   );
 }
+

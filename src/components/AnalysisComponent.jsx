@@ -9,6 +9,8 @@ import {
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import * as XLSX from "xlsx";
+import { useNavigate } from "react-router-dom";
+
 
 // 🎨 Chart colors
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AA00FF", "#FF4081"];
@@ -31,6 +33,8 @@ export default function AnalysisComponent() {
   const [selectedStudent, setSelectedStudent] = useState("");
   const [chartData, setChartData] = useState([]);
   const chartRef = useRef(null);
+  const navigate = useNavigate();
+
 
   // 📥 Load all studentResults live from Firestore
   useEffect(() => {
@@ -187,6 +191,17 @@ export default function AnalysisComponent() {
   return (
     <div className="max-w-6xl mx-auto p-6">
       <h2 className="text-3xl font-bold text-center mb-6">📊 Exam Analysis Dashboard</h2>
+
+{/* return button */}
+      <div className="mt-6">
+  <button
+    onClick={() => navigate(-1)}
+    className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+  >
+    ← Return to Main Page
+  </button>
+</div>
+
 
       {/* 🔘 Filters */}
       <div className="flex flex-wrap gap-4 mb-6">

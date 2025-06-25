@@ -1,66 +1,55 @@
-// PasswordPage.jsx
+// src/components/PasswordPage.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { signInWithPopup } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { studentList } from '../data/studentData';
+import { auth, provider, db } from '../utils/firebase';
 
 export default function PasswordPage({ setStudentInfo }) {
   const [grade, setGrade] = useState('');
   const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [errors, setErrors] = useState({ name: false, grade: false, password: false });
-
   const navigate = useNavigate();
 
-  const handleLogin = () => {
-    let hasError = false;
-    const newErrors = { name: false, grade: false, password: false };
-    setError('');
-
-    // Validate grade
-    if (!grade || !studentList[grade]) {
-      newErrors.grade = true;
-      hasError = true;
+  const handleGoogleLogin = async () => {
+    if (!grade || !name) {
+      setError('Please select both grade and name.');
+      return;
     }
 
-    // Validate name
-    if (!name) {
-      newErrors.name = true;
-      hasError = true;
-    }
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const email = result.user.email;
 
-    // Find the student safely: trim + case-insensitive match
-    const selectedStudent = studentList[grade]?.find(
-      student =>
-        student.name.trim().toLowerCase() === name.trim().toLowerCase()
-    );
+      // Document ID format: Grade 12_John Doe
+      const studentId = `${grade}_${name}`;
+      const studentRef = doc(db, 'students', studentId);
+      const snapshot = await getDoc(studentRef);
 
-    console.log({
-      grade,
-      nameInput: name,
-      selectedStudent,
-      enteredPassword: password,
-      studentPassword: selectedStudent?.password
-    });
-
-    // Check student and password
-    if (!selectedStudent) {
-      newErrors.name = true;
-      setError('Student not found. Please check your name.');
-      hasError = true;
-    } else if (String(selectedStudent.password).trim() !== password.trim()) {
-      newErrors.password = true;
-      setError('Incorrect password. Please try again.');
-      hasError = true;
-    }
-
-    setErrors(newErrors);
-
-    // All good → proceed
-    if (!hasError) {
-      setStudentInfo({ name: selectedStudent.name, grade });
-      navigate('/exam');
+      if (snapshot.exists()) {
+        const savedEmail = snapshot.data().email;
+        if (savedEmail === email) {
+          // ✅ Email matches → allow login
+          setStudentInfo({ name, grade, email });
+          navigate('/exam');
+        } else {
+          // ❌ Email mismatch
+          setError('This student name is linked to a different Google account.');
+        }
+      } else {
+        // ✅ First-time login → save the email
+        await setDoc(studentRef, {
+          name,
+          grade,
+          email
+        });
+        setStudentInfo({ name, grade, email });
+        navigate('/exam');
+      }
+    } catch (err) {
+      console.error('Google login error:', err);
+      setError('Google sign-in failed. Please try again.');
     }
   };
 
@@ -76,11 +65,9 @@ export default function PasswordPage({ setStudentInfo }) {
           value={grade}
           onChange={(e) => {
             setGrade(e.target.value);
-            setName(''); // reset name if grade changes
+            setName('');
           }}
-          className={`w-full p-3 mb-2 border ${
-            errors.grade ? 'border-red-500' : 'border-gray-300'
-          } rounded text-black`}
+          className="w-full p-3 mb-3 border border-gray-300 rounded text-black"
         >
           <option value="">Select your grade</option>
           {Object.keys(studentList).map((g) => (
@@ -89,66 +76,34 @@ export default function PasswordPage({ setStudentInfo }) {
             </option>
           ))}
         </select>
-        {errors.grade && (
-          <p className="text-red-500 text-sm mb-2">
-            Please select a valid grade.
-          </p>
-        )}
 
         {/* Name selector */}
-        {grade && studentList[grade] && (
+        {grade && (
           <select
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className={`w-full p-3 mb-2 border ${
-              errors.name ? 'border-red-500' : 'border-gray-300'
-            } rounded text-black`}
+            className="w-full p-3 mb-3 border border-gray-300 rounded text-black"
           >
             <option value="">Select your name</option>
-            {studentList[grade].map((student) => (
-              <option key={student.name} value={student.name}>
-                {student.name}
+            {studentList[grade]?.map((s) => (
+              <option key={s.name} value={s.name}>
+                {s.name}
               </option>
             ))}
           </select>
         )}
-        {errors.name && (
-          <p className="text-red-500 text-sm mb-2">
-            {error || 'Please select your name.'}
-          </p>
+
+        {/* Error message */}
+        {error && (
+          <p className="text-red-600 text-sm mb-3 text-center">{error}</p>
         )}
 
-        {/* Password input */}
-        <div className="relative mb-2">
-          <input
-            type={showPassword ? 'text' : 'password'}
-            placeholder="Enter your unique password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={`w-full p-3 border ${
-              errors.password ? 'border-red-500' : 'border-gray-300'
-            } rounded text-black`}
-          />
-          <label className="flex items-center mt-2 text-sm">
-            <input
-              type="checkbox"
-              checked={showPassword}
-              onChange={() => setShowPassword(!showPassword)}
-              className="mr-2"
-            />
-            Show password
-          </label>
-        </div>
-        {errors.password && (
-          <p className="text-red-500 text-sm mb-4">{error}</p>
-        )}
-
-        {/* Submit button */}
+        {/* Google Sign-In button */}
         <button
-          onClick={handleLogin}
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white p-3 rounded font-semibold"
+          onClick={handleGoogleLogin}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded font-semibold"
         >
-          Enter Exam
+          Sign in with Google
         </button>
       </div>
     </div>

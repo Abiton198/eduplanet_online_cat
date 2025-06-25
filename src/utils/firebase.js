@@ -1,7 +1,7 @@
 // Import Firebase functions
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore"; // ✅ Import Firestore
-import { getAuth, signInAnonymously } from "firebase/auth"; // ✅ Import Auth
+import { getAuth, signInAnonymously, GoogleAuthProvider } from "firebase/auth"; // ✅ Import Auth
 import { getAnalytics } from "firebase/analytics";
 
 // Your Firebase configuration
@@ -19,6 +19,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app); // ✅ Correctly initialize Firestore
 const auth = getAuth(app); // ✅ Correctly initialize Auth
 const analytics = getAnalytics(app);
+const provider = new GoogleAuthProvider();
 
 // Export Firestore & Auth
-export { db, auth , signInAnonymously};
+export { db, auth , signInAnonymously, provider};
