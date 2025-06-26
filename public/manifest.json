@@ -1,0 +1,51 @@
+{
+  "name": "EduPlanet CAT",
+  "short_name": "EduCAT",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "theme_color": "#004aad",
+  "background_color": "#ffffff",
+  "scope": "/",
+  "orientation": "portrait",
+  "description": "Access EduPlanet CAT online exams, results and student dashboard.",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Take Exam",
+      "short_name": "Exam",
+      "description": "Start your CAT exam now",
+      "url": "/exam?source=pwa",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "My Results",
+      "short_name": "Results",
+      "description": "Check exam results and feedback",
+      "url": "/results?source=pwa",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}
