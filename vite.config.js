@@ -15,7 +15,7 @@ export default defineConfig({
       ],
       manifest: {
         name: 'EduPlanet CAT Exams',
-        short_name: 'EduPlanet',
+        short_name: 'EduPlanet CAT',
         description: 'Track your CAT exam results and performance.',
         theme_color: '#ffffff',
         background_color: '#ffffff',
