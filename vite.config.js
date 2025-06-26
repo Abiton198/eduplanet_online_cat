@@ -7,11 +7,16 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
+      includeAssets: [
+        'favicon.ico',
+        'favicon-96x96.png',
+        'favicon.svg',
+        'apple-touch-icon.png'
+      ],
       manifest: {
-        name: 'My Student App',
-        short_name: 'StudentApp',
-        description: 'Track your results and performance',
+        name: 'EduPlanet CAT Exams',
+        short_name: 'EduPlanet',
+        description: 'Track your CAT exam results and performance.',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
@@ -47,7 +52,8 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: ({ url }) => url.origin === self.location.origin && url.pathname.startsWith('/icons/'),
+            urlPattern: ({ url }) =>
+              url.origin === self.location.origin && url.pathname.startsWith('/icons/'),
             handler: 'CacheFirst',
             options: {
               cacheName: 'icon-cache',
