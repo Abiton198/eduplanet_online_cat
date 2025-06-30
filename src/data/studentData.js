@@ -47,7 +47,9 @@ export const studentList = {
     { name: "NOSILELA, Anda" },
     { name: "PETER, Likhanye" },
     { name: "S, Isenathis" },
-    { name: "TOTYI, Anda" }
+    { name: "TOTYI, Anda" },
+    { name: "Tyris, P" }
+
   ],
   "12B": [
     { name: "Deyandre" },

@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import AnalysisComponent from './AnalysisComponent';
 import { db } from '../utils/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+// ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, RadialLinearScale, PointElement, LineElement, Tooltip, Legend);
 
 export default function ResultPage({ studentInfo }) {
   const [teacherResult, setTeacherResult] = useState(null);
-
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  
   useEffect(() => {
     const fetch = async () => {
       if (studentInfo?.name) {
@@ -19,6 +22,7 @@ export default function ResultPage({ studentInfo }) {
   }, [studentInfo]);
 
   const sum = (rows) => rows.reduce((a, b) => a + Number(b.score || 0), 0);
+
 
   return (
     <div className="max-w-4xl mx-auto mt-10 p-6 space-y-10 bg-white rounded shadow">
@@ -91,7 +95,7 @@ export default function ResultPage({ studentInfo }) {
               <tr className="font-bold bg-gray-100">
                 <td className="border p-2">PERCENTAGE</td>
                 <td className="border p-2">-</td>
-                <td className="border p-2">{((sum(teacherResult.practical.results) / 50) * 100).toFixed(2)}%</td>
+                <td className="border p-2">{((sum(teacherResult.practical.results) / 150) * 100).toFixed(2)}%</td>
               </tr>
             </tbody>
           </table>
@@ -99,6 +103,27 @@ export default function ResultPage({ studentInfo }) {
       ) : (
         <p className="text-gray-500">Practical results not available yet, please be patient...</p>
       )}
+
+{teacherResult && (
+  <div
+    onClick={() => setShowAnalysis(true)}
+    className="cursor-pointer bg-blue-100 border border-blue-300 p-4 rounded-lg text-center hover:bg-blue-200 transition"
+  >
+    <p className="font-semibold text-lg">📊 View Personal Results Analysis</p>
+    <p className="text-sm text-gray-600">Click to see your performance insights and recommendations</p>
+  </div>
+)}
+
+{showAnalysis && (
+  <div className="mt-6">
+    <AnalysisComponent
+      studentName={studentInfo?.name}
+      grade={studentInfo?.grade}
+      onClose={() => setShowAnalysis(false)}
+    />
+  </div>
+)}
+      
     </div>
   );
 }
