@@ -373,6 +373,8 @@ export default function AllResults() {
                 <th className="border p-3">Practical</th>
                 <th className="border p-3">Practical %</th>
                 <th className="border p-3">Grand %</th>
+                <th className="border p-2">Feedback</th>
+
               </tr>
             </thead>
             <tbody>
@@ -384,6 +386,19 @@ export default function AllResults() {
                   <td className="border p-2">{s.practical}</td>
                   <td className={`border p-2 ${s.practicalPercent >= 30 ? "text-green-600" : "text-red-600"}`}>{s.practicalPercent}%</td>
                   <td className={`border p-2 font-bold ${s.grand >= 30 ? "text-green-700" : "text-red-700"}`}>{s.grand}%</td>
+                  <td className="border p-2 text-center">
+                    {student.feedback ? (
+                      <button
+                        onClick={() => setSelectedFeedback(student.feedback)}
+                        className="text-blue-600 underline"
+                      >
+                        View Feedback
+                      </button>
+                    ) : (
+                      <span className="text-gray-400">No Feedback</span>
+                    )}
+                  </td>
+
                 </tr>
               ))}
             </tbody>
@@ -439,6 +454,7 @@ export default function AllResults() {
               </tr>
             </thead>
             <tbody>
+              
               {generalExamData.filter(
                 (r) =>
                   r.grade?.toLowerCase().includes(selectedGrade.split(" ")[1].toLowerCase()) &&
@@ -456,8 +472,27 @@ export default function AllResults() {
               ))}
             </tbody>
           </table>
+
         </div>
       )}
+
+      {selectedFeedback && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+    <div className="bg-white p-6 rounded max-w-md w-full">
+      <h3 className="text-lg font-bold mb-2">📋 Student Feedback</h3>
+      {["q1", "q2", "q3", "q4", "q5"].map((q, idx) => (
+        <p key={idx}><span className="font-medium">Q{idx + 1}:</span> {selectedFeedback[q]}</p>
+      ))}
+      <button
+        onClick={() => setSelectedFeedback(null)}
+        className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+      >
+        Close
+      </button>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }

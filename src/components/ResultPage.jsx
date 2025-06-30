@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import AnalysisComponent from './AnalysisComponent';
 import { db } from '../utils/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-// ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, RadialLinearScale, PointElement, LineElement, Tooltip, Legend);
+import StudentFeedbackCard from "../utils/StudentFeedbackCard";
+
 
 export default function ResultPage({ studentInfo }) {
   const [teacherResult, setTeacherResult] = useState(null);
+  const [showFeedback, setShowFeedback] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
   
   useEffect(() => {
@@ -104,6 +106,7 @@ export default function ResultPage({ studentInfo }) {
         <p className="text-gray-500">Practical results not available yet, please be patient...</p>
       )}
 
+{/* Analysis card */}
 {teacherResult && (
   <div
     onClick={() => setShowAnalysis(true)}
@@ -123,7 +126,26 @@ export default function ResultPage({ studentInfo }) {
     />
   </div>
 )}
-      
+
+{/* FEEDBACK CARD */}
+{teacherResult && !showFeedback && (
+  <div
+    onClick={() => setShowFeedback(true)}
+    className="cursor-pointer bg-yellow-100 border border-yellow-300 p-4 rounded-lg text-center hover:bg-yellow-200 transition"
+  >
+    <p className="font-semibold text-lg">📝 FEEDBACK</p>
+    <p className="text-sm text-gray-600">Click to give your personal feedback about your results</p>
+  </div>
+)}
+
+{showFeedback && (
+  <StudentFeedbackCard
+    studentName={studentInfo?.name}
+    onClose={() => setShowFeedback(false)}
+  />
+)}
+
+
     </div>
   );
 }
