@@ -10,34 +10,74 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import * as XLSX from "xlsx";
 
+// Chart colors
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AA00FF", "#FF4081"];
 
-const QUESTION_MAX_SCORES = {
-  "WORD PROCESSING": 40,
-  "SPREADSHEETS": 33,
+// Grade 11 theory max scores
+const GRADE_11_MAX_SCORES = {
+  "MCQ": 10,
+  "MATCHING ITEMS": 5,
+  "T/F": 5,
+  "SPREADSHEETS": 20,
+  "DATABASES": 20,
+  "INTERNET & NETWORK TECH": 20,
+  "INTERNET & TECHNOLOGY SCENARIO": 20,
+  "DATABASES SCENARIO": 20,
+};
+
+// Grade 11 practical max scores
+const GRADE_11_PRACTICAL = {
+  "WORD PROCESSING": 33,
+  "SPREADSHEETS": 21,
+  "DATABASES": 26,
+  "HTML": 20,
+};
+
+// Grade 12 practical scores
+const GRADE_12_PRAC_SCORES = {
+  "WORD PROCESSING Q1": 25,
+  "WORD PROCESSING Q2": 19,
+  "SPREADSHEETS": 24,
   "DATABASES": 40,
   "HTML": 33,
   "GENERAL": 9,
+};
+
+// Grade 12 theory scores
+const GRADE_12_THEORY_SCORES = {
   "MCQ": 10,
   "MATCHING ITEMS": 10,
   "T/F": 5,
   "SYSTEMS TECHNOLOGIES": 20,
+  "INTERNET & NETWORKS": 15,
   "INTERNET & NETWORK TECH": 15,
-  "INFORMATION MANAGEMENT": 20,
+  "INFORMATION MANAGEMENT": 10,
   "SOCIAL IMPLICATIONS": 10,
   "SOLUTION DEVELOPMENT": 20,
   "APPLICATION SCENARIO": 25,
   "TASK SCENARIO": 25,
 };
 
+// Default fallback
+const DEFAULT_MAX_SCORES = {
+  "WORD PROCESSING": 25,
+  "SPREADSHEETS": 24,
+  "DATABASES": 40,
+  "HTML": 33,
+  "GENERAL": 9,
+};
 
-export default function AnalysisComponent({ studentName, grade, onClose }) {
+export default function AnalysisComponent() {
   const [mainExamData, setMainExamData] = useState({});
+  const [analysisType, setAnalysisType] = useState("overall");
   const [chartType, setChartType] = useState("pie");
+  const [selectedGrade, setSelectedGrade] = useState("All Grades");
+  const [selectedStudent, setSelectedStudent] = useState("");
   const [chartData, setChartData] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const chartRef = useRef(null);
 
+  // Fetch student results
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "studentResults"), (snap) => {
       const temp = {};
@@ -47,69 +87,109 @@ export default function AnalysisComponent({ studentName, grade, onClose }) {
     return () => unsub();
   }, []);
 
+  // Core analysis logic
   useEffect(() => {
-    if (!studentName || Object.keys(mainExamData).length === 0) return;
-  
-    const student = mainExamData[studentName];
-    if (!student) return;
-  
-    const allResults = [
-      ...(student?.theory?.results || []),
-      ...(student?.practical?.results || [])
-    ];
-  
-    const typeScores = {};
-  
-    allResults.forEach(r => {
-      const type = r.type || "Unknown";
-      const score = Number(r.score || 0);
-  
-      if (!typeScores[type]) {
-        typeScores[type] = { total: 0, maxTotal: QUESTION_MAX_SCORES[type] || 30 };
-      }
-      typeScores[type].total += score;
+    let data = [];
+    let recs = [];
+
+    const filtered = Object.keys(mainExamData).filter(name => {
+      const g = mainExamData[name].grade || mainExamData[name].theory?.grade || mainExamData[name].practical?.grade || "";
+      return selectedGrade === "All Grades" || g.toLowerCase().includes(selectedGrade.toLowerCase());
     });
-  
-    const data = [];
-    const recs = [];
-  
-    Object.keys(typeScores).forEach(type => {
-      const total = typeScores[type].total;
-      const maxTotal = typeScores[type].maxTotal;
-      const percent = (total / maxTotal) * 100;
-  
-      data.push({
-        name: type,
-        value: parseFloat(percent.toFixed(1)),
+
+    const isGrade11 = selectedGrade.includes("11");
+    const isGrade12 = selectedGrade.includes("12");
+
+    if (analysisType === "individual" && selectedStudent) {
+      const entry = mainExamData[selectedStudent];
+      const grade = entry.grade || entry.theory?.grade || entry.practical?.grade || "Unknown";
+      const practical = entry.practical?.results?.reduce((sum, r) => sum + Number(r.score || 0), 0) || 0;
+      const theory = entry.theory?.results?.reduce((sum, r) => sum + Number(r.score || 0), 0) || 0;
+
+      let practicalMax = 150, theoryMax = 150;
+      if (grade.includes("10")) { practicalMax = 50; theoryMax = 100; }
+      else if (grade.includes("11")) { practicalMax = 100; theoryMax = 120; }
+      else if (grade.includes("12")) { practicalMax = 150; theoryMax = 150; }
+
+      const grand = ((practical + theory) / (practicalMax + theoryMax)) * 100;
+
+      const categories = [
+        { name: "Theory", value: (theory / theoryMax) * 100 },
+        { name: "Practical", value: (practical / practicalMax) * 100 },
+        { name: "Grand Total %", value: grand },
+      ];
+
+      data = categories.map(c => ({ name: c.name, value: parseFloat(c.value.toFixed(2)) }));
+      recs = categories.map(c => {
+        if (c.value < 40) return `${c.name}: Needs improvement (below 50%).`;
+        if (c.value < 70) return `${c.name}: Fair, but can improve (50-70%).`;
+        return `${c.name}: Good mastery (above 70%).`;
       });
-  
-      if (percent < 50) {
-        recs.push(`⚠️ Needs improvement in ${type} (${percent.toFixed(1)}%)`);
-      } else {
-        recs.push(`✅ Good mastery in ${type} (${percent.toFixed(1)}%)`);
-      }
-    });
-  
+    }
+
+    else if (analysisType === "question" && selectedStudent) {
+      const student = mainExamData[selectedStudent];
+      const results = [...(student?.theory?.results || []), ...(student?.practical?.results || [])];
+
+      const seen = new Set();
+      results.forEach(r => {
+        const qType = r.type || "Unknown";
+        const qNum = r.question || "X";
+        const key = `${qType}-${qNum}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+
+          let max = 10; // fallback
+
+          if (isGrade11) {
+            max = GRADE_11_MAX_SCORES[qType] || GRADE_11_PRACTICAL[qType] || DEFAULT_MAX_SCORES[qType] || 10;
+          } else if (isGrade12) {
+            max = GRADE_12_THEORY_SCORES[qType] || GRADE_12_PRAC_SCORES[qType] || DEFAULT_MAX_SCORES[qType] || 10;
+          } else {
+            max = DEFAULT_MAX_SCORES[qType] || 10;
+          }
+
+          const score = Number(r.score || 0);
+          const percent = (score / max) * 100;
+
+          data.push({
+            name: `${qType} - Q${qNum}`,
+            type: qType,
+            value: score,
+            max,
+            percent: parseFloat(percent.toFixed(1)),
+          });
+
+          if (percent < 50) recs.push(`${qType} - Q${qNum}: Needs improvement (${percent.toFixed(1)}%).`);
+          else if (percent < 70) recs.push(`${qType} - Q${qNum}: Fair, can improve (${percent.toFixed(1)}%).`);
+          else recs.push(`${qType} - Q${qNum}: Good mastery (${percent.toFixed(1)}%).`);
+        }
+      });
+    }
+
     setChartData(data);
     setRecommendations(recs);
-  }, [mainExamData, studentName]);
-  
+  }, [analysisType, selectedStudent, selectedGrade, mainExamData]);
 
+  const hasData = chartData && chartData.length > 0;
+
+  // Export handlers
   const exportToPDF = async () => {
     const canvas = await html2canvas(chartRef.current);
     const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF();
+    const pdf = new jsPDF("p", "mm", "a4");
+    const imgProps = pdf.getImageProperties(imgData);
     const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
     pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`analysis_${studentName}.pdf`);
+    pdf.save(`analysis_${selectedStudent || selectedGrade}.pdf`);
   };
 
   const exportToExcel = () => {
     const ws = XLSX.utils.json_to_sheet(chartData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Analysis");
-    XLSX.writeFile(wb, `analysis_${studentName}.xlsx`);
+    XLSX.writeFile(wb, `analysis_${selectedStudent || selectedGrade}.xlsx`);
   };
 
   const exportToCSV = () => {
@@ -118,37 +198,66 @@ export default function AnalysisComponent({ studentName, grade, onClose }) {
     const blob = new Blob([csv], { type: "text/csv" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `analysis_${studentName}.csv`;
+    link.download = `analysis_${selectedStudent || selectedGrade}.csv`;
     link.click();
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-4 bg-white rounded shadow">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">📊 Personal Analysis for {studentName} (Per Question Type)</h2>
-        {onClose && (
-          <button onClick={onClose} className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700">
-            ← Back
-          </button>
+    <div className="max-w-6xl mx-auto p-6">
+      <h2 className="text-3xl font-bold text-center mb-6">📊 Exam Analysis Dashboard</h2>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-4 mb-6">
+        <div>
+          <label className="font-medium mr-2">Grade:</label>
+          <select value={selectedGrade} onChange={e => setSelectedGrade(e.target.value)} className="border rounded px-3 py-1">
+            <option>All Grades</option>
+            <option>Grade 10</option>
+            <option>Grade 11</option>
+            <option>Grade 12</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="font-medium mr-2">Analysis:</label>
+          <select value={analysisType} onChange={e => setAnalysisType(e.target.value)} className="border rounded px-3 py-1">
+            <option value="overall">Overall Student Performance</option>
+            <option value="overallQuestions">Overall Per Question (Focus Areas)</option>
+            <option value="question">Performance per Question (1 Student)</option>
+            <option value="individual">Individual Summary</option>
+          </select>
+        </div>
+
+        {(analysisType === "question" || analysisType === "individual") && (
+          <div>
+            <label className="font-medium mr-2">Student:</label>
+            <select value={selectedStudent} onChange={e => setSelectedStudent(e.target.value)} className="border rounded px-3 py-1">
+              <option value="">Select</option>
+              {Object.keys(mainExamData).map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          </div>
         )}
+
+        <div>
+          <label className="font-medium mr-2">Chart Type:</label>
+          <select value={chartType} onChange={e => setChartType(e.target.value)} className="border rounded px-3 py-1">
+            <option value="pie">Pie</option>
+            <option value="bar">Bar</option>
+            <option value="line">Line</option>
+          </select>
+        </div>
       </div>
 
-      <div className="mb-4">
-        <label className="mr-2">Chart Type:</label>
-        <select value={chartType} onChange={e => setChartType(e.target.value)} className="border rounded p-1">
-          <option value="pie">Pie</option>
-          <option value="bar">Bar</option>
-          <option value="line">Line</option>
-        </select>
-      </div>
-
-      <div ref={chartRef} className="bg-gray-50 p-4 rounded">
-        {chartData.length > 0 ? (
+      {/* Chart */}
+      <div ref={chartRef} className="bg-white p-4 rounded shadow">
+        {hasData ? (
           <>
             {chartType === "pie" && (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={400}>
                 <PieChart>
-                  <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                  <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={150} label>
                     {chartData.map((entry, idx) => (
                       <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
                     ))}
@@ -158,49 +267,57 @@ export default function AnalysisComponent({ studentName, grade, onClose }) {
               </ResponsiveContainer>
             )}
             {chartType === "bar" && (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={400}>
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
-                  <YAxis domain={[0, 100]} />
+                  <YAxis />
                   <Tooltip />
-                  <Bar dataKey="value" fill="#4C51BF" />
-                </BarChart>
+                  <Bar dataKey="value" fill="#0088FE" /> 
+                  </BarChart>
               </ResponsiveContainer>
             )}
             {chartType === "line" && (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={400}>
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
-                  <YAxis domain={[0, 100]} />
+                  <YAxis />
                   <Tooltip />
-                  <Line type="monotone" dataKey="value" stroke="#4C51BF" strokeWidth={2} />
+                  <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#8884d8"
+                      dot={{ stroke: "black", strokeWidth: 1, fill: entry => entry.value < 30 ? "#FF4C4C" : "#8884d8" }} // red dot if <30
+                      activeDot={{ r: 8 }}
+                    />
+
                 </LineChart>
               </ResponsiveContainer>
             )}
 
-            <div className="mt-4">
-              <h4 className="font-semibold text-lg">📌 Recommendations:</h4>
-              <ul className="list-disc list-inside mt-2">
-                {recommendations.map((rec, idx) => (
-                  <li key={idx} className={rec.includes("⚠️") ? "text-red-600" : "text-green-700"}>
-                    {rec}
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <ul className="list-disc list-inside space-y-1">
+            {recommendations.map((rec, idx) => {
+              const isLow = rec.includes("below 30") || rec.match(/(\d+(\.\d+)?)%/g)?.some(p => parseFloat(p) < 30);
+              return (
+                <li key={idx} className={isLow ? "text-red-600 font-semibold" : ""}>
+                  {rec}
+                </li>
+              );
+            })}
+          </ul>
+
           </>
         ) : (
-          <p className="text-center text-gray-500">Loading personalized analysis...</p>
+          <p className="text-center text-gray-500">No data for selected options.</p>
         )}
       </div>
 
-      {chartData.length > 0 && (
-        <div className="flex gap-3 mt-4 justify-center">
-          <button onClick={exportToPDF} className="bg-blue-600 text-white px-3 py-1 rounded">Export PDF</button>
-          <button onClick={exportToExcel} className="bg-green-600 text-white px-3 py-1 rounded">Export Excel</button>
-          <button onClick={exportToCSV} className="bg-yellow-600 text-white px-3 py-1 rounded">Export CSV</button>
+      {hasData && (
+        <div className="mt-4 flex flex-wrap gap-4">
+          <button onClick={exportToPDF} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">📄 PDF</button>
+          <button onClick={exportToExcel} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">📊 Excel</button>
+          <button onClick={exportToCSV} className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">📁 CSV</button>
         </div>
       )}
     </div>

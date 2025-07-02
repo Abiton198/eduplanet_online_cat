@@ -3,7 +3,7 @@
 export const termExams = {
     "Grade 12": {
       "Term 1": [
-        { id: 101, title: "Networks Basics", password: "grade12pass" },
+        { id: 101, title: "Networks Basics", password: "" },
         { id: 102, title: "Intro to HTML", password: "grade12pass" },
       ],
       "Term 2": [
@@ -26,6 +26,8 @@ export const termExams = {
       ],
     },
   
+    // /////////////////////////////////////////////////////////////////////////////////
+    // GRADE 11
     "Grade 11": {
       "Term 1": [
         { id: 201, title: "Databases Intro", password: "grade11pass" },
@@ -44,8 +46,14 @@ export const termExams = {
         { id: 10, title: "HTML & Web Design", password: "grade11pass1" },
       ],
       "Term 3": [
-        { id: 203, title: "HTML Revision", password: "grade11pass" },
-        { id: 204, title: "Database Practice", password: "grade11pass" },
+        { id: 1, title: "Systems Technologies", password: "grade11pass" },
+        { id: 2, title: "Internet Technologies", password: "grade11pass" },
+        { id: 3, title: "Social Implications 2", password: "grade11pass" },
+        { id: 4, title: "Information Management & PAT", password: "grade11pass" },
+        { id: 5, title: "Databases", password: "grade11pass" },
+        { id: 6, title: "Spreadsheets 2", password: "grade11pass" },
+        { id: 7, title: "Word Processing 2", password: "grade11pass" },
+        { id: 8, title: "HTML 2", password: "grade11pass" },
       ],
       "Term 4": [
         { id: 205, title: "Mock Paper 1", password: "grade11pass" },
@@ -53,6 +61,11 @@ export const termExams = {
       ],
     },
   
+
+    // /////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////
+    // GRADE 10
+
     "Grade 10": {
       "Term 1": [
         { id: 301, title: "Computer Basics", password: "grade10pass" },
@@ -71,8 +84,10 @@ export const termExams = {
         { id: 10, title: "Consolidation & Control Test Preparation", password: "grade10pass1" },
       ],
       "Term 3": [
-        { id: 303, title: "Word Processing Basics", password: "grade10pass" },
-        { id: 304, title: "Spreadsheet Practice", password: "grade10pass" },
+        { id: 1, title: "Networks", password: "grade10pass" },
+        { id: 2, title: "Spreadsheets 2", password: "grade10pass" }, 
+        { id: 3, title: "Word Processing & Presentations", password: "grade10pass" },
+        { id: 4, title: "HTML & Information", password: "grade10pass" },
       ],
       "Term 4": [
         { id: 305, title: "Mock Exam 1", password: "grade10pass" },

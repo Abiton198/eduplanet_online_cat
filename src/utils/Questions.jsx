@@ -1,6 +1,8 @@
 export const questions = {
   
   // GRADE 10 EXAMS
+
+  // TERM 2 EXAMS
   
  "NETWORK TECHNOLOGIES - Grade 10": [
   { "id": 1, "question": "What is a computer network?", "options": ["A single computer used for browsing", "A device used to play games", "A system that connects devices to share data", "A program used for editing"], "correctAnswer": "A system that connects devices to share data" },
@@ -372,6 +374,928 @@ export const questions = {
   { id: 30, question: "What is a key benefit of using charts in a spreadsheet?", options: ["To hide data", "To organize text", "To visually represent data", "To delete cells"], correctAnswer: "To visually represent data" }
 ],
 
+//! TERM 3 EXAMS #######################
+"Networks":
+[
+  {
+    "id": 1,
+    "question": "What does LAN stand for?",
+    "options": ["Large Area Network", "Local Area Network", "Long Access Network", "Limited Access Network"],
+    "correctAnswer": "Local Area Network"
+  },
+  {
+    "id": 2,
+    "question": "Which device connects multiple devices in a network?",
+    "options": ["Router", "Printer", "Monitor", "Keyboard"],
+    "correctAnswer": "Router"
+  },
+  {
+    "id": 3,
+    "question": "Which network type connects devices within a single room or building?",
+    "options": ["WAN", "PAN", "LAN", "MAN"],
+    "correctAnswer": "LAN"
+  },
+  {
+    "id": 4,
+    "question": "What is the primary function of a modem?",
+    "options": ["Store data", "Print documents", "Connect to the internet", "Edit photos"],
+    "correctAnswer": "Connect to the internet"
+  },
+  {
+    "id": 5,
+    "question": "What does ISP stand for?",
+    "options": ["Internet Service Provider", "Internal Service Process", "Internet Software Program", "Interactive Service Provider"],
+    "correctAnswer": "Internet Service Provider"
+  },
+  {
+    "id": 6,
+    "question": "Which is an example of wired media?",
+    "options": ["WiFi", "Bluetooth", "Ethernet cable", "Infrared"],
+    "correctAnswer": "Ethernet cable"
+  },
+  {
+    "id": 7,
+    "question": "Which is an example of wireless communication media?",
+    "options": ["Fiber optic", "Ethernet", "Coaxial cable", "WiFi"],
+    "correctAnswer": "WiFi"
+  },
+  {
+    "id": 8,
+    "question": "What is the main purpose of a network?",
+    "options": ["Printing faster", "Sharing resources", "Editing documents", "Creating graphics"],
+    "correctAnswer": "Sharing resources"
+  },
+  {
+    "id": 9,
+    "question": "Which device helps in managing and directing traffic in a network?",
+    "options": ["Scanner", "Router", "Projector", "Monitor"],
+    "correctAnswer": "Router"
+  },
+  {
+    "id": 10,
+    "question": "Which of these is a benefit of networking?",
+    "options": ["Using less power", "Resource sharing", "Better screen resolution", "Printing in color"],
+    "correctAnswer": "Resource sharing"
+  },
+  {
+    "id": 11,
+    "question": "A network at home is called?",
+    "options": ["HAN", "LAN", "WAN", "PAN"],
+    "correctAnswer": "HAN"
+  },
+  {
+    "id": 12,
+    "question": "A small personal network around a user is called?",
+    "options": ["WAN", "PAN", "MAN", "LAN"],
+    "correctAnswer": "PAN"
+  },
+  {
+    "id": 13,
+    "question": "Which device converts digital signals for internet communication?",
+    "options": ["Switch", "Modem", "Router", "Keyboard"],
+    "correctAnswer": "Modem"
+  },
+  {
+    "id": 14,
+    "question": "Which of the following is a communication channel?",
+    "options": ["Ethernet cable", "Monitor", "Keyboard", "Mouse"],
+    "correctAnswer": "Ethernet cable"
+  },
+  {
+    "id": 15,
+    "question": "The physical path over which data travels is called?",
+    "options": ["Channel", "Device", "Router", "Printer"],
+    "correctAnswer": "Channel"
+  },
+  {
+    "id": 16,
+    "question": "What does the abbreviation WWW stand for?",
+    "options": ["World Wide Web", "Wireless Wide Web", "Wide World Web", "Web Wide World"],
+    "correctAnswer": "World Wide Web"
+  },
+  {
+    "id": 17,
+    "question": "The term ISP refers to?",
+    "options": ["An internet application", "An online game", "A service provider for internet access", "An email service"],
+    "correctAnswer": "A service provider for internet access"
+  },
+  {
+    "id": 18,
+    "question": "Which device shares internet connection to multiple devices?",
+    "options": ["Router", "Keyboard", "Printer", "Monitor"],
+    "correctAnswer": "Router"
+  },
+  {
+    "id": 19,
+    "question": "Which of the following can connect to the internet?",
+    "options": ["Printer", "Monitor", "Router", "Mouse"],
+    "correctAnswer": "Router"
+  },
+  {
+    "id": 20,
+    "question": "The fastest internet connection medium is?",
+    "options": ["Dial-up", "Fiber optic", "Coaxial cable", "Satellite"],
+    "correctAnswer": "Fiber optic"
+  },
+  {
+    "id": 21,
+    "question": "Which network covers a large geographical area?",
+    "options": ["PAN", "LAN", "WAN", "HAN"],
+    "correctAnswer": "WAN"
+  },
+  {
+    "id": 22,
+    "question": "What is a benefit of using WiFi in a network?",
+    "options": ["Wires required", "Fixed connection", "Mobility and flexibility", "Slower speeds"],
+    "correctAnswer": "Mobility and flexibility"
+  },
+  {
+    "id": 23,
+    "question": "Which network is typically used in schools?",
+    "options": ["PAN", "LAN", "WAN", "HAN"],
+    "correctAnswer": "LAN"
+  },
+  {
+    "id": 24,
+    "question": "What is the full form of PAN?",
+    "options": ["Public Area Network", "Personal Area Network", "Private Access Network", "Personal Access Node"],
+    "correctAnswer": "Personal Area Network"
+  },
+  {
+    "id": 25,
+    "question": "A switch in networking is used to?",
+    "options": ["Type documents", "Send data to the correct device", "Print data", "Scan documents"],
+    "correctAnswer": "Send data to the correct device"
+  },
+  {
+    "id": 26,
+    "question": "Which medium can carry data at high speeds?",
+    "options": ["Copper wire", "Fiber optic cable", "Plastic wire", "Steel wire"],
+    "correctAnswer": "Fiber optic cable"
+  },
+  {
+    "id": 27,
+    "question": "Which component is required to access the internet?",
+    "options": ["Printer", "ISP", "Scanner", "Monitor"],
+    "correctAnswer": "ISP"
+  },
+  {
+    "id": 28,
+    "question": "Which network device helps in data packet filtering?",
+    "options": ["Keyboard", "Router", "Firewall", "Monitor"],
+    "correctAnswer": "Firewall"
+  },
+  {
+    "id": 29,
+    "question": "What is the advantage of using a network in a business?",
+    "options": ["Increased paper usage", "Better file sharing and communication", "Lower screen brightness", "More printing costs"],
+    "correctAnswer": "Better file sharing and communication"
+  },
+  {
+    "id": 30,
+    "question": "Which is NOT a type of network?",
+    "options": ["LAN", "WAN", "CPU", "PAN"],
+    "correctAnswer": "CPU"
+  }
+],
+
+"Internet & communications":
+[
+  {
+    "id": 1,
+    "question": "What does HTTP stand for?",
+    "options": ["HyperText Transfer Protocol", "Hyperlink Transfer Protocol", "Hyperlink Text Transfer Process", "Hyper Transfer Text Protocol"],
+    "correctAnswer": "HyperText Transfer Protocol"
+  },
+  {
+    "id": 2,
+    "question": "Which application is used to access websites?",
+    "options": ["Word Processor", "Spreadsheet", "Web Browser", "Email Client"],
+    "correctAnswer": "Web Browser"
+  },
+  {
+    "id": 3,
+    "question": "What does URL stand for?",
+    "options": ["Universal Resource Locator", "Uniform Resource Locator", "Universal Resource Link", "Uniform Resource Link"],
+    "correctAnswer": "Uniform Resource Locator"
+  },
+  {
+    "id": 4,
+    "question": "Which of the following is NOT a web browser?",
+    "options": ["Chrome", "Firefox", "Excel", "Safari"],
+    "correctAnswer": "Excel"
+  },
+  {
+    "id": 5,
+    "question": "What is downloading?",
+    "options": ["Sending data to the internet", "Receiving data from the internet", "Printing documents", "Scanning images"],
+    "correctAnswer": "Receiving data from the internet"
+  },
+  {
+    "id": 6,
+    "question": "Which of these is a popular search engine?",
+    "options": ["Google", "Excel", "Word", "PowerPoint"],
+    "correctAnswer": "Google"
+  },
+  {
+    "id": 7,
+    "question": "What is uploading?",
+    "options": ["Receiving data from the internet", "Editing documents", "Sending data to the internet", "Browsing websites"],
+    "correctAnswer": "Sending data to the internet"
+  },
+  {
+    "id": 8,
+    "question": "What does ISP provide?",
+    "options": ["Printing services", "Internet access", "Document editing", "Scanning services"],
+    "correctAnswer": "Internet access"
+  },
+  {
+    "id": 9,
+    "question": "Which of these is a communication device?",
+    "options": ["Printer", "Monitor", "Modem", "Mouse"],
+    "correctAnswer": "Modem"
+  },
+  {
+    "id": 10,
+    "question": "Which of the following is a type of e-communication?",
+    "options": ["Writing letters", "Face-to-face meetings", "Email", "Photocopying"],
+    "correctAnswer": "Email"
+  },
+  {
+    "id": 11,
+    "question": "Which rule should you follow when using email?",
+    "options": ["Ignore attachments", "Use clear subject lines", "Avoid proofreading", "Send empty emails"],
+    "correctAnswer": "Use clear subject lines"
+  },
+  {
+    "id": 12,
+    "question": "What is netiquette?",
+    "options": ["Internet security software", "Etiquette on the internet", "A type of browser", "A communication device"],
+    "correctAnswer": "Etiquette on the internet"
+  },
+  {
+    "id": 13,
+    "question": "Which of the following is NOT an email provider?",
+    "options": ["Gmail", "Yahoo", "Outlook", "Excel"],
+    "correctAnswer": "Excel"
+  },
+  {
+    "id": 14,
+    "question": "What is a hyperlink?",
+    "options": ["A type of virus", "A clickable link to another page", "A browser extension", "A document editor"],
+    "correctAnswer": "A clickable link to another page"
+  },
+  {
+    "id": 15,
+    "question": "Which device allows you to connect to the internet wirelessly?",
+    "options": ["Router", "Printer", "Monitor", "Scanner"],
+    "correctAnswer": "Router"
+  },
+  {
+    "id": 16,
+    "question": "Which of the following describes 'attachment' in email?",
+    "options": ["A hyperlink", "A file sent with an email", "A subject line", "A browser feature"],
+    "correctAnswer": "A file sent with an email"
+  },
+  {
+    "id": 17,
+    "question": "What is a benefit of using email?",
+    "options": ["High cost", "Slow communication", "Fast communication", "Limited accessibility"],
+    "correctAnswer": "Fast communication"
+  },
+  {
+    "id": 18,
+    "question": "Which of these is a valid email address?",
+    "options": ["user@gmail", "user@gmail.com", "user.gmail.com", "@gmail.com"],
+    "correctAnswer": "user@gmail.com"
+  },
+  {
+    "id": 19,
+    "question": "What should you avoid when using email?",
+    "options": ["Using polite language", "Using clear subjects", "Using caps for emphasis", "Sending large attachments unnecessarily"],
+    "correctAnswer": "Sending large attachments unnecessarily"
+  },
+  {
+    "id": 20,
+    "question": "Which software is used for browsing the internet?",
+    "options": ["Excel", "Word", "Chrome", "Access"],
+    "correctAnswer": "Chrome"
+  },
+  {
+    "id": 21,
+    "question": "What is the World Wide Web?",
+    "options": ["A type of computer", "A global network of computers", "A web browser", "A type of spreadsheet"],
+    "correctAnswer": "A global network of computers"
+  },
+  {
+    "id": 22,
+    "question": "What is the use of search engines?",
+    "options": ["To edit documents", "To browse files", "To find information online", "To print documents"],
+    "correctAnswer": "To find information online"
+  },
+  {
+    "id": 23,
+    "question": "Which of these is an example of a search engine?",
+    "options": ["Chrome", "Yahoo", "Google", "Firefox"],
+    "correctAnswer": "Google"
+  },
+  {
+    "id": 24,
+    "question": "What is 'bandwidth'?",
+    "options": ["A device", "The speed of data transfer", "A software program", "A type of document"],
+    "correctAnswer": "The speed of data transfer"
+  },
+  {
+    "id": 25,
+    "question": "What is 'browsing history'?",
+    "options": ["List of emails sent", "List of documents printed", "Record of websites visited", "Files downloaded"],
+    "correctAnswer": "Record of websites visited"
+  },
+  {
+    "id": 26,
+    "question": "Which device converts digital signals to analog for internet communication?",
+    "options": ["Monitor", "Modem", "Printer", "Mouse"],
+    "correctAnswer": "Modem"
+  },
+  {
+    "id": 27,
+    "question": "What should you avoid while using the internet?",
+    "options": ["Updating your browser", "Using strong passwords", "Sharing personal information publicly", "Using antivirus software"],
+    "correctAnswer": "Sharing personal information publicly"
+  },
+  {
+    "id": 28,
+    "question": "Which device allows connection to WiFi?",
+    "options": ["Scanner", "Printer", "Router", "Keyboard"],
+    "correctAnswer": "Router"
+  },
+  {
+    "id": 29,
+    "question": "What is phishing?",
+    "options": ["A type of email fraud to steal information", "A type of software", "A type of printer", "A type of hyperlink"],
+    "correctAnswer": "A type of email fraud to steal information"
+  },
+  {
+    "id": 30,
+    "question": "What should be included in a professional email signature?",
+    "options": ["Name and contact information", "Random emojis", "Jokes", "Caps lock sentences"],
+    "correctAnswer": "Name and contact information"
+  }
+],
+"Spreadsheets 2":
+[
+  {
+    "id": 1,
+    "question": "What is the primary purpose of a spreadsheet application?",
+    "options": ["Word processing", "Data analysis and calculations", "Drawing", "Sending emails"],
+    "correctAnswer": "Data analysis and calculations"
+  },
+  {
+    "id": 2,
+    "question": "Which of the following is NOT a spreadsheet function?",
+    "options": ["SUM", "AVERAGE", "PRINT", "COUNT"],
+    "correctAnswer": "PRINT"
+  },
+  {
+    "id": 3,
+    "question": "Which formula calculates the average of numbers in cells A1 to A5?",
+    "options": ["=SUM(A1:A5)", "=MIN(A1:A5)", "=AVERAGE(A1:A5)", "=COUNT(A1:A5)"],
+    "correctAnswer": "=AVERAGE(A1:A5)"
+  },
+  {
+    "id": 4,
+    "question": "Which function returns the smallest number in a range?",
+    "options": ["=MIN()", "=MAX()", "=SUM()", "=AVERAGE()"],
+    "correctAnswer": "=MIN()"
+  },
+  {
+    "id": 5,
+    "question": "What is the use of the COUNT function?",
+    "options": ["Counts the number of cells with data", "Counts the number of blank cells", "Counts the total sum", "Creates charts"],
+    "correctAnswer": "Counts the number of cells with data"
+  },
+  {
+    "id": 6,
+    "question": "Which symbol is used to start a formula in spreadsheets?",
+    "options": ["#", "$", "=", "+"],
+    "correctAnswer": "="
+  },
+  {
+    "id": 7,
+    "question": "What does the term 'cell reference' mean?",
+    "options": ["The name of a file", "The address of a cell in a spreadsheet", "The password of a sheet", "The number of sheets"],
+    "correctAnswer": "The address of a cell in a spreadsheet"
+  },
+  {
+    "id": 8,
+    "question": "What does the term 'range' refer to in spreadsheets?",
+    "options": ["A type of chart", "A group of selected cells", "A formula type", "A worksheet name"],
+    "correctAnswer": "A group of selected cells"
+  },
+  {
+    "id": 9,
+    "question": "What does merging cells do in a spreadsheet?",
+    "options": ["Deletes the cells", "Combines multiple cells into one", "Creates a chart", "Changes font style"],
+    "correctAnswer": "Combines multiple cells into one"
+  },
+  {
+    "id": 10,
+    "question": "Which chart is best to display trends over time?",
+    "options": ["Pie chart", "Bar chart", "Line chart", "Area chart"],
+    "correctAnswer": "Line chart"
+  },
+  {
+    "id": 11,
+    "question": "What is the use of conditional formatting?",
+    "options": ["To add borders", "To apply different formats based on conditions", "To merge cells", "To print data"],
+    "correctAnswer": "To apply different formats based on conditions"
+  },
+  {
+    "id": 12,
+    "question": "Which of the following is a relational operator?",
+    "options": ["&", ">", "#", "$"],
+    "correctAnswer": ">"
+  },
+  {
+    "id": 13,
+    "question": "Which function would you use to count blank cells in a range?",
+    "options": ["COUNTBLANK", "COUNTA", "SUM", "AVERAGE"],
+    "correctAnswer": "COUNTBLANK"
+  },
+  {
+    "id": 14,
+    "question": "Which function returns the highest value in a range?",
+    "options": ["MIN", "MAX", "COUNT", "SUM"],
+    "correctAnswer": "MAX"
+  },
+  {
+    "id": 15,
+    "question": "What does the TODAY function display?",
+    "options": ["Current time", "Current date", "Cell address", "Sheet name"],
+    "correctAnswer": "Current date"
+  },
+  {
+    "id": 16,
+    "question": "Which menu option would you use to sort data?",
+    "options": ["File", "Data", "Insert", "Review"],
+    "correctAnswer": "Data"
+  },
+  {
+    "id": 17,
+    "question": "Which option would you use to adjust the number of decimal places displayed in a cell?",
+    "options": ["Cell formatting", "Insert function", "Print preview", "Merge cells"],
+    "correctAnswer": "Cell formatting"
+  },
+  {
+    "id": 18,
+    "question": "Which of the following is NOT a valid data type in spreadsheets?",
+    "options": ["Text", "Number", "Chart", "Date"],
+    "correctAnswer": "Chart"
+  },
+  {
+    "id": 19,
+    "question": "What is the purpose of using charts in spreadsheets?",
+    "options": ["To format text", "To visually represent data", "To create hyperlinks", "To write comments"],
+    "correctAnswer": "To visually represent data"
+  },
+  {
+    "id": 20,
+    "question": "Which of the following is a valid spreadsheet file extension?",
+    "options": [".docx", ".xlsx", ".pptx", ".html"],
+    "correctAnswer": ".xlsx"
+  },
+  {
+    "id": 21,
+    "question": "Which tool helps in finding the sum of values in a column quickly?",
+    "options": ["Filter", "AutoSum", "Conditional formatting", "Format painter"],
+    "correctAnswer": "AutoSum"
+  },
+  {
+    "id": 22,
+    "question": "Which function would you use to find the median value in a set of numbers?",
+    "options": ["AVERAGE", "MEDIAN", "MODE", "MIN"],
+    "correctAnswer": "MEDIAN"
+  },
+  {
+    "id": 23,
+    "question": "What does the COUNTA function do?",
+    "options": ["Counts blank cells", "Counts cells with data", "Counts numerical values only", "Counts errors"],
+    "correctAnswer": "Counts cells with data"
+  },
+  {
+    "id": 24,
+    "question": "Which formula calculates the sum of cells B1 to B10?",
+    "options": ["=AVERAGE(B1:B10)", "=SUM(B1:B10)", "=COUNT(B1:B10)", "=MAX(B1:B10)"],
+    "correctAnswer": "=SUM(B1:B10)"
+  },
+  {
+    "id": 25,
+    "question": "What is the purpose of using filters in spreadsheets?",
+    "options": ["To merge cells", "To sort data", "To hide data based on conditions", "To print documents"],
+    "correctAnswer": "To hide data based on conditions"
+  },
+  {
+    "id": 26,
+    "question": "Which of the following is a logical function in spreadsheets?",
+    "options": ["SUM", "IF", "COUNT", "MIN"],
+    "correctAnswer": "IF"
+  },
+  {
+    "id": 27,
+    "question": "Which tool is used to apply the same formatting to multiple cells?",
+    "options": ["Format painter", "Conditional formatting", "Filter", "Sort"],
+    "correctAnswer": "Format painter"
+  },
+  {
+    "id": 28,
+    "question": "What happens when you double-click the boundary between two columns?",
+    "options": ["Deletes the column", "Resizes the column to fit content", "Adds a new column", "Formats the column"],
+    "correctAnswer": "Resizes the column to fit content"
+  },
+  {
+    "id": 29,
+    "question": "What is the use of data validation in spreadsheets?",
+    "options": ["To print data", "To merge cells", "To restrict the type of data entered", "To create charts"],
+    "correctAnswer": "To restrict the type of data entered"
+  },
+  {
+    "id": 30,
+    "question": "What is a worksheet?",
+    "options": ["A chart", "A single spreadsheet page", "A cell", "A workbook"],
+    "correctAnswer": "A single spreadsheet page"
+  }
+],
+"Word Processing & Presentations":
+[
+  {
+    "id": 1,
+    "question": "What is the primary purpose of word processing software?",
+    "options": ["Editing images", "Creating and editing text documents", "Managing databases", "Creating presentations"],
+    "correctAnswer": "Creating and editing text documents"
+  },
+  {
+    "id": 2,
+    "question": "Which feature helps to correct spelling errors in a Word document?",
+    "options": ["Grammar check", "Spell check", "Thesaurus", "Track changes"],
+    "correctAnswer": "Spell check"
+  },
+  {
+    "id": 3,
+    "question": "Which feature allows you to see changes made to a document?",
+    "options": ["Track changes", "Find and replace", "Print preview", "Mail merge"],
+    "correctAnswer": "Track changes"
+  },
+  {
+    "id": 4,
+    "question": "What is the purpose of headers and footers in a Word document?",
+    "options": ["To add page numbers and document titles", "To change text formatting", "To add hyperlinks", "To insert images"],
+    "correctAnswer": "To add page numbers and document titles"
+  },
+  {
+    "id": 5,
+    "question": "Which of the following is NOT a view option in Word?",
+    "options": ["Print layout", "Web layout", "Draft", "Database view"],
+    "correctAnswer": "Database view"
+  },
+  {
+    "id": 6,
+    "question": "What does the 'mail merge' feature do?",
+    "options": ["Combines multiple documents", "Sends emails", "Creates personalized letters for multiple recipients", "Prints envelopes"],
+    "correctAnswer": "Creates personalized letters for multiple recipients"
+  },
+  {
+    "id": 7,
+    "question": "Which tab would you use to insert a table in Word?",
+    "options": ["Home", "Insert", "Design", "Review"],
+    "correctAnswer": "Insert"
+  },
+  {
+    "id": 8,
+    "question": "What is the purpose of styles in Word processing?",
+    "options": ["To add images", "To apply consistent formatting quickly", "To print documents", "To add animations"],
+    "correctAnswer": "To apply consistent formatting quickly"
+  },
+  {
+    "id": 9,
+    "question": "What is a Table of Contents used for?",
+    "options": ["Listing headings and page numbers", "Displaying images", "Creating charts", "Printing envelopes"],
+    "correctAnswer": "Listing headings and page numbers"
+  },
+  {
+    "id": 10,
+    "question": "Which feature allows you to find and replace words in a document?",
+    "options": ["Track changes", "Spell check", "Find and replace", "Comments"],
+    "correctAnswer": "Find and replace"
+  },
+  {
+    "id": 11,
+    "question": "Which file extension is associated with Word documents?",
+    "options": [".xlsx", ".pptx", ".docx", ".html"],
+    "correctAnswer": ".docx"
+  },
+  {
+    "id": 12,
+    "question": "Which of the following is considered best practice in document formatting?",
+    "options": ["Using all caps", "Using consistent fonts and styles", "Using multiple font colors", "Using very large fonts"],
+    "correctAnswer": "Using consistent fonts and styles"
+  },
+  {
+    "id": 13,
+    "question": "What is the function of the 'Review' tab in Word?",
+    "options": ["Inserting images", "Managing page layout", "Spell check and comments", "Creating tables"],
+    "correctAnswer": "Spell check and comments"
+  },
+  {
+    "id": 14,
+    "question": "Which feature can be used to add references and citations in Word?",
+    "options": ["Mail merge", "References tab", "Insert tab", "Design tab"],
+    "correctAnswer": "References tab"
+  },
+  {
+    "id": 15,
+    "question": "Which of the following can be added using the Insert tab?",
+    "options": ["Tables", "Charts", "Pictures", "All of the above"],
+    "correctAnswer": "All of the above"
+  },
+  {
+    "id": 16,
+    "question": "What is the primary use of presentation software?",
+    "options": ["To create slideshows", "To edit photos", "To write documents", "To calculate data"],
+    "correctAnswer": "To create slideshows"
+  },
+  {
+    "id": 17,
+    "question": "Which of the following is a feature of presentation software?",
+    "options": ["Slide transitions", "Photo editing", "Data analysis", "Mail merge"],
+    "correctAnswer": "Slide transitions"
+  },
+  {
+    "id": 18,
+    "question": "Which file extension is commonly used for presentations?",
+    "options": [".xlsx", ".pptx", ".docx", ".txt"],
+    "correctAnswer": ".pptx"
+  },
+  {
+    "id": 19,
+    "question": "What is the use of animations in a presentation?",
+    "options": ["To format text", "To make slides visually engaging", "To edit charts", "To print slides"],
+    "correctAnswer": "To make slides visually engaging"
+  },
+  {
+    "id": 20,
+    "question": "Which feature allows you to add speaker notes in a presentation?",
+    "options": ["View menu", "Insert menu", "Animations tab", "Design tab"],
+    "correctAnswer": "View menu"
+  },
+  {
+    "id": 21,
+    "question": "Which chart type is commonly used in presentations to show parts of a whole?",
+    "options": ["Bar chart", "Pie chart", "Line chart", "Scatter plot"],
+    "correctAnswer": "Pie chart"
+  },
+  {
+    "id": 22,
+    "question": "Which of the following is NOT a slide layout option in presentation software?",
+    "options": ["Title slide", "Content slide", "Footer slide", "Blank slide"],
+    "correctAnswer": "Footer slide"
+  },
+  {
+    "id": 23,
+    "question": "What is the function of slide transitions?",
+    "options": ["To animate objects on a slide", "To change how one slide moves to the next", "To format text", "To insert tables"],
+    "correctAnswer": "To change how one slide moves to the next"
+  },
+  {
+    "id": 24,
+    "question": "What should be avoided in a professional presentation?",
+    "options": ["Consistent fonts", "Excessive animations", "Relevant images", "Clear headings"],
+    "correctAnswer": "Excessive animations"
+  },
+  {
+    "id": 25,
+    "question": "What is a design template in presentation software?",
+    "options": ["A slide layout", "A pre-designed slide format", "An image", "A chart type"],
+    "correctAnswer": "A pre-designed slide format"
+  },
+  {
+    "id": 26,
+    "question": "Which of the following is a best practice in presentations?",
+    "options": ["Using many different fonts", "Using readable font sizes", "Using multiple bright colors", "Adding long paragraphs"],
+    "correctAnswer": "Using readable font sizes"
+  },
+  {
+    "id": 27,
+    "question": "How can you add a hyperlink in a presentation?",
+    "options": ["Using the Insert tab", "Using the Design tab", "Using the View tab", "Using the Review tab"],
+    "correctAnswer": "Using the Insert tab"
+  },
+  {
+    "id": 28,
+    "question": "Which option allows you to insert a video in a presentation?",
+    "options": ["Design tab", "Insert tab", "Review tab", "View tab"],
+    "correctAnswer": "Insert tab"
+  },
+  {
+    "id": 29,
+    "question": "What is a slide master used for?",
+    "options": ["To add animations", "To manage consistent formatting across slides", "To add charts", "To insert images"],
+    "correctAnswer": "To manage consistent formatting across slides"
+  },
+  {
+    "id": 30,
+    "question": "What should a good presentation avoid?",
+    "options": ["Clear titles", "Readable fonts", "Unnecessary clutter", "Appropriate images"],
+    "correctAnswer": "Unnecessary clutter"
+  }
+],
+"HTML & Information":
+[
+  {
+    "id": 1,
+    "question": "What does HTML stand for?",
+    "options": ["Hyper Text Markup Language", "High Text Markup Language", "Hyperlink and Text Markup Language", "Home Tool Markup Language"],
+    "correctAnswer": "Hyper Text Markup Language"
+  },
+  {
+    "id": 2,
+    "question": "Which HTML tag is used to create a paragraph?",
+    "options": ["<p>", "<h1>", "<div>", "<span>"],
+    "correctAnswer": "<p>"
+  },
+  {
+    "id": 3,
+    "question": "Which HTML tag is used to create a hyperlink?",
+    "options": ["<link>", "<a>", "<href>", "<hyper>"],
+    "correctAnswer": "<a>"
+  },
+  {
+    "id": 4,
+    "question": "What is the correct HTML tag for inserting a line break?",
+    "options": ["<lb>", "<br>", "<break>", "<line>"],
+    "correctAnswer": "<br>"
+  },
+  {
+    "id": 5,
+    "question": "Which tag is used to display images in HTML?",
+    "options": ["<pic>", "<image>", "<img>", "<src>"],
+    "correctAnswer": "<img>"
+  },
+  {
+    "id": 6,
+    "question": "In HTML, what attribute is used to specify the image source?",
+    "options": ["href", "src", "link", "img"],
+    "correctAnswer": "src"
+  },
+  {
+    "id": 7,
+    "question": "What does the <head> tag contain?",
+    "options": ["Main content of the page", "Header text", "Metadata and links", "Page footer"],
+    "correctAnswer": "Metadata and links"
+  },
+  {
+    "id": 8,
+    "question": "Which tag is used to create an ordered list in HTML?",
+    "options": ["<ol>", "<ul>", "<li>", "<list>"],
+    "correctAnswer": "<ol>"
+  },
+  {
+    "id": 9,
+    "question": "Which tag is used to create an unordered list in HTML?",
+    "options": ["<ul>", "<ol>", "<li>", "<list>"],
+    "correctAnswer": "<ul>"
+  },
+  {
+    "id": 10,
+    "question": "What tag is used to create a list item in both ordered and unordered lists?",
+    "options": ["<li>", "<ul>", "<ol>", "<item>"],
+    "correctAnswer": "<li>"
+  },
+  {
+    "id": 11,
+    "question": "What is the purpose of using hyperlinks in HTML?",
+    "options": ["To display images", "To create paragraphs", "To navigate to other pages", "To add styles"],
+    "correctAnswer": "To navigate to other pages"
+  },
+  {
+    "id": 12,
+    "question": "Which HTML tag is used to create headings?",
+    "options": ["<heading>", "<h>", "<h1> to <h6>", "<head>"],
+    "correctAnswer": "<h1> to <h6>"
+  },
+  {
+    "id": 13,
+    "question": "Which tag is used to define the body of an HTML document?",
+    "options": ["<main>", "<body>", "<content>", "<page>"],
+    "correctAnswer": "<body>"
+  },
+  {
+    "id": 14,
+    "question": "Which HTML element is used for the largest heading?",
+    "options": ["<h6>", "<h1>", "<head>", "<title>"],
+    "correctAnswer": "<h1>"
+  },
+  {
+    "id": 15,
+    "question": "Which attribute is used to specify the destination of a hyperlink?",
+    "options": ["link", "href", "src", "url"],
+    "correctAnswer": "href"
+  },
+  {
+    "id": 16,
+    "question": "What is Information Management?",
+    "options": ["Managing people in IT", "Using and organizing data to create useful information", "Creating websites", "Installing software"],
+    "correctAnswer": "Using and organizing data to create useful information"
+  },
+  {
+    "id": 17,
+    "question": "Which of the following is a step in the Information Management process?",
+    "options": ["Installing applications", "Finding and accessing information", "Designing logos", "Printing documents"],
+    "correctAnswer": "Finding and accessing information"
+  },
+  {
+    "id": 18,
+    "question": "What is a reliable source when gathering information?",
+    "options": ["Social media rumors", "Personal opinions", "Academic journals", "Advertisements"],
+    "correctAnswer": "Academic journals"
+  },
+  {
+    "id": 19,
+    "question": "Which of the following helps in avoiding plagiarism?",
+    "options": ["Copying directly", "Not citing sources", "Summarizing without reference", "Citing sources properly"],
+    "correctAnswer": "Citing sources properly"
+  },
+  {
+    "id": 20,
+    "question": "Why is it important to analyze data before presenting it?",
+    "options": ["To reduce data", "To remove headings", "To extract meaningful information", "To increase storage space"],
+    "correctAnswer": "To extract meaningful information"
+  },
+  {
+    "id": 21,
+    "question": "Which tool can be used to sort and analyze data in Information Management?",
+    "options": ["Word Processor", "Spreadsheet", "Web browser", "Paint"],
+    "correctAnswer": "Spreadsheet"
+  },
+  {
+    "id": 22,
+    "question": "What is data sifting in Information Management?",
+    "options": ["Deleting unnecessary files", "Organizing and filtering useful data", "Formatting text", "Sharing videos"],
+    "correctAnswer": "Organizing and filtering useful data"
+  },
+  {
+    "id": 23,
+    "question": "What does the PAT stand for in CAT?",
+    "options": ["Practical Assessment Task", "Programming and Technology", "Practical Analysis Tool", "Project and Task"],
+    "correctAnswer": "Practical Assessment Task"
+  },
+  {
+    "id": 24,
+    "question": "Which file format is best for sharing processed data results?",
+    "options": [".txt", ".jpg", ".xlsx", ".mp4"],
+    "correctAnswer": ".xlsx"
+  },
+  {
+    "id": 25,
+    "question": "Which of the following is an ethical use of information?",
+    "options": ["Sharing confidential information", "Plagiarizing content", "Using data with consent", "Editing data for manipulation"],
+    "correctAnswer": "Using data with consent"
+  },
+  {
+    "id": 26,
+    "question": "Which tool can you use to create graphs for presenting data?",
+    "options": ["MS Paint", "Spreadsheet", "Web Browser", "Media Player"],
+    "correctAnswer": "Spreadsheet"
+  },
+  {
+    "id": 27,
+    "question": "What is one benefit of using digital tools in information management?",
+    "options": ["Takes more time", "Makes data storage difficult", "Enhances data analysis and presentation", "Reduces accuracy"],
+    "correctAnswer": "Enhances data analysis and presentation"
+  },
+  {
+    "id": 28,
+    "question": "Which is an example of information management in school projects?",
+    "options": ["Watching videos", "Printing pictures", "Collecting, organizing, and analyzing data", "Playing games"],
+    "correctAnswer": "Collecting, organizing, and analyzing data"
+  },
+  {
+    "id": 29,
+    "question": "What should be included when referencing sources?",
+    "options": ["Source URL or book title", "Your name only", "Just a heading", "The color of the text"],
+    "correctAnswer": "Source URL or book title"
+  },
+  {
+    "id": 30,
+    "question": "Which method helps in presenting data visually?",
+    "options": ["Charts and graphs", "Paragraphs only", "Long text blocks", "Audio recordings"],
+    "correctAnswer": "Charts and graphs"
+  }
+],
+
+
+
+
+
 
 
 //######################################################################################################################################################################################################################################################################################
@@ -379,6 +1303,8 @@ export const questions = {
 // ############################################################################################################################################################################################################################################################################################
   // GRADE 11 EXAMS
 
+
+// TERM 2 EXAMS
 "SPREADSHEETS - Grade 11": [
   { "id": 1, "question": "What is a spreadsheet?", "options": ["A text document", "A tool for organizing and analyzing data", "An email application", "A photo editing program"], "correctAnswer": "A tool for organizing and analyzing data" },
   { "id": 2, "question": "Which of the following best defines a cell in a spreadsheet?", "options": ["A storage unit", "A row identifier", "The intersection of a row and a column", "A type of chart"], "correctAnswer": "The intersection of a row and a column" },
@@ -805,6 +1731,1479 @@ export const questions = {
   { "id": 29, "question": "What type of task is the PAT?", "options": ["Theoretical only", "Entirely creative", "Hands-on and research-based", "Only programming"], "correctAnswer": "Hands-on and research-based" },
   { "id": 30, "question": "What is a good sign that your PAT meets ethical standards?", "options": ["Includes jokes", "Uses creative fonts", "Has properly cited all sources", "Has no references at all"], "correctAnswer": "Has properly cited all sources" }
 ],
+
+//! TERM 3 ////////////////////////////////////////
+"Systems Technologies":
+[
+  {
+    "id": 1,
+    "question": "What is the primary function of an operating system?",
+    "options": ["To manage hardware and software resources", "To create presentations", "To design web pages", "To edit videos"],
+    "correctAnswer": "To manage hardware and software resources"
+  },
+  {
+    "id": 2,
+    "question": "Which of the following is an example of system software?",
+    "options": ["Microsoft Word", "Adobe Photoshop", "Windows 10", "Google Chrome"],
+    "correctAnswer": "Windows 10"
+  },
+  {
+    "id": 3,
+    "question": "Which utility helps protect a computer from malware?",
+    "options": ["Backup software", "Anti-virus software", "Word processor", "Spreadsheet"],
+    "correctAnswer": "Anti-virus software"
+  },
+  {
+    "id": 4,
+    "question": "What is the purpose of backup utilities?",
+    "options": ["To clean the hard drive", "To restore data in case of loss", "To improve graphic quality", "To update applications"],
+    "correctAnswer": "To restore data in case of loss"
+  },
+  {
+    "id": 5,
+    "question": "What does 'software compatibility' mean?",
+    "options": ["Software that can run on any hardware", "Software that requires updates", "Software that can work with other software and hardware", "Software that is free"],
+    "correctAnswer": "Software that can work with other software and hardware"
+  },
+  {
+    "id": 6,
+    "question": "Which of these is NOT a system utility?",
+    "options": ["Disk cleanup", "Anti-virus", "Spreadsheet", "Defragmentation tool"],
+    "correctAnswer": "Spreadsheet"
+  },
+  {
+    "id": 7,
+    "question": "What is authentication in computer systems?",
+    "options": ["Using multiple programs", "Verifying user identity", "Designing web pages", "Editing documents"],
+    "correctAnswer": "Verifying user identity"
+  },
+  {
+    "id": 8,
+    "question": "Which file system utility helps improve disk efficiency?",
+    "options": ["Virus scanner", "Disk defragmenter", "File explorer", "Word processor"],
+    "correctAnswer": "Disk defragmenter"
+  },
+  {
+    "id": 9,
+    "question": "Why is updating software important?",
+    "options": ["To make the computer slower", "To remove unused files", "To improve performance and security", "To increase the file size"],
+    "correctAnswer": "To improve performance and security"
+  },
+  {
+    "id": 10,
+    "question": "What is the purpose of the Device Manager?",
+    "options": ["To manage installed hardware devices", "To manage internet browsers", "To edit spreadsheets", "To manage file sharing"],
+    "correctAnswer": "To manage installed hardware devices"
+  },
+  {
+    "id": 11,
+    "question": "Which of the following is an example of portable storage media?",
+    "options": ["CD", "USB Flash Drive", "External Hard Drive", "All of the above"],
+    "correctAnswer": "All of the above"
+  },
+  {
+    "id": 12,
+    "question": "Which feature helps control access to files in an OS?",
+    "options": ["Encryption", "File formatting", "Hardware updates", "Defragmentation"],
+    "correctAnswer": "Encryption"
+  },
+  {
+    "id": 13,
+    "question": "What is the function of a driver in system software?",
+    "options": ["Protects against viruses", "Manages user accounts", "Allows hardware to communicate with the OS", "Creates presentations"],
+    "correctAnswer": "Allows hardware to communicate with the OS"
+  },
+  {
+    "id": 14,
+    "question": "Which system software feature helps prevent unauthorized access?",
+    "options": ["Firewall", "Spreadsheet", "Word processor", "Presentation software"],
+    "correctAnswer": "Firewall"
+  },
+  {
+    "id": 15,
+    "question": "Which one is NOT a function of an operating system?",
+    "options": ["Managing memory", "Controlling hardware", "Creating documents", "Managing files"],
+    "correctAnswer": "Creating documents"
+  },
+  {
+    "id": 16,
+    "question": "What is virtual memory?",
+    "options": ["A type of RAM", "A memory on the CPU", "A memory management technique using disk space", "Cloud storage"],
+    "correctAnswer": "A memory management technique using disk space"
+  },
+  {
+    "id": 17,
+    "question": "What can cause software bugs?",
+    "options": ["Incorrect programming", "Hardware failure", "Virus infections", "All of the above"],
+    "correctAnswer": "All of the above"
+  },
+  {
+    "id": 18,
+    "question": "What is a system crash?",
+    "options": ["A sudden failure of the OS", "A software update", "A new software installation", "A network connection"],
+    "correctAnswer": "A sudden failure of the OS"
+  },
+  {
+    "id": 19,
+    "question": "What is cloud storage?",
+    "options": ["Storing data on a local computer", "Storing data on online servers", "Storing data on DVDs", "Storing data on flash drives"],
+    "correctAnswer": "Storing data on online servers"
+  },
+  {
+    "id": 20,
+    "question": "What is the role of file management in an OS?",
+    "options": ["To delete files automatically", "To manage creation, deletion, and organization of files", "To play videos", "To edit photos"],
+    "correctAnswer": "To manage creation, deletion, and organization of files"
+  },
+  {
+    "id": 21,
+    "question": "Which tool helps you manage startup programs?",
+    "options": ["Task Manager", "File Explorer", "Spreadsheet", "Disk Cleanup"],
+    "correctAnswer": "Task Manager"
+  },
+  {
+    "id": 22,
+    "question": "What is the BIOS responsible for?",
+    "options": ["Booting the computer", "Editing documents", "Playing games", "Connecting to WiFi"],
+    "correctAnswer": "Booting the computer"
+  },
+  {
+    "id": 23,
+    "question": "Which device manages network traffic in a LAN?",
+    "options": ["Switch", "Printer", "Mouse", "Keyboard"],
+    "correctAnswer": "Switch"
+  },
+  {
+    "id": 24,
+    "question": "Which software handles basic computer startup operations?",
+    "options": ["BIOS", "Spreadsheet", "Presentation software", "Email client"],
+    "correctAnswer": "BIOS"
+  },
+  {
+    "id": 25,
+    "question": "What is a hotfix?",
+    "options": ["A hardware update", "An urgent software update to fix a bug", "A driver update", "A system shutdown"],
+    "correctAnswer": "An urgent software update to fix a bug"
+  },
+  {
+    "id": 26,
+    "question": "Which is NOT an operating system?",
+    "options": ["Windows", "Linux", "Android", "Photoshop"],
+    "correctAnswer": "Photoshop"
+  },
+  {
+    "id": 27,
+    "question": "What is a system utility used for cleanup called?",
+    "options": ["Defragmenter", "Disk Cleanup", "Task Manager", "Firewall"],
+    "correctAnswer": "Disk Cleanup"
+  },
+  {
+    "id": 28,
+    "question": "Which system feature ensures data is safe during unexpected power loss?",
+    "options": ["Surge protector", "Uninterruptible Power Supply (UPS)", "Firewall", "Anti-virus"],
+    "correctAnswer": "Uninterruptible Power Supply (UPS)"
+  },
+  {
+    "id": 29,
+    "question": "Why are software updates necessary?",
+    "options": ["To make software slower", "To remove features", "To fix bugs and improve security", "To increase file size"],
+    "correctAnswer": "To fix bugs and improve security"
+  },
+  {
+    "id": 30,
+    "question": "Which device is used to store data temporarily for quick access by the CPU?",
+    "options": ["RAM", "Hard Disk", "CD-ROM", "USB Drive"],
+    "correctAnswer": "RAM"
+  }
+],
+"Internet Technologies":
+[
+  {
+    "id": 1,
+    "question": "What does WWW stand for?",
+    "options": ["World Wide Web", "World Web Wide", "Web World Wide", "Wide World Web"],
+    "correctAnswer": "World Wide Web"
+  },
+  {
+    "id": 2,
+    "question": "What is a web browser used for?",
+    "options": ["Editing images", "Accessing websites", "Writing documents", "Creating presentations"],
+    "correctAnswer": "Accessing websites"
+  },
+  {
+    "id": 3,
+    "question": "Which of the following is NOT a web browser?",
+    "options": ["Google Chrome", "Mozilla Firefox", "Microsoft Word", "Safari"],
+    "correctAnswer": "Microsoft Word"
+  },
+  {
+    "id": 4,
+    "question": "What is an ISP?",
+    "options": ["Internet System Provider", "Internet Service Provider", "Internet Server Provider", "Internal Service Provider"],
+    "correctAnswer": "Internet Service Provider"
+  },
+  {
+    "id": 5,
+    "question": "Which protocol is commonly used to transfer web pages?",
+    "options": ["HTTP", "FTP", "SMTP", "TCP"],
+    "correctAnswer": "HTTP"
+  },
+  {
+    "id": 6,
+    "question": "What is the purpose of a search engine?",
+    "options": ["To browse files", "To search for information on the web", "To create documents", "To manage emails"],
+    "correctAnswer": "To search for information on the web"
+  },
+  {
+    "id": 7,
+    "question": "Which of the following is an example of a search engine?",
+    "options": ["Outlook", "Bing", "Excel", "Word"],
+    "correctAnswer": "Bing"
+  },
+  {
+    "id": 8,
+    "question": "What does URL stand for?",
+    "options": ["Universal Resource Locator", "Uniform Resource Locator", "Unified Resource Locator", "Universal Reference Locator"],
+    "correctAnswer": "Uniform Resource Locator"
+  },
+  {
+    "id": 9,
+    "question": "What is the main purpose of email?",
+    "options": ["To browse the internet", "To send and receive messages", "To create web pages", "To play games online"],
+    "correctAnswer": "To send and receive messages"
+  },
+  {
+    "id": 10,
+    "question": "Which of the following is a benefit of using the internet for communication?",
+    "options": ["Fast information sharing", "Slower message delivery", "Increased cost", "Reduced connectivity"],
+    "correctAnswer": "Fast information sharing"
+  },
+  {
+    "id": 11,
+    "question": "Which device is required to connect to the internet?",
+    "options": ["Printer", "Scanner", "Modem", "Speaker"],
+    "correctAnswer": "Modem"
+  },
+  {
+    "id": 12,
+    "question": "What is the function of hyperlinks in web pages?",
+    "options": ["They display images", "They link to other web pages or sections", "They change the background color", "They increase download speed"],
+    "correctAnswer": "They link to other web pages or sections"
+  },
+  {
+    "id": 13,
+    "question": "What is downloading?",
+    "options": ["Sending files to a server", "Receiving files from the internet to your computer", "Deleting files from a server", "Viewing files online"],
+    "correctAnswer": "Receiving files from the internet to your computer"
+  },
+  {
+    "id": 14,
+    "question": "What is uploading?",
+    "options": ["Sending files from your computer to the internet", "Receiving files from the internet", "Editing online documents", "Searching for information"],
+    "correctAnswer": "Sending files from your computer to the internet"
+  },
+  {
+    "id": 15,
+    "question": "Which is an example of an online communication tool?",
+    "options": ["Microsoft Paint", "Skype", "Calculator", "Notepad"],
+    "correctAnswer": "Skype"
+  },
+  {
+    "id": 16,
+    "question": "What is a disadvantage of online communication?",
+    "options": ["Faster responses", "Global reach", "Potential for cyberbullying", "Ease of sharing information"],
+    "correctAnswer": "Potential for cyberbullying"
+  },
+  {
+    "id": 17,
+    "question": "Which of the following protocols is used for email transmission?",
+    "options": ["SMTP", "HTTP", "FTP", "HTTPS"],
+    "correctAnswer": "SMTP"
+  },
+  {
+    "id": 18,
+    "question": "Which is a safe practice when using email?",
+    "options": ["Opening all attachments", "Ignoring unknown senders", "Sharing personal information", "Using strong passwords"],
+    "correctAnswer": "Using strong passwords"
+  },
+  {
+    "id": 19,
+    "question": "What is bandwidth?",
+    "options": ["The physical width of cables", "The amount of data that can be transmitted in a given time", "The speed of typing", "The size of web pages"],
+    "correctAnswer": "The amount of data that can be transmitted in a given time"
+  },
+  {
+    "id": 20,
+    "question": "Which of the following is considered e-communication?",
+    "options": ["Email", "Fax", "Telephone call", "Printed letters"],
+    "correctAnswer": "Email"
+  },
+  {
+    "id": 21,
+    "question": "What is VoIP used for?",
+    "options": ["Voice communication over the internet", "Printing documents", "Storing files", "Creating spreadsheets"],
+    "correctAnswer": "Voice communication over the internet"
+  },
+  {
+    "id": 22,
+    "question": "Which is an example of a communication device?",
+    "options": ["Router", "Printer", "Scanner", "Monitor"],
+    "correctAnswer": "Router"
+  },
+  {
+    "id": 23,
+    "question": "What is netiquette?",
+    "options": ["Internet speed", "Good online behavior", "Web browsing", "Virus protection"],
+    "correctAnswer": "Good online behavior"
+  },
+  {
+    "id": 24,
+    "question": "What is the purpose of using secure websites (HTTPS)?",
+    "options": ["To block ads", "To enhance security and encrypt data", "To load pages faster", "To add animations"],
+    "correctAnswer": "To enhance security and encrypt data"
+  },
+  {
+    "id": 25,
+    "question": "Which term describes malicious emails that trick users into giving personal information?",
+    "options": ["Phishing", "Spamming", "Hacking", "Browsing"],
+    "correctAnswer": "Phishing"
+  },
+  {
+    "id": 26,
+    "question": "Which of the following is NOT a feature of web browsers?",
+    "options": ["Bookmarking", "Tab browsing", "Virus scanning", "Private browsing"],
+    "correctAnswer": "Virus scanning"
+  },
+  {
+    "id": 27,
+    "question": "What is cloud computing?",
+    "options": ["Using local servers only", "Using the internet to access services and storage", "Using floppy disks for storage", "Printing from a network"],
+    "correctAnswer": "Using the internet to access services and storage"
+  },
+  {
+    "id": 28,
+    "question": "Which of the following helps users find information online efficiently?",
+    "options": ["E-mail client", "Search engine", "Spreadsheet", "Text editor"],
+    "correctAnswer": "Search engine"
+  },
+  {
+    "id": 29,
+    "question": "Which action can help maintain privacy while using online platforms?",
+    "options": ["Sharing personal details", "Using strong passwords", "Posting locations publicly", "Accepting unknown requests"],
+    "correctAnswer": "Using strong passwords"
+  },
+  {
+    "id": 30,
+    "question": "Which device is essential for wireless internet connectivity?",
+    "options": ["Monitor", "Router", "Printer", "Mouse"],
+    "correctAnswer": "Router"
+  }
+],"Social Implications":
+[
+  {
+    "id": 1,
+    "question": "What is cyberbullying?",
+    "options": ["Bullying that occurs face-to-face", "Bullying using electronic technology", "Physically harming someone", "Talking loudly online"],
+    "correctAnswer": "Bullying using electronic technology"
+  },
+  {
+    "id": 2,
+    "question": "Which of the following is considered ethical technology use?",
+    "options": ["Pirating software", "Using strong passwords", "Spamming others", "Hacking accounts"],
+    "correctAnswer": "Using strong passwords"
+  },
+  {
+    "id": 3,
+    "question": "What does 'digital footprint' refer to?",
+    "options": ["Your shoe size", "Your online activity record", "Your email password", "Your computer speed"],
+    "correctAnswer": "Your online activity record"
+  },
+  {
+    "id": 4,
+    "question": "What law protects personal data in South Africa?",
+    "options": ["POPI Act", "Copyright Act", "Data Sharing Act", "Cyber Law"],
+    "correctAnswer": "POPI Act"
+  },
+  {
+    "id": 5,
+    "question": "Which of the following can contribute to information overload?",
+    "options": ["Access to filtered content", "Too much unfiltered data", "Limited data access", "Controlled content"],
+    "correctAnswer": "Too much unfiltered data"
+  },
+  {
+    "id": 6,
+    "question": "What is a safe practice when using social media?",
+    "options": ["Sharing passwords", "Accepting unknown friend requests", "Posting personal information", "Adjusting privacy settings"],
+    "correctAnswer": "Adjusting privacy settings"
+  },
+  {
+    "id": 7,
+    "question": "What is geotagging?",
+    "options": ["Marking a location on a digital photo", "Tagging a friend in a post", "Sending emails", "Using hashtags"],
+    "correctAnswer": "Marking a location on a digital photo"
+  },
+  {
+    "id": 8,
+    "question": "What does VPN stand for?",
+    "options": ["Virtual Private Network", "Visible Public Network", "Verified Private Network", "Virtual Public Network"],
+    "correctAnswer": "Virtual Private Network"
+  },
+  {
+    "id": 9,
+    "question": "What is e-learning?",
+    "options": ["Electronic gaming", "Online learning using technology", "Typing on a computer", "Playing videos online"],
+    "correctAnswer": "Online learning using technology"
+  },
+  {
+    "id": 10,
+    "question": "Which of the following can reduce the risk of malware?",
+    "options": ["Clicking unknown links", "Downloading from untrusted sites", "Using anti-virus software", "Disabling firewalls"],
+    "correctAnswer": "Using anti-virus software"
+  },
+  {
+    "id": 11,
+    "question": "What is blended learning?",
+    "options": ["Learning using printed books only", "Learning using online and traditional methods", "Watching videos only", "Learning without technology"],
+    "correctAnswer": "Learning using online and traditional methods"
+  },
+  {
+    "id": 12,
+    "question": "What is one potential harm of social media use?",
+    "options": ["Learning new skills", "Connecting with friends", "Cyberbullying", "Access to educational content"],
+    "correctAnswer": "Cyberbullying"
+  },
+  {
+    "id": 13,
+    "question": "Which is an example of appropriate online behaviour?",
+    "options": ["Spamming emails", "Respecting others' privacy", "Posting false information", "Engaging in cyberbullying"],
+    "correctAnswer": "Respecting others' privacy"
+  },
+  {
+    "id": 14,
+    "question": "What is artificial intelligence (AI)?",
+    "options": ["Human intelligence", "Machine-based intelligence", "Using a calculator", "Simple computer operations"],
+    "correctAnswer": "Machine-based intelligence"
+  },
+  {
+    "id": 15,
+    "question": "Which of the following is an example of remote access?",
+    "options": ["Using a local printer", "Accessing files on your home PC from another location", "Using a flash drive", "Printing documents"],
+    "correctAnswer": "Accessing files on your home PC from another location"
+  },
+  {
+    "id": 16,
+    "question": "What does the term 'virtual reality' refer to?",
+    "options": ["Watching TV", "Using an online banking app", "A simulated digital environment", "Reading a printed book"],
+    "correctAnswer": "A simulated digital environment"
+  },
+  {
+    "id": 17,
+    "question": "Why is using a VPN important?",
+    "options": ["To slow down your internet", "To increase internet prices", "To provide secure, private browsing", "To allow malware downloads"],
+    "correctAnswer": "To provide secure, private browsing"
+  },
+  {
+    "id": 18,
+    "question": "What is the main purpose of antivirus software?",
+    "options": ["To decorate your computer", "To protect against viruses and malware", "To create documents", "To browse the internet"],
+    "correctAnswer": "To protect against viruses and malware"
+  },
+  {
+    "id": 19,
+    "question": "What is meant by e-working?",
+    "options": ["Working with emails", "Working from home using technology", "Using only paper to work", "Ignoring technology"],
+    "correctAnswer": "Working from home using technology"
+  },
+  {
+    "id": 20,
+    "question": "Which of the following best describes digital citizenship?",
+    "options": ["Using digital devices only", "Using technology responsibly and ethically", "Avoiding technology", "Posting everything online"],
+    "correctAnswer": "Using technology responsibly and ethically"
+  },
+  {
+    "id": 21,
+    "question": "Which is an example of unethical technology use?",
+    "options": ["Downloading pirated software", "Using strong passwords", "Encrypting files", "Backing up data"],
+    "correctAnswer": "Downloading pirated software"
+  },
+  {
+    "id": 22,
+    "question": "What is one benefit of technology in society?",
+    "options": ["Information overload", "Access to education", "Cyberbullying", "Privacy invasion"],
+    "correctAnswer": "Access to education"
+  },
+  {
+    "id": 23,
+    "question": "Which technology helps in reducing physical travel for meetings?",
+    "options": ["Email", "Video conferencing", "Printers", "Flash drives"],
+    "correctAnswer": "Video conferencing"
+  },
+  {
+    "id": 24,
+    "question": "Which of the following is NOT a social implication of technology?",
+    "options": ["Cyberbullying", "Information overload", "Malware protection", "Digital divide"],
+    "correctAnswer": "Malware protection"
+  },
+  {
+    "id": 25,
+    "question": "What does information overload mean?",
+    "options": ["Too much information to process", "Limited access to data", "Lack of information", "Filtering information"],
+    "correctAnswer": "Too much information to process"
+  },
+  {
+    "id": 26,
+    "question": "What is m-learning?",
+    "options": ["Mobile learning using devices", "Machine learning", "Manual learning", "Mixed learning"],
+    "correctAnswer": "Mobile learning using devices"
+  },
+  {
+    "id": 27,
+    "question": "Which of the following is a legal implication of technology use?",
+    "options": ["Using pirated software", "Following copyright laws", "Hacking accounts", "Ignoring user agreements"],
+    "correctAnswer": "Following copyright laws"
+  },
+  {
+    "id": 28,
+    "question": "Which is a potential disadvantage of using social media?",
+    "options": ["Improved communication", "Cyberbullying", "Staying updated", "Networking with professionals"],
+    "correctAnswer": "Cyberbullying"
+  },
+  {
+    "id": 29,
+    "question": "What is a strong password characteristic?",
+    "options": ["Short and simple", "Includes personal info", "Long with symbols and numbers", "Using 'password123'"],
+    "correctAnswer": "Long with symbols and numbers"
+  },
+  {
+    "id": 30,
+    "question": "Why is respecting copyright important?",
+    "options": ["To avoid using technology", "To protect creators' rights", "To increase data usage", "To share files easily"],
+    "correctAnswer": "To protect creators' rights"
+  }
+],
+"Information Management & PAT":
+[
+  {
+    "id": 1,
+    "question": "What does PAT stand for in CAT?",
+    "options": ["Practical Assessment Task", "Public Access Terminal", "Personal Academic Test", "Practical Academic Task"],
+    "correctAnswer": "Practical Assessment Task"
+  },
+  {
+    "id": 2,
+    "question": "What is the first phase of PAT?",
+    "options": ["Processing data", "Finding and accessing information", "Creating charts", "Creating a database"],
+    "correctAnswer": "Finding and accessing information"
+  },
+  {
+    "id": 3,
+    "question": "Which tool is commonly used to process and analyse data in PAT?",
+    "options": ["Word Processor", "Spreadsheet", "PDF Reader", "Browser"],
+    "correctAnswer": "Spreadsheet"
+  },
+  {
+    "id": 4,
+    "question": "Which of the following is a method to ensure the validity of collected data?",
+    "options": ["Using unreliable sources", "Cross-checking information", "Ignoring data errors", "Using old data"],
+    "correctAnswer": "Cross-checking information"
+  },
+  {
+    "id": 5,
+    "question": "What does 'information management' involve?",
+    "options": ["Finding, analysing, and presenting information", "Deleting files", "Gaming online", "Programming software"],
+    "correctAnswer": "Finding, analysing, and presenting information"
+  },
+  {
+    "id": 6,
+    "question": "What is a reliable source when gathering information?",
+    "options": ["Unverified blog", "Wikipedia without checking references", "Peer-reviewed article", "Social media post"],
+    "correctAnswer": "Peer-reviewed article"
+  },
+  {
+    "id": 7,
+    "question": "What is sifting in information management?",
+    "options": ["Deleting information", "Selecting relevant data", "Typing data into Word", "Printing data"],
+    "correctAnswer": "Selecting relevant data"
+  },
+  {
+    "id": 8,
+    "question": "Which software is best for report writing in PAT?",
+    "options": ["Spreadsheet", "Presentation software", "Word Processor", "Photo Editor"],
+    "correctAnswer": "Word Processor"
+  },
+  {
+    "id": 9,
+    "question": "Why is referencing important in PAT?",
+    "options": ["It is optional", "It credits original authors and avoids plagiarism", "It decorates the document", "It increases word count"],
+    "correctAnswer": "It credits original authors and avoids plagiarism"
+  },
+  {
+    "id": 10,
+    "question": "What is the final phase of PAT?",
+    "options": ["Collecting data", "Report writing and presenting findings", "Brainstorming", "Searching for websites"],
+    "correctAnswer": "Report writing and presenting findings"
+  },
+  {
+    "id": 11,
+    "question": "What feature in Word assists with creating a Table of Contents?",
+    "options": ["Bold formatting", "Header styles", "Inserting images", "Using bullets"],
+    "correctAnswer": "Header styles"
+  },
+  {
+    "id": 12,
+    "question": "Which formula is useful in spreadsheets for PAT calculations?",
+    "options": ["=PRINT()", "=SAVE()", "=SUM()", "=COPY()"],
+    "correctAnswer": "=SUM()"
+  },
+  {
+    "id": 13,
+    "question": "How can you visually present your PAT findings?",
+    "options": ["Use graphs and charts", "Write in paragraphs only", "Write all in capital letters", "Add random images"],
+    "correctAnswer": "Use graphs and charts"
+  },
+  {
+    "id": 14,
+    "question": "What is plagiarism?",
+    "options": ["Creating your own content", "Using information without giving credit", "Referencing correctly", "Summarising data"],
+    "correctAnswer": "Using information without giving credit"
+  },
+  {
+    "id": 15,
+    "question": "What is an important ethical aspect of information management?",
+    "options": ["Using unreliable sources", "Copying without permission", "Respecting copyright laws", "Spreading misinformation"],
+    "correctAnswer": "Respecting copyright laws"
+  },
+  {
+    "id": 16,
+    "question": "What can be used to analyse large amounts of data in PAT?",
+    "options": ["Manual counting", "Spreadsheets and pivot tables", "Writing paragraphs", "Using Paint"],
+    "correctAnswer": "Spreadsheets and pivot tables"
+  },
+  {
+    "id": 17,
+    "question": "How can charts assist in PAT reports?",
+    "options": ["They add colour", "They present data visually for easier understanding", "They replace all text", "They increase file size"],
+    "correctAnswer": "They present data visually for easier understanding"
+  },
+  {
+    "id": 18,
+    "question": "Why is it important to sift information?",
+    "options": ["To remove unneeded data", "To avoid printing", "To increase data size", "To skip research"],
+    "correctAnswer": "To remove unneeded data"
+  },
+  {
+    "id": 19,
+    "question": "Which feature in Word can be used for citations?",
+    "options": ["Insert Table", "Track Changes", "References tool", "Hyperlink"],
+    "correctAnswer": "References tool"
+  },
+  {
+    "id": 20,
+    "question": "What is a pivot table used for?",
+    "options": ["To create animations", "To summarise and analyse data", "To format text", "To edit images"],
+    "correctAnswer": "To summarise and analyse data"
+  },
+  {
+    "id": 21,
+    "question": "What is the benefit of using advanced spreadsheet functions in PAT?",
+    "options": ["They complicate your work", "They provide accurate calculations", "They slow down your work", "They reduce accuracy"],
+    "correctAnswer": "They provide accurate calculations"
+  },
+  {
+    "id": 22,
+    "question": "Which tool helps in filtering relevant data in spreadsheets?",
+    "options": ["Format Painter", "Filter tool", "Header styles", "Themes"],
+    "correctAnswer": "Filter tool"
+  },
+  {
+    "id": 23,
+    "question": "What is a footer in a report used for?",
+    "options": ["Adding page numbers and document info", "Changing fonts", "Formatting headings", "Inserting graphs"],
+    "correctAnswer": "Adding page numbers and document info"
+  },
+  {
+    "id": 24,
+    "question": "When should you backup your PAT work?",
+    "options": ["Only at the end", "Regularly throughout the project", "Never", "Once at the beginning"],
+    "correctAnswer": "Regularly throughout the project"
+  },
+  {
+    "id": 25,
+    "question": "What can happen if data sources are not referenced?",
+    "options": ["Recognition for your work", "Plagiarism accusations", "Better marks", "More visuals"],
+    "correctAnswer": "Plagiarism accusations"
+  },
+  {
+    "id": 26,
+    "question": "What is the purpose of the PAT in CAT?",
+    "options": ["To test programming skills", "To assess research, analysis, and presentation skills", "To test gaming knowledge", "To test speed typing"],
+    "correctAnswer": "To assess research, analysis, and presentation skills"
+  },
+  {
+    "id": 27,
+    "question": "What type of graph is best for showing trends over time?",
+    "options": ["Pie chart", "Line graph", "Bar chart", "Table"],
+    "correctAnswer": "Line graph"
+  },
+  {
+    "id": 28,
+    "question": "Which software feature is useful for importing data into a spreadsheet for PAT?",
+    "options": ["Paste Special", "Data Import Wizard", "Font Styles", "Format Painter"],
+    "correctAnswer": "Data Import Wizard"
+  },
+  {
+    "id": 29,
+    "question": "Which step follows after collecting data in PAT?",
+    "options": ["Writing a report", "Printing documents", "Deleting files", "Saving to USB"],
+    "correctAnswer": "Writing a report"
+  },
+  {
+    "id": 30,
+    "question": "Which of the following best describes good practice when managing information?",
+    "options": ["Using one source", "Collecting and analysing from multiple credible sources", "Using outdated information", "Skipping analysis"],
+    "correctAnswer": "Collecting and analysing from multiple credible sources"
+  }
+],
+"Databases":
+[
+  {
+    "id": 1,
+    "question": "What is a database?",
+    "options": ["A place to store paper files", "A collection of data organized for easy access", "An image editor", "A spreadsheet formula"],
+    "correctAnswer": "A collection of data organized for easy access"
+  },
+  {
+    "id": 2,
+    "question": "Which software is typically used to manage databases in CAT?",
+    "options": ["Photoshop", "Microsoft Access", "MS Paint", "Excel"],
+    "correctAnswer": "Microsoft Access"
+  },
+  {
+    "id": 3,
+    "question": "What is a field in a database?",
+    "options": ["A table of data", "A single piece of data about a record", "A list of records", "A document"],
+    "correctAnswer": "A single piece of data about a record"
+  },
+  {
+    "id": 4,
+    "question": "What is a record in a database?",
+    "options": ["A group of related fields", "A software program", "A file", "A heading in a document"],
+    "correctAnswer": "A group of related fields"
+  },
+  {
+    "id": 5,
+    "question": "Which data type would you use for storing dates in Access?",
+    "options": ["Text", "Currency", "Date/Time", "Yes/No"],
+    "correctAnswer": "Date/Time"
+  },
+  {
+    "id": 6,
+    "question": "What is a primary key?",
+    "options": ["A unique identifier for each record", "A tool to print reports", "A type of form", "A type of query"],
+    "correctAnswer": "A unique identifier for each record"
+  },
+  {
+    "id": 7,
+    "question": "Which object is used to input data in a user-friendly way in Access?",
+    "options": ["Report", "Query", "Form", "Macro"],
+    "correctAnswer": "Form"
+  },
+  {
+    "id": 8,
+    "question": "What is the purpose of a query in a database?",
+    "options": ["To store images", "To search and filter data", "To print documents", "To draw graphs"],
+    "correctAnswer": "To search and filter data"
+  },
+  {
+    "id": 9,
+    "question": "Which view allows you to design the structure of a table in Access?",
+    "options": ["Datasheet View", "Form View", "Design View", "Layout View"],
+    "correctAnswer": "Design View"
+  },
+  {
+    "id": 10,
+    "question": "What is a relationship in databases?",
+    "options": ["Connection between fields in the same table", "Connection between tables using related fields", "Connection between forms and reports", "Connection between queries"],
+    "correctAnswer": "Connection between tables using related fields"
+  },
+  {
+    "id": 11,
+    "question": "Which symbol indicates a one-to-many relationship in Access?",
+    "options": ["∞", "1:1", "1:M", "M:M"],
+    "correctAnswer": "1:M"
+  },
+  {
+    "id": 12,
+    "question": "What is referential integrity?",
+    "options": ["Ensures data is exported correctly", "Ensures related records remain consistent", "Allows data sorting", "Formats reports"],
+    "correctAnswer": "Ensures related records remain consistent"
+  },
+  {
+    "id": 13,
+    "question": "What does sorting in a query allow you to do?",
+    "options": ["Arrange records in a specific order", "Delete records", "Format fields", "Change data types"],
+    "correctAnswer": "Arrange records in a specific order"
+  },
+  {
+    "id": 14,
+    "question": "Which data type would you use to store currency values in Access?",
+    "options": ["Text", "Number", "Currency", "Memo"],
+    "correctAnswer": "Currency"
+  },
+  {
+    "id": 15,
+    "question": "Which of the following is NOT a data type in Access?",
+    "options": ["Date/Time", "Image", "Number", "Text"],
+    "correctAnswer": "Image"
+  },
+  {
+    "id": 16,
+    "question": "Which feature allows you to summarise data in Access?",
+    "options": ["Forms", "Reports", "Macros", "Tables"],
+    "correctAnswer": "Reports"
+  },
+  {
+    "id": 17,
+    "question": "What does the filter tool in Access allow you to do?",
+    "options": ["Create new tables", "Export data", "View specific records based on criteria", "Format reports"],
+    "correctAnswer": "View specific records based on criteria"
+  },
+  {
+    "id": 18,
+    "question": "Which part of a database is used to store data?",
+    "options": ["Table", "Form", "Query", "Macro"],
+    "correctAnswer": "Table"
+  },
+  {
+    "id": 19,
+    "question": "In Access, what does a form assist with?",
+    "options": ["Exporting data", "Data entry in a structured way", "Creating queries", "Generating random numbers"],
+    "correctAnswer": "Data entry in a structured way"
+  },
+  {
+    "id": 20,
+    "question": "Which tool in Access is used for data analysis and presentation?",
+    "options": ["Form", "Report", "Table", "Query"],
+    "correctAnswer": "Report"
+  },
+  {
+    "id": 21,
+    "question": "What is the purpose of validation rules in Access?",
+    "options": ["To format tables", "To limit data entry to certain values", "To export tables", "To create queries"],
+    "correctAnswer": "To limit data entry to certain values"
+  },
+  {
+    "id": 22,
+    "question": "Which view in Access allows you to see and enter data in a table format?",
+    "options": ["Design View", "Form View", "Datasheet View", "Layout View"],
+    "correctAnswer": "Datasheet View"
+  },
+  {
+    "id": 23,
+    "question": "What does the Lookup Wizard in Access help you create?",
+    "options": ["Reports", "Dropdown list for field values", "Validation rules", "Macros"],
+    "correctAnswer": "Dropdown list for field values"
+  },
+  {
+    "id": 24,
+    "question": "What does the 'AutoNumber' data type do in Access?",
+    "options": ["Automatically generates a unique number for each record", "Stores text", "Stores dates", "Stores currency"],
+    "correctAnswer": "Automatically generates a unique number for each record"
+  },
+  {
+    "id": 25,
+    "question": "Which statement is true about databases?",
+    "options": ["They cannot store large amounts of data", "They help in organising and retrieving data easily", "They are used for creating presentations", "They can only store images"],
+    "correctAnswer": "They help in organising and retrieving data easily"
+  },
+  {
+    "id": 26,
+    "question": "Which object allows you to display data in a printable format in Access?",
+    "options": ["Form", "Query", "Table", "Report"],
+    "correctAnswer": "Report"
+  },
+  {
+    "id": 27,
+    "question": "What is the use of a foreign key in Access?",
+    "options": ["To uniquely identify records in a table", "To create a link between tables", "To format tables", "To delete records"],
+    "correctAnswer": "To create a link between tables"
+  },
+  {
+    "id": 28,
+    "question": "Which data type in Access allows you to store large blocks of text?",
+    "options": ["Text", "Memo", "Date/Time", "Yes/No"],
+    "correctAnswer": "Memo"
+  },
+  {
+    "id": 29,
+    "question": "What is the default view when you open a table in Access?",
+    "options": ["Form View", "Design View", "Datasheet View", "Layout View"],
+    "correctAnswer": "Datasheet View"
+  },
+  {
+    "id": 30,
+    "question": "Which action can be performed in a query in Access?",
+    "options": ["Insert images", "Filter and sort data", "Draw diagrams", "Edit photos"],
+    "correctAnswer": "Filter and sort data"
+  }
+],
+"Spreadsheets 2":
+[
+  {
+    "id": 1,
+    "question": "Which formula calculates the sum of cells A1 to A5?",
+    "options": ["=AVG(A1:A5)", "=SUM(A1:A5)", "=ADD(A1:A5)", "=TOTAL(A1:A5)"],
+    "correctAnswer": "=SUM(A1:A5)"
+  },
+  {
+    "id": 2,
+    "question": "What is the purpose of the COUNT function?",
+    "options": ["Counts the number of cells with numbers", "Counts blank cells", "Calculates totals", "Calculates averages"],
+    "correctAnswer": "Counts the number of cells with numbers"
+  },
+  {
+    "id": 3,
+    "question": "Which function returns the largest value in a range?",
+    "options": ["MIN", "MAX", "AVERAGE", "COUNT"],
+    "correctAnswer": "MAX"
+  },
+  {
+    "id": 4,
+    "question": "Which function returns the smallest value in a range?",
+    "options": ["MAX", "AVG", "MIN", "COUNT"],
+    "correctAnswer": "MIN"
+  },
+  {
+    "id": 5,
+    "question": "What does the AVERAGE function do in spreadsheets?",
+    "options": ["Adds numbers", "Counts values", "Finds the middle value", "Calculates the mean of numbers"],
+    "correctAnswer": "Calculates the mean of numbers"
+  },
+  {
+    "id": 6,
+    "question": "Which symbol is used for absolute referencing?",
+    "options": ["#", "$", "&", "*"],
+    "correctAnswer": "$"
+  },
+  {
+    "id": 7,
+    "question": "Which function counts the number of non-empty cells in a range?",
+    "options": ["COUNT", "COUNTA", "COUNTBLANK", "COUNTIF"],
+    "correctAnswer": "COUNTA"
+  },
+  {
+    "id": 8,
+    "question": "Which function would you use to count blank cells in a range?",
+    "options": ["COUNTBLANK", "COUNT", "COUNTA", "SUM"],
+    "correctAnswer": "COUNTBLANK"
+  },
+  {
+    "id": 9,
+    "question": "What does conditional formatting do?",
+    "options": ["Sorts data automatically", "Changes formatting based on conditions", "Deletes empty cells", "Calculates totals"],
+    "correctAnswer": "Changes formatting based on conditions"
+  },
+  {
+    "id": 10,
+    "question": "What type of chart is best to show trends over time?",
+    "options": ["Pie chart", "Bar chart", "Line chart", "Scatter plot"],
+    "correctAnswer": "Line chart"
+  },
+  {
+    "id": 11,
+    "question": "Which function can be used to look up a value in a table?",
+    "options": ["LOOKUP", "SUM", "AVERAGE", "COUNT"],
+    "correctAnswer": "LOOKUP"
+  },
+  {
+    "id": 12,
+    "question": "In spreadsheets, what does the IF function do?",
+    "options": ["Sorts data", "Checks a condition and returns values accordingly", "Formats cells", "Creates charts"],
+    "correctAnswer": "Checks a condition and returns values accordingly"
+  },
+  {
+    "id": 13,
+    "question": "Which operator represents multiplication in formulas?",
+    "options": ["+", "-", "*", "/"],
+    "correctAnswer": "*"
+  },
+  {
+    "id": 14,
+    "question": "Which symbol is used for division in spreadsheet formulas?",
+    "options": ["*", "/", "+", "-"],
+    "correctAnswer": "/"
+  },
+  {
+    "id": 15,
+    "question": "Which feature allows you to arrange data in ascending or descending order?",
+    "options": ["Filter", "Sort", "Chart", "Format"],
+    "correctAnswer": "Sort"
+  },
+  {
+    "id": 16,
+    "question": "What is a cell reference?",
+    "options": ["Name of a file", "Name of a spreadsheet", "The address of a cell", "A formula"],
+    "correctAnswer": "The address of a cell"
+  },
+  {
+    "id": 17,
+    "question": "What will the formula =A1+B1 do?",
+    "options": ["Subtract values", "Add values", "Multiply values", "Divide values"],
+    "correctAnswer": "Add values"
+  },
+  {
+    "id": 18,
+    "question": "Which chart is best for displaying parts of a whole?",
+    "options": ["Pie chart", "Line chart", "Bar chart", "Scatter plot"],
+    "correctAnswer": "Pie chart"
+  },
+  {
+    "id": 19,
+    "question": "How do you refer to the cell in column C, row 5?",
+    "options": ["5C", "C5", "C:5", "5:C"],
+    "correctAnswer": "C5"
+  },
+  {
+    "id": 20,
+    "question": "What does the fill handle allow you to do?",
+    "options": ["Resize columns", "Copy cell content or continue a series", "Delete cells", "Format cells"],
+    "correctAnswer": "Copy cell content or continue a series"
+  },
+  {
+    "id": 21,
+    "question": "What is the benefit of using formulas in spreadsheets?",
+    "options": ["Format cells", "Automate calculations", "Draw charts", "Color cells"],
+    "correctAnswer": "Automate calculations"
+  },
+  {
+    "id": 22,
+    "question": "Which feature helps filter data based on specific criteria?",
+    "options": ["Sort", "Filter", "Chart", "Format"],
+    "correctAnswer": "Filter"
+  },
+  {
+    "id": 23,
+    "question": "What happens if you copy a formula with relative references?",
+    "options": ["References change relative to the new position", "References remain fixed", "Formula is deleted", "Cell formats change"],
+    "correctAnswer": "References change relative to the new position"
+  },
+  {
+    "id": 24,
+    "question": "Which tab would you typically use to create charts in spreadsheets?",
+    "options": ["Home", "Insert", "View", "Layout"],
+    "correctAnswer": "Insert"
+  },
+  {
+    "id": 25,
+    "question": "What is a range in a spreadsheet?",
+    "options": ["A single cell", "A group of selected cells", "A row", "A column"],
+    "correctAnswer": "A group of selected cells"
+  },
+  {
+    "id": 26,
+    "question": "Which function can be used to round numbers in spreadsheets?",
+    "options": ["ROUND", "SUM", "COUNT", "MIN"],
+    "correctAnswer": "ROUND"
+  },
+  {
+    "id": 27,
+    "question": "What does the term 'cell formatting' refer to?",
+    "options": ["Changing the content", "Changing the appearance of cells", "Deleting cells", "Copying cells"],
+    "correctAnswer": "Changing the appearance of cells"
+  },
+  {
+    "id": 28,
+    "question": "Which feature helps adjust the width of a column automatically?",
+    "options": ["Manual resize", "AutoFit", "Wrap Text", "Merge Cells"],
+    "correctAnswer": "AutoFit"
+  },
+  {
+    "id": 29,
+    "question": "What does merging cells do?",
+    "options": ["Deletes data", "Combines multiple cells into one", "Inserts formulas", "Creates charts"],
+    "correctAnswer": "Combines multiple cells into one"
+  },
+  {
+    "id": 30,
+    "question": "What is the purpose of using charts in spreadsheets?",
+    "options": ["To organize text", "To visually represent data", "To add colors", "To enter formulas"],
+    "correctAnswer": "To visually represent data"
+  }
+],
+"Word Processing 2":
+[
+  {
+    "id": 1,
+    "question": "What feature in Word Processing helps create an automatic list of headings in a document?",
+    "options": ["Table of Contents", "Footnotes", "Headers", "Track Changes"],
+    "correctAnswer": "Table of Contents"
+  },
+  {
+    "id": 2,
+    "question": "Which feature allows you to add page numbers to your document?",
+    "options": ["Table", "Footer", "Hyperlink", "Caption"],
+    "correctAnswer": "Footer"
+  },
+  {
+    "id": 3,
+    "question": "What is the purpose of 'Track Changes' in Word Processing?",
+    "options": ["To highlight grammar errors", "To track who opened the document", "To monitor and show changes made to the document", "To insert hyperlinks"],
+    "correctAnswer": "To monitor and show changes made to the document"
+  },
+  {
+    "id": 4,
+    "question": "Which tool helps find and correct spelling mistakes in a document?",
+    "options": ["Track Changes", "Spell Check", "Footer", "Header"],
+    "correctAnswer": "Spell Check"
+  },
+  {
+    "id": 5,
+    "question": "Which function allows you to copy formatting from one part of your document to another?",
+    "options": ["Format Painter", "Track Changes", "Insert Table", "Page Layout"],
+    "correctAnswer": "Format Painter"
+  },
+  {
+    "id": 6,
+    "question": "What is the purpose of using styles in Word Processing?",
+    "options": ["To insert tables", "To apply consistent formatting", "To create charts", "To add images"],
+    "correctAnswer": "To apply consistent formatting"
+  },
+  {
+    "id": 7,
+    "question": "Which feature allows you to automatically insert repeated content, like a letter template?",
+    "options": ["Mail Merge", "Footer", "Header", "Table"],
+    "correctAnswer": "Mail Merge"
+  },
+  {
+    "id": 8,
+    "question": "What feature should you use to add references at the bottom of each page?",
+    "options": ["Footnotes", "Header", "Caption", "Track Changes"],
+    "correctAnswer": "Footnotes"
+  },
+  {
+    "id": 9,
+    "question": "Which option would you use to split text into two or more columns?",
+    "options": ["Columns in Page Layout", "Insert Table", "Header", "Track Changes"],
+    "correctAnswer": "Columns in Page Layout"
+  },
+  {
+    "id": 10,
+    "question": "What is the purpose of using section breaks in a document?",
+    "options": ["To add images", "To divide a document into different formatting sections", "To insert hyperlinks", "To check spelling"],
+    "correctAnswer": "To divide a document into different formatting sections"
+  },
+  {
+    "id": 11,
+    "question": "Which feature allows you to add descriptions under images?",
+    "options": ["Header", "Footer", "Caption", "Track Changes"],
+    "correctAnswer": "Caption"
+  },
+  {
+    "id": 12,
+    "question": "In Word Processing, which layout feature allows you to adjust the size of margins?",
+    "options": ["Page Setup", "Insert", "Header", "Footer"],
+    "correctAnswer": "Page Setup"
+  },
+  {
+    "id": 13,
+    "question": "Which Word feature allows linking sections within a document?",
+    "options": ["Hyperlinks", "Track Changes", "Footer", "Header"],
+    "correctAnswer": "Hyperlinks"
+  },
+  {
+    "id": 14,
+    "question": "What does the 'Find and Replace' feature do?",
+    "options": ["Finds and replaces text in a document", "Finds images", "Replaces formatting only", "Inserts headers"],
+    "correctAnswer": "Finds and replaces text in a document"
+  },
+  {
+    "id": 15,
+    "question": "Which tab is used to insert a table into a Word document?",
+    "options": ["Insert", "Layout", "Review", "View"],
+    "correctAnswer": "Insert"
+  },
+  {
+    "id": 16,
+    "question": "What is the benefit of using a table in a Word document?",
+    "options": ["To add images", "To organize data systematically", "To track changes", "To apply styles"],
+    "correctAnswer": "To organize data systematically"
+  },
+  {
+    "id": 17,
+    "question": "Which feature automatically corrects common spelling errors while typing?",
+    "options": ["AutoCorrect", "Spell Check", "Grammar Check", "Track Changes"],
+    "correctAnswer": "AutoCorrect"
+  },
+  {
+    "id": 18,
+    "question": "Which feature helps in reviewing a document collaboratively?",
+    "options": ["Track Changes and Comments", "Hyperlinks", "Footnotes", "Header"],
+    "correctAnswer": "Track Changes and Comments"
+  },
+  {
+    "id": 19,
+    "question": "Which view in Word helps to check the layout before printing?",
+    "options": ["Print Layout", "Draft", "Web Layout", "Outline"],
+    "correctAnswer": "Print Layout"
+  },
+  {
+    "id": 20,
+    "question": "Which element is used to display the document title at the top of each page?",
+    "options": ["Footer", "Header", "Caption", "Table"],
+    "correctAnswer": "Header"
+  },
+  {
+    "id": 21,
+    "question": "What is the purpose of using templates in Word?",
+    "options": ["To create consistent and formatted documents quickly", "To track changes", "To insert images", "To add page numbers"],
+    "correctAnswer": "To create consistent and formatted documents quickly"
+  },
+  {
+    "id": 22,
+    "question": "What is the function of a watermark in a Word document?",
+    "options": ["To add images", "To add a background text/image indicating status like 'Confidential'", "To create tables", "To add hyperlinks"],
+    "correctAnswer": "To add a background text/image indicating status like 'Confidential'"
+  },
+  {
+    "id": 23,
+    "question": "Which feature allows the addition of citation sources in a document?",
+    "options": ["Mail Merge", "References and Bibliography", "Header", "Footer"],
+    "correctAnswer": "References and Bibliography"
+  },
+  {
+    "id": 24,
+    "question": "Which tool is used to insert a list with numbers or bullets?",
+    "options": ["Bullets and Numbering", "Header", "Footer", "Table"],
+    "correctAnswer": "Bullets and Numbering"
+  },
+  {
+    "id": 25,
+    "question": "What does the 'Review' tab mainly help with in Word?",
+    "options": ["Formatting text", "Inserting images", "Proofing and tracking changes", "Creating tables"],
+    "correctAnswer": "Proofing and tracking changes"
+  },
+  {
+    "id": 26,
+    "question": "What is Mail Merge commonly used for?",
+    "options": ["Sending bulk personalized documents like letters", "Creating tables", "Inserting footnotes", "Adding watermarks"],
+    "correctAnswer": "Sending bulk personalized documents like letters"
+  },
+  {
+    "id": 27,
+    "question": "What is the benefit of using styles for headings?",
+    "options": ["Easy formatting and Table of Contents generation", "Inserts tables automatically", "Adds images", "Creates charts"],
+    "correctAnswer": "Easy formatting and Table of Contents generation"
+  },
+  {
+    "id": 28,
+    "question": "Which option allows the adjustment of line spacing in a document?",
+    "options": ["Paragraph settings", "Header", "Footer", "Mail Merge"],
+    "correctAnswer": "Paragraph settings"
+  },
+  {
+    "id": 29,
+    "question": "Which element is essential for academic documents to credit sources?",
+    "options": ["References", "Hyperlinks", "Footnotes", "Captions"],
+    "correctAnswer": "References"
+  },
+  {
+    "id": 30,
+    "question": "Which feature can be used to automatically generate a list of figures or tables in a document?",
+    "options": ["Table of Figures", "Mail Merge", "Header", "Footer"],
+    "correctAnswer": "Table of Figures"
+  }
+],
+"HTML 2":
+[
+  {
+    "id": 1,
+    "question": "What does HTML stand for?",
+    "options": ["Hyperlinks and Text Markup Language", "Hyper Text Markup Language", "Home Tool Markup Language", "Hyper Transfer Markup Language"],
+    "correctAnswer": "Hyper Text Markup Language"
+  },
+  {
+    "id": 2,
+    "question": "Which tag is used to create a hyperlink in HTML?",
+    "options": ["<link>", "<a>", "<href>", "<hyperlink>"],
+    "correctAnswer": "<a>"
+  },
+  {
+    "id": 3,
+    "question": "Which HTML tag is used to define an image?",
+    "options": ["<image>", "<img>", "<src>", "<pic>"],
+    "correctAnswer": "<img>"
+  },
+  {
+    "id": 4,
+    "question": "Which attribute is used in the <img> tag to specify the image source?",
+    "options": ["link", "href", "src", "source"],
+    "correctAnswer": "src"
+  },
+  {
+    "id": 5,
+    "question": "Which tag is used to insert a line break in HTML?",
+    "options": ["<lb>", "<br>", "<break>", "<line>"],
+    "correctAnswer": "<br>"
+  },
+  {
+    "id": 6,
+    "question": "Which tag is used to create an unordered list?",
+    "options": ["<ul>", "<ol>", "<list>", "<li>"],
+    "correctAnswer": "<ul>"
+  },
+  {
+    "id": 7,
+    "question": "What is the purpose of the <head> tag in an HTML document?",
+    "options": ["It displays the main content", "It contains metadata and title of the page", "It shows images", "It creates hyperlinks"],
+    "correctAnswer": "It contains metadata and title of the page"
+  },
+  {
+    "id": 8,
+    "question": "Which tag is used to create the largest heading in HTML?",
+    "options": ["<heading>", "<h6>", "<h1>", "<head>"],
+    "correctAnswer": "<h1>"
+  },
+  {
+    "id": 9,
+    "question": "Which HTML tag is used to create a table?",
+    "options": ["<tab>", "<table>", "<tb>", "<t>"],
+    "correctAnswer": "<table>"
+  },
+  {
+    "id": 10,
+    "question": "Which tag is used to define a table row?",
+    "options": ["<tr>", "<td>", "<th>", "<row>"],
+    "correctAnswer": "<tr>"
+  },
+  {
+    "id": 11,
+    "question": "Which tag is used to define a cell in a table?",
+    "options": ["<cell>", "<tr>", "<th>", "<td>"],
+    "correctAnswer": "<td>"
+  },
+  {
+    "id": 12,
+    "question": "What does the 'href' attribute in the <a> tag specify?",
+    "options": ["The heading of the page", "The hyperlink reference (URL)", "The color of the link", "The font of the link"],
+    "correctAnswer": "The hyperlink reference (URL)"
+  },
+  {
+    "id": 13,
+    "question": "Which tag is used to define a list item?",
+    "options": ["<item>", "<li>", "<list>", "<ul>"],
+    "correctAnswer": "<li>"
+  },
+  {
+    "id": 14,
+    "question": "Which HTML element is used to add a background color to a web page?",
+    "options": ["<background>", "<color>", "<body bgcolor=''>", "<bg>"],
+    "correctAnswer": "<body bgcolor=''>"
+  },
+  {
+    "id": 15,
+    "question": "What is the correct syntax to add a comment in HTML?",
+    "options": ["// This is a comment", "<!-- This is a comment -->", "' This is a comment", "** This is a comment **"],
+    "correctAnswer": "<!-- This is a comment -->"
+  },
+  {
+    "id": 16,
+    "question": "Which tag is used to emphasize text in HTML, making it italic by default?",
+    "options": ["<b>", "<i>", "<em>", "<strong>"],
+    "correctAnswer": "<em>"
+  },
+  {
+    "id": 17,
+    "question": "What does the 'alt' attribute in the <img> tag provide?",
+    "options": ["The image file size", "Alternative text if the image cannot be displayed", "The image alignment", "The hyperlink for the image"],
+    "correctAnswer": "Alternative text if the image cannot be displayed"
+  },
+  {
+    "id": 18,
+    "question": "Which tag would you use to create a numbered list?",
+    "options": ["<ol>", "<ul>", "<li>", "<list>"],
+    "correctAnswer": "<ol>"
+  },
+  {
+    "id": 19,
+    "question": "Which tag would be used to make text bold?",
+    "options": ["<bold>", "<b>", "<strong>", "<em>"],
+    "correctAnswer": "<b>"
+  },
+  {
+    "id": 20,
+    "question": "What does URL stand for?",
+    "options": ["Uniform Resource Locator", "Unified Resource Locator", "Uniform Reference Locator", "Universal Reference Locator"],
+    "correctAnswer": "Uniform Resource Locator"
+  },
+  {
+    "id": 21,
+    "question": "Which of the following is an HTML editor?",
+    "options": ["Microsoft Word", "Adobe Photoshop", "Notepad", "Excel"],
+    "correctAnswer": "Notepad"
+  },
+  {
+    "id": 22,
+    "question": "What is the function of the <title> tag?",
+    "options": ["Displays the title of the document in the browser tab", "Creates a heading", "Inserts an image", "Defines the body content"],
+    "correctAnswer": "Displays the title of the document in the browser tab"
+  },
+  {
+    "id": 23,
+    "question": "Which HTML element defines the body of the document?",
+    "options": ["<body>", "<head>", "<html>", "<main>"],
+    "correctAnswer": "<body>"
+  },
+  {
+    "id": 24,
+    "question": "Which tag is used to define a paragraph?",
+    "options": ["<p>", "<para>", "<pg>", "<pr>"],
+    "correctAnswer": "<p>"
+  },
+  {
+    "id": 25,
+    "question": "What is the function of using attributes in HTML tags?",
+    "options": ["To add additional information about elements", "To create tables", "To add headings", "To create lists"],
+    "correctAnswer": "To add additional information about elements"
+  },
+  {
+    "id": 26,
+    "question": "Which tag is used to display preformatted text?",
+    "options": ["<p>", "<pre>", "<text>", "<format>"],
+    "correctAnswer": "<pre>"
+  },
+  {
+    "id": 27,
+    "question": "What attribute is used to specify the width of an image?",
+    "options": ["size", "height", "length", "width"],
+    "correctAnswer": "width"
+  },
+  {
+    "id": 28,
+    "question": "Which tag would you use to insert a horizontal line?",
+    "options": ["<line>", "<hr>", "<br>", "<border>"],
+    "correctAnswer": "<hr>"
+  },
+  {
+    "id": 29,
+    "question": "What does the <strong> tag do in HTML?",
+    "options": ["It italicizes text", "It creates a list", "It makes text bold", "It underlines text"],
+    "correctAnswer": "It makes text bold"
+  },
+  {
+    "id": 30,
+    "question": "Which of the following best describes HTML?",
+    "options": ["A programming language", "A markup language used to create web pages", "An image editing tool", "A spreadsheet software"],
+    "correctAnswer": "A markup language used to create web pages"
+  }
+],
+
+
+
+
+
+
+
+
 
 
 
