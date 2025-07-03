@@ -35,6 +35,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 5000000, // ✅ Move it here
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.destination === 'document',
