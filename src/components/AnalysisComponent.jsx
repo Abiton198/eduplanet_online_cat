@@ -1,6 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
 import { db } from "../utils/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
+// import GroupWeakStudents from '../utils/GroupWeakStudents';
+import { useNavigate } from "react-router-dom";
+
 import {
   PieChart, Pie, Cell, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -12,6 +15,7 @@ import * as XLSX from "xlsx";
 
 // Chart colors
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AA00FF", "#FF4081"];
+
 
 // Grade 11 theory max scores
 const GRADE_11_MAX_SCORES = {
@@ -76,6 +80,7 @@ export default function AnalysisComponent() {
   const [chartData, setChartData] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const chartRef = useRef(null);
+  const navigate = useNavigate();
 
   // Fetch student results
   useEffect(() => {
@@ -206,6 +211,14 @@ export default function AnalysisComponent() {
     <div className="max-w-6xl mx-auto p-6">
       <h2 className="text-3xl font-bold text-center mb-6">📊 Exam Analysis Dashboard</h2>
 
+      {/* ✅ Return to All Results Button */}
+      <button
+        onClick={() => navigate("/all-results")}
+        className="mb-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+      >
+        ← Return to All Results
+      </button>
+
       {/* Filters */}
       <div className="flex flex-wrap gap-4 mb-6">
         <div>
@@ -320,6 +333,15 @@ export default function AnalysisComponent() {
           <button onClick={exportToCSV} className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">📁 CSV</button>
         </div>
       )}
+
+<div
+  onClick={() => navigate("/group-weak-students")}
+  className="cursor-pointer bg-pink-600 text-white rounded-xl shadow p-6 hover:scale-105 transition"
+>
+  <h3 className="text-xl font-bold">👥 Group Weak Students</h3>
+  <p>Identify and plan extra lessons for struggling students</p>
+</div>
+
     </div>
   );
 }

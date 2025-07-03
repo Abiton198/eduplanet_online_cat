@@ -12,6 +12,7 @@ import Chatbot from './utils/Chatbot';
 import TeacherDashboard from './components/TeacherDashboard';
 import { AnalysisComponent } from './components';
 import StudentGoogleLogin from './components/StudentGoogleLogin';
+import GroupWeakStudents from './utils/GroupWeakStudents';
 
 function App() {
   const [studentInfo, setStudentInfo] = useState(null);   // Student session
@@ -97,8 +98,8 @@ function App() {
           {/* Open Routes */}
           <Route path="/exam-rules" element={<ExamRules />} />
           <Route path="/all-results" element={<AllResults />} />
-          <Route path="/analysis-component" element={<AnalysisComponent />} />
-
+          <Route path="/analysis-component" element={<AnalysisComponent />} /> 
+          <Route path="/group-weak-students" element={<GroupWeakStudents />}/>
           {/* Protected Teacher Dashboard (admin only) */}
           <Route
             path="/teacher-dashboard"
