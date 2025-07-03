@@ -80,20 +80,68 @@ export default function AllResults() {
     return <div className="text-center pt-28 text-red-600">Access denied.</div>;
 
   // 🔹 Grades
-  const grades = ["All Grades", "10A", "11", "12A","12B"];
+  const grades = ["All Grades", "10A", "11", "Grade 12", "12A","12B"];
 
   // 🔹 Process Main Exams
-  const mainStudents = Object.keys(mainExamData).map((name) => {
-    const entry = mainExamData[name];
-    const grade = entry?.grade || entry?.theory?.grade || entry?.practical?.grade || "Unknown";
-    const practical = entry.practical?.results?.reduce((sum, r) => sum + Number(r.score || 0), 0) || 0;
-    const theory = entry.theory?.results?.reduce((sum, r) => sum + Number(r.score || 0), 0) || 0;
-    const practicalPercent = ((practical / 150) * 100).toFixed(2);
-    const theoryPercent = ((theory / 150) * 100).toFixed(2);
-    const grand = Math.round((Number(practicalPercent) + Number(theoryPercent)) / 2);
-    const feedback = entry?.theory?.comment || entry?.practical?.comment || "";
-    return { name, grade, practical, practicalPercent, theory, theoryPercent, grand, feedback };
-  });
+const mainStudents = Object.keys(mainExamData).map((name) => {
+  const entry = mainExamData[name];
+
+ 
+  
+  const grade =
+    entry?.grade ||
+    entry?.theory?.grade ||
+    entry?.practical?.grade ||
+    "Unknown";
+
+  // Compute totals
+  const practical = entry.practical?.results?.reduce(
+    (sum, r) => sum + Number(r.score || 0),
+    0
+  ) || 0;
+
+  const theory = entry.theory?.results?.reduce(
+    (sum, r) => sum + Number(r.score || 0),
+    0
+  ) || 0;
+
+  // Determine correct divisors based on grade
+  let practicalTotal = 100;
+  let theoryTotal = 120;
+
+  if (grade === "Grade 12" || grade === "Grade 12A" || grade === "Grade 12B") {
+    practicalTotal = 150;
+    theoryTotal = 150;
+  }
+
+  // Calculate percentages safely
+  const practicalPercent = practicalTotal
+    ? ((practical / practicalTotal) * 100).toFixed(2)
+    : "0.00";
+
+  const theoryPercent = theoryTotal
+    ? ((theory / theoryTotal) * 100).toFixed(2)
+    : "0.00";
+
+  const grand = Math.round(
+    (parseFloat(practicalPercent) + parseFloat(theoryPercent)) / 2
+  );
+
+  const feedback =
+    entry?.theory?.comment || entry?.practical?.comment || "";
+
+  return {
+    name,
+    grade,
+    practical,
+    practicalPercent,
+    theory,
+    theoryPercent,
+    grand,
+    feedback,
+  };
+});
+
 
   // 🔹 Export Helpers
   const exportResults = (data, fileName, format, headers, bodyData) => {
@@ -115,20 +163,50 @@ export default function AllResults() {
   };
 
   const exportMainResults = (format) => {
-    const filtered = mainStudents.filter((s) =>
-      selectedGrade === "All Grades" ? true : s.grade === selectedGrade
-    );
+  const filtered = mainStudents.filter((s) => {
+    if (selectedGrade === "All Grades") return true;
 
-    const bodyData = filtered.map((s) => ({
-      Name: s.name,
-      "Theory %": s.theoryPercent + "%",
-      "Practical %": s.practicalPercent + "%",
-      "Grand %": s.grand + "%",
-    }));
+    const gradeNormalized = s.grade.replace(/\s+/g, "").toLowerCase();
+    const selectedNormalized = selectedGrade.replace(/\s+/g, "").toLowerCase();
 
-    exportResults(filtered, `MainResults_${selectedGrade.replace(" ", "")}`, format,
-      ["Name", "Theory %", "Practical %", "Grand %"], bodyData);
-  };
+    // ✅ Grade 12 filter includes Grade 12, Grade 12A, Grade 12B
+    if (selectedNormalized === "grade12") {
+      return (
+        gradeNormalized === "grade12" ||
+        gradeNormalized === "grade12a" ||
+        gradeNormalized === "grade12b" ||
+        gradeNormalized === "12a" ||
+        gradeNormalized === "12b"
+      );
+    }
+
+    // ✅ Grade 11 filter includes variations
+    if (selectedNormalized === "grade11") {
+      return (
+        gradeNormalized === "grade11" ||
+        gradeNormalized === "11"
+      );
+    }
+
+    // ✅ Exact match for other grades
+    return gradeNormalized === selectedNormalized;
+  });
+
+  const bodyData = filtered.map((s) => ({
+    Name: s.name,
+    "Theory %": s.theoryPercent + "%",
+    "Practical %": s.practicalPercent + "%",
+    "Grand %": s.grand + "%",
+  }));
+
+  exportResults(
+    filtered,
+    `MainResults_${selectedGrade.replace(/\s+/g, "")}`,
+    format,
+    ["Name", "Theory %", "Practical %", "Grand %"],
+    bodyData
+  );
+};
 
   const exportGeneralResults = (format) => {
     const filtered = generalExamData.filter((r) => {
