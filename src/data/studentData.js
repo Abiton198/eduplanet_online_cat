@@ -10,7 +10,9 @@ export const studentList = {
     { name: "N. Tendai" },
     { name: "P. Akhanya" },
     { name: "T. Amzolele" },
-    { name: "W. Caleb" }
+    { name: "W. Caleb" },
+    { name: "Chloe" },
+    { name: "Abiton_10" }
   ],
   "11": [
     { name: "ANTONI, Lwando" },
@@ -27,7 +29,8 @@ export const studentList = {
     { name: "VAN RAYNER, Taneesha" },
     { name: "ZAKA, Zola" },
     { name: "ZONDANI, Ukhona" },
-    { name: "Baartman, Hayley" }
+    { name: "Baartman, Hayley" },
+    { name: "Abiton_11" }
   ],
   "12A": [
     { name: "APLEIN, Okuhle" },
@@ -48,7 +51,7 @@ export const studentList = {
     { name: "PETER, Likhanye" },
     { name: "S, Isenathis" },
     { name: "TOTYI, Anda" },
-    { name: "Tyris, P" }
+    { name: "Abiton_12A" }
 
   ],
   "12B": [
@@ -71,7 +74,8 @@ export const studentList = {
     { name: "Aphiwokuhle" },
     { name: "Jordan" },
     { name: "Likho" },
-    { name: "Akhumzi" }
+    { name: "Akhumzi" },
+  
   ],
   "Admin": [
     { name: "Abiton" },

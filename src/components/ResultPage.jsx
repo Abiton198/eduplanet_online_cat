@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import AnalysisComponent from './AnalysisComponent';
 import { db } from '../utils/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import StudentFeedbackCard from "../utils/StudentFeedbackCard";
+// import StudentFeedbackCard from "../utils/StudentFeedbackCard";
 
 
 export default function ResultPage({ studentInfo }) {
@@ -137,15 +137,16 @@ export default function ResultPage({ studentInfo }) {
     <p className="text-sm text-gray-600">Click to give your personal feedback about your results</p>
   </div>
 )}
-
+{/* 
 {showFeedback && (
   <StudentFeedbackCard
     studentName={studentInfo?.name}
     onClose={() => setShowFeedback(false)}
   />
-)}
+)} */}
 
 
     </div>
   );
 }
+

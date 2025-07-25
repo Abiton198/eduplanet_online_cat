@@ -375,6 +375,8 @@ export const questions = {
 ],
 
 //! TERM 3 EXAMS #######################
+// GRADE 10
+
 "Networks":
 [
   {
@@ -1304,7 +1306,8 @@ export const questions = {
   // GRADE 11 EXAMS
 
 
-// TERM 2 EXAMS
+//! TERM 2 EXAMS
+
 "SPREADSHEETS - Grade 11": [
   { "id": 1, "question": "What is a spreadsheet?", "options": ["A text document", "A tool for organizing and analyzing data", "An email application", "A photo editing program"], "correctAnswer": "A tool for organizing and analyzing data" },
   { "id": 2, "question": "Which of the following best defines a cell in a spreadsheet?", "options": ["A storage unit", "A row identifier", "The intersection of a row and a column", "A type of chart"], "correctAnswer": "The intersection of a row and a column" },
@@ -1732,7 +1735,8 @@ export const questions = {
   { "id": 30, "question": "What is a good sign that your PAT meets ethical standards?", "options": ["Includes jokes", "Uses creative fonts", "Has properly cited all sources", "Has no references at all"], "correctAnswer": "Has properly cited all sources" }
 ],
 
-//! TERM 3 ////////////////////////////////////////
+//! TERM 3 //////////////////////////////////////// GRADE 11
+
 "Systems Technologies":
 [
   {
