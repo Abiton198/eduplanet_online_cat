@@ -17,8 +17,8 @@ export const termExams = {
         { id: 8, title: "Information Management & PAT 2", password: "grade12pass2" },
       ],
       "Term 3": [
-        { id: 103, title: "Revision: Networks", password: "grade12pass" },
-        { id: 104, title: "Revision: HTML", password: "grade12pass" },
+        { id: 103, title: "Operating Systems & File Management", password: "grade12pass" },
+        { id: 104, title: "Internet Technologies & Digital Communications", password: "grade12pass" },
       ],
       "Term 4": [
         { id: 105, title: "Mock Exam Paper 1", password: "grade12pass" },

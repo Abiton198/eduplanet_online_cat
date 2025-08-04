@@ -81,7 +81,7 @@ export default function ExamPage({ studentInfo, addResult }) {
       const lastAttemptDate = new Date(lastAttemptTime);
       const hoursSinceLastAttempt = (now - lastAttemptDate) / (1000 * 60 * 60);
       if (hoursSinceLastAttempt < 48) {
-        Swal.fire('Too Soon', 'Wait before trying again.', 'warning');
+        Swal.fire('Too Soon', 'Wait 48hrs after attempt before trying again.', 'warning');
         return;
       }
     }
@@ -192,6 +192,7 @@ export default function ExamPage({ studentInfo, addResult }) {
         Welcome {studentInfo.name} ({studentInfo.grade})
       </h2>
 
+  
       {!selectedExam && (
         <>
           <ExamResultsCard studentName={studentInfo.name} />
@@ -227,9 +228,22 @@ export default function ExamPage({ studentInfo, addResult }) {
       {authenticated && selectedExam && (
         <div className="mt-6" ref={formRef}>
           <h3 className="text-xl mb-2">{selectedExam.title}</h3>
-          <div className="mb-4 text-red-600 font-mono">
-            Time Left: {formatTime(timeLeft)}
-          </div>
+           {/* Floating Timer */}
+              <div style={{
+                position: 'fixed',
+                top: '40px',
+                right: '20px',
+                zIndex: 9999,
+                background: 'rgba(0,0,0,0.8)',
+                color: '#fff',
+                padding: '15px 25px',
+                borderRadius: '12px',
+                fontSize: '2rem',
+                fontWeight: 'bold',
+                boxShadow: '0 0 15px rgba(0,0,0,0.5)',
+              }}>
+                ⏱ {formatTime(timeLeft)}
+              </div>
 
           {submitted ? (
             <p className="text-center">Submitting your answers…</p>

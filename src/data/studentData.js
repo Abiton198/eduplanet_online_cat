@@ -2,15 +2,15 @@
 
 export const studentList = {
   "10A": [
-    { name: "C. Ayakha" },
-    { name: "J. R-Jay" },
-    { name: "M. Lungelo" },
-    { name: "M. Tarshus" },
-    { name: "N. Kayzio" },
-    { name: "N. Tendai" },
-    { name: "P. Akhanya" },
-    { name: "T. Amzolele" },
-    { name: "W. Caleb" },
+    { name: "Ayakha" },
+    { name: "R-Jay" },
+    { name: "Lungelo" },
+    { name: "Tarshus" },
+    { name: "Kayzio" },
+    { name: "Tendai" },
+    { name: "Akhanya" },
+    { name: "Amzolele" },
+    { name: "Caleb" },
     { name: "Chloe" },
     { name: "Abiton_10" }
   ],

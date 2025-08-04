@@ -12,31 +12,43 @@ import {
 import StudentSummaryCard from "../utils/StudentSummaryCard";
 
 export default function ResultPage({ studentInfo }) {
-  // 🔹 State for general test attempts
   const [generalResults, setGeneralResults] = useState([]);
-  // 🔹 State for main exam results (theory + practical)
   const [mainExamResults, setMainExamResults] = useState(null);
-  // 🔹 Stores selected attempt for review
   const [selectedResult, setSelectedResult] = useState(null);
-  // 🔹 Active tab: "general" or "main"
   const [activeTab, setActiveTab] = useState("general");
 
-  /**
-   * ✅ Fetch student's general tests & main exam results from Firestore.
-   */
   useEffect(() => {
     if (!studentInfo?.name) return;
 
-    // Normalize student name exactly how you save it in Firestore
     const studentName = studentInfo.name.trim();
-
+    const studentNameLower = studentName.toLowerCase();
     console.log("🔍 Querying Firestore for student:", studentName);
 
-    // ✅ Fetch general test attempts from `examResults`
+    /**
+     * ✅ Hybrid case-insensitive query:
+     * Matches exact case, lowercase, and uppercase versions of the student's name.
+     * This ensures results show even if the DB has mixed casing.
+     */
+    // const q = query(
+    //   collection(db, 'examResults'),
+    //   where('name', 'in', [
+    //     studentName,
+    //     studentName.toLowerCase(),
+    //     studentName.toUpperCase()
+    //   ]),
+    //   orderBy('completedTime', 'desc')
+    // );
+
+    // const unsub = onSnapshot(q, (snap) => {
+    //   const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    //   console.log("✅ Live General Results:", data);
+    //   setGeneralResults(data);
+    // });
+
     const q = query(
       collection(db, 'examResults'),
-      where('name', '==', studentName),           // filter by student name
-      orderBy('completedTime', 'desc')            // sort latest first
+      where('name', 'in', [studentName, studentNameLower]),
+      orderBy('completedTime', 'desc')
     );
 
     const unsub = onSnapshot(q, (snap) => {
@@ -45,9 +57,9 @@ export default function ResultPage({ studentInfo }) {
       setGeneralResults(data);
     });
 
-    // ✅ Fetch main exam results from `studentResults`
+    // ✅ Fetch main exam results (using original capitalization for doc ID)
     const fetchMain = async () => {
-      const ref = doc(db, 'studentResults', studentName);
+      const ref = doc(db, 'studentResults', studentInfo.name.trim());
       const snap = await getDoc(ref);
       if (snap.exists()) {
         console.log("✅ Main Exam Results:", snap.data());
@@ -59,16 +71,15 @@ export default function ResultPage({ studentInfo }) {
     return () => unsub();
   }, [studentInfo]);
 
-  /**
-   * ✅ Helper to calculate total score for main exam tables.
-   */
+  // ✅ Helper to calculate total score for exam tables
   const sum = (rows) => rows.reduce((a, b) => a + Number(b.score || 0), 0);
 
   return (
     <div className="max-w-6xl mx-auto mt-10 p-6 bg-white rounded-lg shadow space-y-6">
+      {/* ✅ Display original student name with capitalization */}
       <h2 className="text-2xl font-bold">📊 Results for {studentInfo?.name}</h2>
 
-      {/* 🔹 Tab Switcher */}
+      {/* ✅ Tab Switcher */}
       <div className="flex gap-4 mt-4">
         <button
           onClick={() => setActiveTab("general")}
@@ -89,7 +100,7 @@ export default function ResultPage({ studentInfo }) {
         <div>
           {selectedResult ? (
             <>
-              {/* Back button to return to all results */}
+              {/* ✅ Back button */}
               <button
                 onClick={() => setSelectedResult(null)}
                 className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
@@ -97,30 +108,58 @@ export default function ResultPage({ studentInfo }) {
                 ← Back to General Tests
               </button>
 
-              {/* ✅ Pass selected attempt to summary card */}
+              {/* ✅ Detailed result view */}
               <StudentSummaryCard examResult={selectedResult} />
             </>
           ) : (
             <div>
               <h3 className="text-xl font-semibold mb-4">🧠 Your General Test Attempts</h3>
+
               {generalResults.length === 0 ? (
                 <p className="text-gray-500">No general test results found.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {generalResults.map(result => (
-                    <div
-                      key={result.id}
-                      onClick={() => setSelectedResult(result)}   // ✅ Open detail view
-                      className="cursor-pointer p-4 bg-blue-50 rounded-lg border hover:bg-blue-100 transition"
-                    >
-                      <h4 className="font-bold">{result.exam}</h4>
-                      <p className="text-sm">Date: {result.completedDate} | Time: {result.completedTimeOnly}</p>
-                      <p className="text-sm">
-                        Score: {result.score} | {result.percentage}%
-                      </p>
-                      <p className="text-xs text-gray-500">Attempts: {result.attempts || 1}</p>
-                    </div>
-                  ))}
+                  {generalResults.map(result => {
+                    const percentage = parseInt(result.percentage, 10);
+
+                    // ✅ Color coding and comments based on percentage
+                    let bgColor = 'bg-red-100';
+                    let hoverColor = 'hover:bg-red-200';
+                    let comment = 'Needs a lot of improvement. Keep practicing!';
+
+                    if (percentage >= 80) {
+                      bgColor = 'bg-green-100';
+                      hoverColor = 'hover:bg-green-200';
+                      comment = 'Excellent work! Keep up the great performance!';
+                    } else if (percentage >= 60) {
+                      bgColor = 'bg-blue-100';
+                      hoverColor = 'hover:bg-blue-200';
+                      comment = 'Good job! A bit more effort can get you to the top!';
+                    } else if (percentage >= 40) {
+                      bgColor = 'bg-yellow-100';
+                      hoverColor = 'hover:bg-yellow-200';
+                      comment = 'You’re getting there. Keep practicing to improve!';
+                    }
+
+                    return (
+                      <div
+                        key={result.id}
+                        onClick={() => setSelectedResult(result)}
+                        className={`cursor-pointer p-4 rounded-lg border transition ${bgColor} ${hoverColor}`}
+                      >
+                        <h4 className="font-bold">{result.exam}</h4>
+                        <p className="text-sm">Date: {result.completedDate} | Time: {result.completedTimeOnly}</p>
+                        <p className="text-sm">
+                          Score: {result.score} | 
+                          <span className="font-semibold"> {result.percentage}%</span>
+                        </p>
+                        <p className="text-xs text-gray-500">Attempts: {result.attempts || 1}</p>
+
+                        {/* ✅ Dynamic comment */}
+                        <p className="mt-2 text-sm font-medium">{comment}</p>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -133,7 +172,7 @@ export default function ResultPage({ studentInfo }) {
         <div>
           <h3 className="text-xl font-semibold mb-4">📘 Main Exams (Theory + Practical)</h3>
 
-          {/* === THEORY === */}
+          {/* === THEORY RESULTS === */}
           {mainExamResults?.theory ? (
             <div className="mb-6">
               <h4 className="font-semibold">{mainExamResults.theory.examTitle}</h4>
@@ -173,7 +212,7 @@ export default function ResultPage({ studentInfo }) {
             <p className="text-gray-500">Theory exam results not available.</p>
           )}
 
-          {/* === PRACTICAL === */}
+          {/* === PRACTICAL RESULTS === */}
           {mainExamResults?.practical ? (
             <div>
               <h4 className="font-semibold">{mainExamResults.practical.examTitle}</h4>
