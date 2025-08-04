@@ -2102,7 +2102,71 @@ export const questions = {
     "options": ["Monitor", "Router", "Printer", "Mouse"],
     "correctAnswer": "Router"
   }
-],"Social Implications":
+],
+"System Requirements & Computing Basics": [
+  { "id": 1, "question": "What are minimum specifications for a software?", "options": ["The ideal setup for smooth performance", "The lowest hardware and software requirements to run the program", "The most expensive hardware configuration", "The default settings of the software"], "correctAnswer": "The lowest hardware and software requirements to run the program" },
+
+  { "id": 2, "question": "Which of the following ensures smooth performance of software?", "options": ["Meeting minimum specs", "Meeting recommended specs", "Ignoring system requirements", "Using outdated hardware"], "correctAnswer": "Meeting recommended specs" },
+
+  { "id": 3, "question": "What component temporarily stores data while a program is running?", "options": ["CPU", "RAM", "SSD", "GPU"], "correctAnswer": "RAM" },
+
+  { "id": 4, "question": "Which storage device provides the fastest load times?", "options": ["HDD", "SSD", "CD-ROM", "Floppy Disk"], "correctAnswer": "SSD" },
+
+  { "id": 5, "question": "Why is it important to check system requirements before installation?", "options": ["To make the computer look modern", "To ensure compatibility and smooth performance", "To increase electricity usage", "To avoid installing updates"], "correctAnswer": "To ensure compatibility and smooth performance" },
+
+  { "id": 6, "question": "Which component is most important for running graphics-heavy software?", "options": ["GPU", "Printer", "Sound Card", "Modem"], "correctAnswer": "GPU" },
+
+  { "id": 7, "question": "Which is an example of basic software with low hardware needs?", "options": ["Video editing software", "3D rendering tool", "Microsoft Word", "High-end gaming software"], "correctAnswer": "Microsoft Word" },
+
+  { "id": 8, "question": "What is the first step in installing software?", "options": ["Restart the computer", "Obtain the installation file or media", "Delete old files", "Update the antivirus"], "correctAnswer": "Obtain the installation file or media" },
+
+  { "id": 9, "question": "What does EULA stand for?", "options": ["End User License Agreement", "Extended Usage License Access", "Enterprise Utility License Application", "Essential User Legal Act"], "correctAnswer": "End User License Agreement" },
+
+  { "id": 10, "question": "Which of these is NOT a portable storage device?", "options": ["USB Flash Drive", "External HDD", "SSD", "Motherboard"], "correctAnswer": "Motherboard" },
+
+  { "id": 11, "question": "Which storage device has mechanical parts and is slower?", "options": ["SSD", "HDD", "USB Drive", "SD Card"], "correctAnswer": "HDD" },
+
+  { "id": 12, "question": "Which type of license allows software to be freely used and modified?", "options": ["Single-user license", "Trial license", "Open-source license", "Enterprise license"], "correctAnswer": "Open-source license" },
+
+  { "id": 13, "question": "Which of the following is an example of a file extension for a document?", "options": [".mp3", ".docx", ".jpg", ".exe"], "correctAnswer": ".docx" },
+
+  { "id": 14, "question": "Which of these should you avoid using in file names?", "options": ["Letters and numbers", "Underscores", "Special characters like /\\:*?\"<>|", "Descriptive words"], "correctAnswer": "Special characters like /\\:*?\"<>|" },
+
+  { "id": 15, "question": "Why is a clear folder structure important?", "options": ["It makes files look colorful", "It organizes and makes files easy to find", "It increases computer speed automatically", "It prevents viruses from attacking"], "correctAnswer": "It organizes and makes files easy to find" },
+
+  { "id": 16, "question": "What is a common risk of downloading files from unsafe sources?", "options": ["Faster installation", "Viruses and malware", "Free storage space", "Better performance"], "correctAnswer": "Viruses and malware" },
+
+  { "id": 17, "question": "Which software helps detect and remove malicious programs?", "options": ["Word Processor", "Antivirus", "Spreadsheet", "Media Player"], "correctAnswer": "Antivirus" },
+
+  { "id": 18, "question": "What is a machine error example?", "options": ["Accidental file deletion", "Typing wrong data", "System crash", "Saving in the wrong folder"], "correctAnswer": "System crash" },
+
+  { "id": 19, "question": "What is a human error example?", "options": ["Hardware malfunction", "Corrupted operating system", "Accidental overwriting of a file", "Power supply failure"], "correctAnswer": "Accidental overwriting of a file" },
+
+  { "id": 20, "question": "Which backup method copies all data every time?", "options": ["Incremental backup", "Full backup", "Cloud sync", "Temporary backup"], "correctAnswer": "Full backup" },
+
+  { "id": 21, "question": "Which backup only saves changes made since the last backup?", "options": ["Complete backup", "Incremental backup", "Manual backup", "System restore"], "correctAnswer": "Incremental backup" },
+
+  { "id": 22, "question": "Which of these is a preventative action against human errors?", "options": ["Using unreliable hardware", "Double-checking before deleting files", "Avoiding backups", "Installing old software versions"], "correctAnswer": "Double-checking before deleting files" },
+
+  { "id": 23, "question": "What is the main purpose of a cloud backup?", "options": ["Store data online for remote access", "Increase RAM size", "Speed up the CPU", "Replace the hard drive"], "correctAnswer": "Store data online for remote access" },
+
+  { "id": 24, "question": "Which component is considered the brain of the computer?", "options": ["RAM", "GPU", "CPU", "Power Supply"], "correctAnswer": "CPU" },
+
+  { "id": 25, "question": "What type of error is caused by hardware failure?", "options": ["Machine error", "Human error", "Software bug", "Typographical error"], "correctAnswer": "Machine error" },
+
+  { "id": 26, "question": "Which software type would most likely require high RAM and a dedicated GPU?", "options": ["Text editor", "Video editing software", "Spreadsheet application", "Web browser"], "correctAnswer": "Video editing software" },
+
+  { "id": 27, "question": "What is the main advantage of SSDs over HDDs?", "options": ["Cheaper cost", "Mechanical durability", "Faster speed and no moving parts", "Higher weight"], "correctAnswer": "Faster speed and no moving parts" },
+
+  { "id": 28, "question": "Which license typically restricts software to one user and one device?", "options": ["Multi-user license", "Single-user license", "Open-source license", "Enterprise license"], "correctAnswer": "Single-user license" },
+
+  { "id": 29, "question": "What is the role of the operating system in system requirements?", "options": ["It defines the screen resolution", "It determines the software compatibility", "It increases internet speed", "It organizes the folder structure"], "correctAnswer": "It determines the software compatibility" },
+
+  { "id": 30, "question": "Why is antivirus software regularly updated?", "options": ["To make the computer faster", "To detect new viruses and threats", "To install new fonts", "To increase storage space"], "correctAnswer": "To detect new viruses and threats" }
+]
+,   
+
+"Social Implications":
 [
   {
     "id": 1,
@@ -3218,6 +3282,8 @@ export const questions = {
 // ######################################################################################################################################################################################################################################################################################
 //######################################################################################################################################################################################################################################################################################
 // GRADE 12 EXAMS
+
+// !!!!TERM 2 #####
 "Networks & Internet Technologies": [
   { id: 1, question: "Which of the following is an example of cloud computing?", options: ["Gmail", "Google Drive", "Google Maps", "WhatsApp"], correctAnswer: "Google Drive" },
   { id: 2, question: "Which protocol is used to send emails?", options: ["POP3", "IMAP", "SMTP", "HTTP"], correctAnswer: "SMTP" },
