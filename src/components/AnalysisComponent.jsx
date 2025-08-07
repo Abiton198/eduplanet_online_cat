@@ -492,41 +492,66 @@ export default function AnalysisComponent() {
     // 2) Cohort per-question
     else if (analysisType === "overallQuestions") {
       const agg = {};
+    
       entries.forEach(({ entry }) => {
-        const results = [
-          ...(entry.theory?.results || []),
-          ...(entry.practical?.results || []),
-        ];
+        const results = [...(entry.theory?.results || []), ...(entry.practical?.results || [])];
+    
+        // Group scores by type per student
+        const studentTotals = {};
+    
         results.forEach((r) => {
           const type = r.type || "Unknown";
+          const score = Number(r.score || 0);
+    
           let max =
             isGrade11
-              ? GRADE_11_MAX_SCORES[type] ||
-                GRADE_11_PRACTICAL[type] ||
-                DEFAULT_MAX_SCORES[type] ||
-                10
+              ? GRADE_11_MAX_SCORES[type] || GRADE_11_PRACTICAL[type] || DEFAULT_MAX_SCORES[type] || 10
               : isGrade12
-              ? GRADE_12_THEORY_SCORES[type] ||
-                GRADE_12_PRAC_SCORES[type] ||
-                DEFAULT_MAX_SCORES[type] ||
-                10
+              ? GRADE_12_THEORY_SCORES[type] || GRADE_12_PRAC_SCORES[type] || DEFAULT_MAX_SCORES[type] || 10
               : DEFAULT_MAX_SCORES[type] || 10;
-          const pct = (Number(r.score || 0) / max) * 100;
-          if (!agg[type]) agg[type] = { total: 0, count: 0 };
-          agg[type].total += pct;
-          agg[type].count += 1;
+    
+          if (!studentTotals[type]) {
+            studentTotals[type] = { score: 0, max };
+          }
+    
+          studentTotals[type].score += score;
         });
+    
+        // Push once per type
+        for (const [type, { score }] of Object.entries(studentTotals)) {
+          const max =
+            isGrade11
+              ? GRADE_11_MAX_SCORES[type] || GRADE_11_PRACTICAL[type] || DEFAULT_MAX_SCORES[type] || 10
+              : isGrade12
+              ? GRADE_12_THEORY_SCORES[type] || GRADE_12_PRAC_SCORES[type] || DEFAULT_MAX_SCORES[type] || 10
+              : DEFAULT_MAX_SCORES[type] || 10;
+    
+          if (!agg[type]) {
+            agg[type] = { score: 0, max: 0 };
+          }
+    
+          // Limit the total score to not exceed the max
+          const cappedScore = Math.min(score, max);
+          agg[type].score += cappedScore;
+          agg[type].max += max;
+        }
       });
-      data = Object.entries(agg).map(([type, { total, count }]) => ({
-        name: type,
-        value: parseFloat((total / count).toFixed(2)),
-      }));
+    
+      data = Object.entries(agg).map(([type, { score, max }]) => {
+        const percent = (score / max) * 100;
+        return {
+          name: type,
+          value: parseFloat(percent.toFixed(2)),
+        };
+      });
+    
       recs = data.map((c) =>
         c.value < 50
           ? `${c.name}: ${c.value}% (focus here).`
           : `${c.name}: ${c.value}%.`
       );
     }
+    
     // 3) Individual summary
     else if (analysisType === "individual" && selectedStudent) {
       const entry = mainExamData[selectedStudent] || {};

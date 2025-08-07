@@ -744,6 +744,373 @@ export const questions = {
     "correctAnswer": "Name and contact information"
   }
 ],
+
+"Internet & communications": [
+  {
+    "id": 1,
+    "question": "What is the Internet?",
+    "options": ["A physical network of computers connected globally", "A search engine", "A type of website", "An app for chatting"],
+    "correctAnswer": "A physical network of computers connected globally"
+  },
+  {
+    "id": 2,
+    "question": "What is the World Wide Web (WWW)?",
+    "options": ["A global chat platform", "The software that powers computers", "A system of interlinked web pages accessed via the Internet", "A gaming platform"],
+    "correctAnswer": "A system of interlinked web pages accessed via the Internet"
+  },
+  {
+    "id": 3,
+    "question": "How is the Internet different from the WWW?",
+    "options": ["The Internet is only used for browsing", "The WWW is the hardware part of the Internet", "The Internet is the infrastructure, the WWW is one service on it", "They are the same thing"],
+    "correctAnswer": "The Internet is the infrastructure, the WWW is one service on it"
+  },
+  {
+    "id": 4,
+    "question": "Which of these uses the Internet but not the WWW?",
+    "options": ["WhatsApp messaging", "Visiting Wikipedia", "Streaming on YouTube", "Shopping on Amazon"],
+    "correctAnswer": "WhatsApp messaging"
+  },
+  {
+    "id": 5,
+    "question": "Fill in the blank: The Internet is a _____, while the WWW is a _____ that runs on it.",
+    "options": ["service, protocol", "web page, browser", "network, service", "machine, program"],
+    "correctAnswer": "network, service"
+  },
+  {
+    "id": 6,
+    "question": "Which one is a correct example of the WWW?",
+    "options": ["Checking emails using Outlook", "Using FTP to transfer files", "Browsing www.google.com", "Making a Skype call"],
+    "correctAnswer": "Browsing www.google.com"
+  },
+  {
+    "id": 7,
+    "question": "Which is NOT part of the WWW?",
+    "options": ["Websites", "Web browsers", "FTP servers", "Hyperlinks"],
+    "correctAnswer": "FTP servers"
+  },
+  {
+    "id": 8,
+    "question": "Which of the following is a feature of the Internet?",
+    "options": ["Contains only websites", "Connects only local networks", "Supports many services like email and web browsing", "Works only with Wi-Fi"],
+    "correctAnswer": "Supports many services like email and web browsing"
+  },
+  {
+    "id": 9,
+    "question": "What does URL stand for?",
+    "options": ["Universal Routing Link", "Uniform Resource Locator", "Unique Resource Loader", "Unified Remote Login"],
+    "correctAnswer": "Uniform Resource Locator"
+  },
+  {
+    "id": 10,
+    "question": "Which part of this URL is the domain? → http://www.example.com/index.html",
+    "options": ["http", "www", "example.com", "/index.html"],
+    "correctAnswer": "example.com"
+  },
+  {
+    "id": 11,
+    "question": "What does 'http' indicate in a URL?",
+    "options": ["The domain name", "The file type", "The transfer protocol used", "The browser engine"],
+    "correctAnswer": "The transfer protocol used"
+  },
+  {
+    "id": 12,
+    "question": "What is the 'path' in a URL?",
+    "options": ["The search query", "The domain name", "The location of a specific resource on the server", "The file extension"],
+    "correctAnswer": "The location of a specific resource on the server"
+  },
+  {
+    "id": 13,
+    "question": "Which part tells the browser what protocol to use?",
+    "options": ["Domain", "Path", "http", "www"],
+    "correctAnswer": "http"
+  },
+  {
+    "id": 14,
+    "question": "Which is a correct full URL?",
+    "options": ["http.example.com", "www.example.com", "http://example.com/home", "example.com"],
+    "correctAnswer": "http://example.com/home"
+  },
+  {
+    "id": 15,
+    "question": "What is the role of 'www' in a URL?",
+    "options": ["It is the website’s name", "It is a mandatory part of every URL", "It is a subdomain prefix", "It refers to the main folder on a computer"],
+    "correctAnswer": "It is a subdomain prefix"
+  },
+  {
+    "id": 16,
+    "question": "What is a web browser?",
+    "options": ["A search engine for the web", "A program used to view web pages", "A download manager", "A website creator"],
+    "correctAnswer": "A program used to view web pages"
+  },
+  {
+    "id": 17,
+    "question": "Which of the following is a search engine?",
+    "options": ["Firefox", "Google", "Safari", "Edge"],
+    "correctAnswer": "Google"
+  },
+  {
+    "id": 18,
+    "question": "What is the difference between a browser and a search engine?",
+    "options": ["They are the same thing", "A browser finds websites, a search engine displays them", "A browser displays websites, a search engine helps find them", "Search engines are installed, browsers are not"],
+    "correctAnswer": "A browser displays websites, a search engine helps find them"
+  },
+  {
+    "id": 19,
+    "question": "Which one of these is NOT a web browser?",
+    "options": ["Chrome", "Bing", "Edge", "Firefox"],
+    "correctAnswer": "Bing"
+  },
+  {
+    "id": 20,
+    "question": "Which pair correctly matches tool and category?",
+    "options": ["Google - Browser", "Firefox - Search Engine", "Bing - Search Engine", "Safari - Search Engine"],
+    "correctAnswer": "Bing - Search Engine"
+  },
+  {
+    "id": 21,
+    "question": "Which browser might you use on an Apple computer?",
+    "options": ["Chrome", "Opera", "Safari", "Firefox"],
+    "correctAnswer": "Safari"
+  },
+  {
+    "id": 22,
+    "question": "Why use more than one search engine?",
+    "options": ["To find more accurate or varied results", "To install new apps", "To access YouTube faster", "To write code"],
+    "correctAnswer": "To find more accurate or varied results"
+  },
+  {
+    "id": 23,
+    "question": "What does it mean to download a file?",
+    "options": ["Send a file to the Internet", "Delete a file", "Move a file from the cloud to your device", "Rename a file"],
+    "correctAnswer": "Move a file from the cloud to your device"
+  },
+  {
+    "id": 24,
+    "question": "What does uploading mean?",
+    "options": ["Copying files to a flash drive", "Sending a file from your device to the Internet", "Moving a file to another folder", "Saving a file to your desktop"],
+    "correctAnswer": "Sending a file from your device to the Internet"
+  },
+  {
+    "id": 25,
+    "question": "Which of the following is an example of downloading?",
+    "options": ["Sending a photo to Google Drive", "Watching a YouTube video", "Saving an attachment from email", "Posting on Instagram"],
+    "correctAnswer": "Saving an attachment from email"
+  },
+  {
+    "id": 26,
+    "question": "Which of the following is an example of uploading?",
+    "options": ["Downloading a document", "Installing an app", "Sending a file to Dropbox", "Reading an online article"],
+    "correctAnswer": "Sending a file to Dropbox"
+  },
+  {
+    "id": 27,
+    "question": "When you upload a file, where does it go?",
+    "options": ["To your flash drive", "To another local folder", "To an online server or cloud", "To the printer"],
+    "correctAnswer": "To an online server or cloud"
+  },
+  {
+    "id": 28,
+    "question": "Downloading usually moves files from:",
+    "options": ["Your device to the Internet", "The Internet to your device", "Your phone to your printer", "Your computer to USB"],
+    "correctAnswer": "The Internet to your device"
+  },
+  {
+    "id": 29,
+    "question": "True or False: Uploading is the same as downloading.",
+    "options": ["True", "False"],
+    "correctAnswer": "False"
+  },
+  {
+    "id": 30,
+    "question": "Which action involves both uploading and downloading?",
+    "options": ["Watching a video", "Installing software", "Emailing an attachment", "Taking a photo"],
+    "correctAnswer": "Emailing an attachment"
+  }
+],
+
+"E-communication & Netiquette": [
+  {
+    "id": 1,
+    "question": "Which of the following is an example of an e-communication tool?",
+    "options": ["Paint", "Excel", "Gmail", "Calculator"],
+    "correctAnswer": "Gmail"
+  },
+  {
+    "id": 2,
+    "question": "What is the purpose of the 'To' field in an email?",
+    "options": ["To write your signature", "To attach a file", "To specify the main recipient", "To hide the recipient"],
+    "correctAnswer": "To specify the main recipient"
+  },
+  {
+    "id": 3,
+    "question": "Which field hides the email addresses of recipients from each other?",
+    "options": ["To", "CC", "BCC", "Subject"],
+    "correctAnswer": "BCC"
+  },
+  {
+    "id": 4,
+    "question": "What is the 'CC' field used for?",
+    "options": ["Sending a copy to others", "Compressing content", "Checking content", "Clearing content"],
+    "correctAnswer": "Sending a copy to others"
+  },
+  {
+    "id": 5,
+    "question": "What part of an email contains the main message?",
+    "options": ["Subject", "Body", "CC", "To"],
+    "correctAnswer": "Body"
+  },
+  {
+    "id": 6,
+    "question": "Which of these would most likely be sent as an attachment?",
+    "options": ["Subject", "Body text", "Document file", "Email address"],
+    "correctAnswer": "Document file"
+  },
+  {
+    "id": 7,
+    "question": "Which of the following is NOT a messaging app?",
+    "options": ["WhatsApp", "Telegram", "Photoshop", "Messenger"],
+    "correctAnswer": "Photoshop"
+  },
+  {
+    "id": 8,
+    "question": "What is scan-to-email?",
+    "options": ["Emailing a screenshot", "Scanning a printed document and sending it as an email", "Sending an email twice", "Emailing from your phone"],
+    "correctAnswer": "Scanning a printed document and sending it as an email"
+  },
+  {
+    "id": 9,
+    "question": "Which of the following is a benefit of using messaging apps?",
+    "options": ["Slow communication", "No message history", "Real-time chat", "No notifications"],
+    "correctAnswer": "Real-time chat"
+  },
+  {
+    "id": 10,
+    "question": "Which is a risk of using online communication apps?",
+    "options": ["Making new friends", "Information overload", "Instant feedback", "Easy collaboration"],
+    "correctAnswer": "Information overload"
+  },
+  {
+    "id": 11,
+    "question": "What is 'netiquette'?",
+    "options": ["Using the internet for shopping", "Following good manners online", "Writing code", "Online password protection"],
+    "correctAnswer": "Following good manners online"
+  },
+  {
+    "id": 12,
+    "question": "Which of the following demonstrates good netiquette?",
+    "options": ["Using ALL CAPS in a message", "Replying politely to emails", "Forwarding spam", "Ignoring questions"],
+    "correctAnswer": "Replying politely to emails"
+  },
+  {
+    "id": 13,
+    "question": "Why should you avoid using all capital letters in a message?",
+    "options": ["It makes text harder to read", "It uses too much data", "It looks boring", "It is considered shouting"],
+    "correctAnswer": "It is considered shouting"
+  },
+  {
+    "id": 14,
+    "question": "Which of these is an example of poor online behavior?",
+    "options": ["Respectful replies", "Avoiding spam", "Using abusive language", "Using proper grammar"],
+    "correctAnswer": "Using abusive language"
+  },
+  {
+    "id": 15,
+    "question": "What should you do before sending an email?",
+    "options": ["Ignore attachments", "Proofread for spelling errors", "Use random subject lines", "Leave it blank"],
+    "correctAnswer": "Proofread for spelling errors"
+  },
+  {
+    "id": 16,
+    "question": "Which tool is best for formal communication?",
+    "options": ["Instagram", "Gmail", "TikTok", "Snapchat"],
+    "correctAnswer": "Gmail"
+  },
+  {
+    "id": 17,
+    "question": "Which feature allows you to send the same message to multiple people without showing who else received it?",
+    "options": ["To", "Subject", "BCC", "Body"],
+    "correctAnswer": "BCC"
+  },
+  {
+    "id": 18,
+    "question": "What should be included in the subject line of an email?",
+    "options": ["A joke", "Emoji only", "A short summary of the email", "Your full message"],
+    "correctAnswer": "A short summary of the email"
+  },
+  {
+    "id": 19,
+    "question": "Which of these is a good netiquette tip when replying to emails?",
+    "options": ["Ignore greetings", "Be brief and clear", "Use slang only", "Delete the subject line"],
+    "correctAnswer": "Be brief and clear"
+  },
+  {
+    "id": 20,
+    "question": "Which part of the email shows who sent the email?",
+    "options": ["CC", "To", "From", "Subject"],
+    "correctAnswer": "From"
+  },
+  {
+    "id": 21,
+    "question": "Which is a benefit of using email over messaging apps?",
+    "options": ["Real-time chat", "Voice notes", "Professional communication", "Stickers"],
+    "correctAnswer": "Professional communication"
+  },
+  {
+    "id": 22,
+    "question": "What does the term 'attachment' refer to in an email?",
+    "options": ["The subject line", "Extra text", "A linked document or file", "An image in the body"],
+    "correctAnswer": "A linked document or file"
+  },
+  {
+    "id": 23,
+    "question": "Why is it important to use greetings in emails?",
+    "options": ["To waste space", "To make your message look longer", "To be respectful and professional", "To show off vocabulary"],
+    "correctAnswer": "To be respectful and professional"
+  },
+  {
+    "id": 24,
+    "question": "Which app is designed mainly for social posts, not formal messages?",
+    "options": ["Outlook", "Twitter", "Gmail", "ProtonMail"],
+    "correctAnswer": "Twitter"
+  },
+  {
+    "id": 25,
+    "question": "Which of these tools is best for sending scanned homework to a teacher?",
+    "options": ["Paint", "Google Drive", "Scan-to-email", "YouTube"],
+    "correctAnswer": "Scan-to-email"
+  },
+  {
+    "id": 26,
+    "question": "What is the risk of clicking unknown links in a message?",
+    "options": ["Faster browsing", "Nothing happens", "You may get hacked or download malware", "You win a prize"],
+    "correctAnswer": "You may get hacked or download malware"
+  },
+  {
+    "id": 27,
+    "question": "What is a sign of phishing?",
+    "options": ["Clear contact name", "Strange email address and urgent request", "Known sender", "Friendly tone"],
+    "correctAnswer": "Strange email address and urgent request"
+  },
+  {
+    "id": 28,
+    "question": "Which is NOT part of netiquette?",
+    "options": ["Respecting others' time", "Sending unnecessary emails", "Using polite language", "Being clear and honest"],
+    "correctAnswer": "Sending unnecessary emails"
+  },
+  {
+    "id": 29,
+    "question": "Which app is best for sending a quick message to a friend?",
+    "options": ["Outlook", "Gmail", "WhatsApp", "Excel"],
+    "correctAnswer": "WhatsApp"
+  },
+  {
+    "id": 30,
+    "question": "When should you use BCC in an email?",
+    "options": ["When replying to one person", "When sending to yourself", "When emailing a large group privately", "When adding your subject line"],
+    "correctAnswer": "When emailing a large group privately"
+  }
+],
+
 "Spreadsheets 2":
 [
   {
@@ -3519,5 +3886,472 @@ export const questions = {
   { "id": 29, "question": "Which is an example of synchronous communication?", "options": ["Live video call", "Email", "Discussion forum", "Recorded lecture"], "correctAnswer": "Live video call" },
   { "id": 30, "question": "Which device allows wireless short-range digital communication between devices?", "options": ["Bluetooth Adapter", "Ethernet Cable", "External Hard Drive", "DVD Drive"], "correctAnswer": "Bluetooth Adapter" }
 ],
+"Operating Systems & Utilities": [
+  {
+    "id": 1,
+    "question": "What is the main role of an operating system?",
+    "options": [
+      "To connect to the internet",
+      "To manage hardware and software resources",
+      "To write emails",
+      "To provide internet security"
+    ],
+    "correctAnswer": "To manage hardware and software resources"
+  },
+  {
+    "id": 2,
+    "question": "Which of the following is an example of multitasking?",
+    "options": [
+      "Printing a file while typing in Word",
+      "Installing a single program",
+      "Watching a movie on DVD",
+      "Shutting down the system"
+    ],
+    "correctAnswer": "Printing a file while typing in Word"
+  },
+  {
+    "id": 3,
+    "question": "How does RAM affect system performance?",
+    "options": [
+      "Increases screen brightness",
+      "Speeds up file downloads",
+      "Allows more programs to run smoothly",
+      "Reduces internet bills"
+    ],
+    "correctAnswer": "Allows more programs to run smoothly"
+  },
+  {
+    "id": 4,
+    "question": "What is file fragmentation?",
+    "options": [
+      "When files are deleted permanently",
+      "When files are stored in a continuous block",
+      "When parts of a file are stored in different areas of the disk",
+      "When files are renamed"
+    ],
+    "correctAnswer": "When parts of a file are stored in different areas of the disk"
+  },
+  {
+    "id": 5,
+    "question": "Which utility removes unnecessary temporary files?",
+    "options": ["Backup", "Disk Cleanup", "Antivirus", "Task Manager"],
+    "correctAnswer": "Disk Cleanup"
+  },
+  {
+    "id": 6,
+    "question": "What is the purpose of a backup utility?",
+    "options": [
+      "To permanently delete files",
+      "To create copies of files for recovery",
+      "To update drivers",
+      "To scan for malware"
+    ],
+    "correctAnswer": "To create copies of files for recovery"
+  },
+  {
+    "id": 7,
+    "question": "Why is antivirus software important?",
+    "options": [
+      "It cleans the keyboard",
+      "It removes RAM",
+      "It protects against malware and viruses",
+      "It improves screen resolution"
+    ],
+    "correctAnswer": "It protects against malware and viruses"
+  },
+  {
+    "id": 8,
+    "question": "What does a software update typically do?",
+    "options": [
+      "Increases monitor size",
+      "Fixes bugs and improves security",
+      "Deletes user data",
+      "Formats the hard drive"
+    ],
+    "correctAnswer": "Fixes bugs and improves security"
+  },
+  {
+    "id": 9,
+    "question": "Which tool monitors CPU and memory usage?",
+    "options": ["Antivirus", "Task Manager", "Backup Utility", "Paint"],
+    "correctAnswer": "Task Manager"
+  },
+  {
+    "id": 10,
+    "question": "Why are strong passwords important?",
+    "options": [
+      "To access gaming accounts",
+      "To protect systems from unauthorized access",
+      "To increase download speeds",
+      "To enable dark mode"
+    ],
+    "correctAnswer": "To protect systems from unauthorized access"
+  },
+  {
+    "id": 11,
+    "question": "What is the purpose of a disk cleanup utility?",
+    "options": [
+      "To clean the screen",
+      "To delete temporary and unused files",
+      "To format the hard disk",
+      "To reset passwords"
+    ],
+    "correctAnswer": "To delete temporary and unused files"
+  },
+  {
+    "id": 12,
+    "question": "Which operating system tool helps prevent viruses and malware?",
+    "options": ["Backup tool", "Disk defragmenter", "Antivirus", "Snipping tool"],
+    "correctAnswer": "Antivirus"
+  },
+  {
+    "id": 13,
+    "question": "Why is it important to perform software updates regularly?",
+    "options": [
+      "To add new games",
+      "To increase screen size",
+      "To improve security and fix bugs",
+      "To remove users"
+    ],
+    "correctAnswer": "To improve security and fix bugs"
+  },
+  {
+    "id": 14,
+    "question": "Which utility allows you to schedule automatic backups?",
+    "options": ["Disk Cleanup", "Antivirus", "Task Scheduler", "Paint"],
+    "correctAnswer": "Task Scheduler"
+  },
+  {
+    "id": 15,
+    "question": "How do strong passwords help with computer security?",
+    "options": [
+      "They boost internet speed",
+      "They protect against unauthorized access",
+      "They remove viruses",
+      "They clean the disk"
+    ],
+    "correctAnswer": "They protect against unauthorized access"
+  },
+  {
+    "id": 16,
+    "question": "Which of the following is NOT a good optimization method?",
+    "options": [
+      "Removing startup programs",
+      "Regular defragmentation",
+      "Disabling antivirus",
+      "Uninstalling unused software"
+    ],
+    "correctAnswer": "Disabling antivirus"
+  },
+  {
+    "id": 17,
+    "question": "What is the role of user access control in Windows?",
+    "options": [
+      "To play music",
+      "To grant or restrict permission to users",
+      "To remove users",
+      "To download videos"
+    ],
+    "correctAnswer": "To grant or restrict permission to users"
+  },
+  {
+    "id": 18,
+    "question": "Which system utility allows you to check for installed RAM and CPU usage?",
+    "options": ["Task Manager", "Notepad", "Recycle Bin", "Paint"],
+    "correctAnswer": "Task Manager"
+  },
+  {
+    "id": 19,
+    "question": "Why is disk defragmentation important for performance?",
+    "options": [
+      "It removes files",
+      "It speeds up file access by organizing data",
+      "It deletes temporary files",
+      "It updates software"
+    ],
+    "correctAnswer": "It speeds up file access by organizing data"
+  },
+  {
+    "id": 20,
+    "question": "Which tool is used to remove malware?",
+    "options": ["Excel", "Snipping Tool", "Antivirus", "Task Manager"],
+    "correctAnswer": "Antivirus"
+  },
+  {
+    "id": 21,
+    "question": "What is the first step in optimizing a slow PC?",
+    "options": [
+      "Install games",
+      "Ignore problems",
+      "Check running background processes",
+      "Buy a printer"
+    ],
+    "correctAnswer": "Check running background processes"
+  },
+  {
+    "id": 22,
+    "question": "How can students visually present PAT data effectively?",
+    "options": [
+      "Write in paragraphs",
+      "Use images only",
+      "Use charts and tables",
+      "Skip that part"
+    ],
+    "correctAnswer": "Use charts and tables"
+  },
+  {
+    "id": 23,
+    "question": "Which Word feature helps create a summary table?",
+    "options": ["Header/Footer", "Table tool", "SmartArt", "Track changes"],
+    "correctAnswer": "Table tool"
+  },
+  {
+    "id": 24,
+    "question": "Where should the analysis section be included in the PAT?",
+    "options": ["Appendix", "Cover Page", "Introduction", "Main Body"],
+    "correctAnswer": "Main Body"
+  },
+  {
+    "id": 25,
+    "question": "What is the benefit of using charts in reports?",
+    "options": [
+      "They slow down the report",
+      "They confuse readers",
+      "They present data clearly and visually",
+      "They take up space"
+    ],
+    "correctAnswer": "They present data clearly and visually"
+  },
+  {
+    "id": 26,
+    "question": "What does defragmentation do?",
+    "options": [
+      "Spreads files randomly",
+      "Deletes files",
+      "Organizes file pieces on the disk",
+      "Creates backups"
+    ],
+    "correctAnswer": "Organizes file pieces on the disk"
+  },
+  {
+    "id": 27,
+    "question": "Which performance factor is affected by multiple programs running at once?",
+    "options": ["Monitor size", "RAM usage", "Wallpaper", "Mouse speed"],
+    "correctAnswer": "RAM usage"
+  },
+  {
+    "id": 28,
+    "question": "What is the purpose of the PAT project in CAT?",
+    "options": [
+      "To test typing speed",
+      "To assess programming skills",
+      "To apply and demonstrate ICT skills",
+      "To write essays"
+    ],
+    "correctAnswer": "To apply and demonstrate ICT skills"
+  },
+  {
+    "id": 29,
+    "question": "Which feature in Word allows chart insertion?",
+    "options": ["References", "Insert", "Layout", "Review"],
+    "correctAnswer": "Insert"
+  },
+  {
+    "id": 30,
+    "question": "What is the advantage of saving the PAT in multiple formats?",
+    "options": [
+      "To increase file size",
+      "To confuse markers",
+      "To ensure compatibility and backup",
+      "To slow down printing"
+    ],
+    "correctAnswer": "To ensure compatibility and backup"
+  }
+],
+"Databases & Integration":
+[
+  {
+    "id": 1,
+    "question": "What is the purpose of setting a primary key in a database table?",
+    "options": ["To create a duplicate entry", "To uniquely identify each record", "To add formatting to data", "To sort the data alphabetically"],
+    "correctAnswer": "To uniquely identify each record"
+  },
+  {
+    "id": 2,
+    "question": "Which data type would be best for storing a student's ID number?",
+    "options": ["Text", "Date/Time", "Number", "Currency"],
+    "correctAnswer": "Text"
+  },
+  {
+    "id": 3,
+    "question": "What does the 'Field Size' property control in a text field?",
+    "options": ["The font size of the text", "The number of characters allowed", "The spacing between records", "The width of the column"],
+    "correctAnswer": "The number of characters allowed"
+  },
+  {
+    "id": 4,
+    "question": "Which of the following best describes a query?",
+    "options": ["A printed version of a table", "A data entry form", "A tool to retrieve specific data based on conditions", "A format for exporting data"],
+    "correctAnswer": "A tool to retrieve specific data based on conditions"
+  },
+  {
+    "id": 5,
+    "question": "Which operator is used for a conditional query showing students with marks above 70?",
+    "options": ["<", "=", ">", "AND"],
+    "correctAnswer": ">"
+  },
+  {
+    "id": 6,
+    "question": "What is a simple query?",
+    "options": ["A query with complex calculations", "A query that joins multiple tables", "A query that filters or displays selected fields from one table", "A query used only in Excel"],
+    "correctAnswer": "A query that filters or displays selected fields from one table"
+  },
+  {
+    "id": 7,
+    "question": "Which query would find all learners in Grade 12 and score above 60?",
+    "options": ["Grade = 12 OR Score > 60", "Grade = 12 AND Score > 60", "Score < 60", "Grade != 12"],
+    "correctAnswer": "Grade = 12 AND Score > 60"
+  },
+  {
+    "id": 8,
+    "question": "What is the purpose of a report in a database?",
+    "options": ["To create a new table", "To display results of a query in a printable format", "To input data into the table", "To edit field properties"],
+    "correctAnswer": "To display results of a query in a printable format"
+  },
+  {
+    "id": 9,
+    "question": "Why are forms useful in databases?",
+    "options": ["They allow printing of tables", "They help export data to Excel", "They provide a user-friendly way to enter data", "They create relationships between tables"],
+    "correctAnswer": "They provide a user-friendly way to enter data"
+  },
+  {
+    "id": 10,
+    "question": "What is Mail Merge used for?",
+    "options": ["Analyzing graphs in Excel", "Creating web forms", "Linking database data to Word documents for mass communication", "Generating queries"],
+    "correctAnswer": "Linking database data to Word documents for mass communication"
+  },
+  {
+    "id": 11,
+    "question": "Which data type is best suited for a field storing birth dates?",
+    "options": ["Text", "Date/Time", "Number", "Currency"],
+    "correctAnswer": "Date/Time"
+  },
+  {
+    "id": 12,
+    "question": "Which field property ensures a field must be filled out before saving?",
+    "options": ["Default Value", "Required", "Format", "Caption"],
+    "correctAnswer": "Required"
+  },
+  {
+    "id": 13,
+    "question": "What is the role of a primary key in a table?",
+    "options": ["To color the row", "To store numbers only", "To ensure each record is unique", "To encrypt the data"],
+    "correctAnswer": "To ensure each record is unique"
+  },
+  {
+    "id": 14,
+    "question": "What happens if two fields are set as primary keys?",
+    "options": ["Creates a conflict", "Makes the table hidden", "Creates a composite key", "Deletes the fields"],
+    "correctAnswer": "Creates a composite key"
+  },
+  {
+    "id": 15,
+    "question": "Which clause in a query is used to filter data?",
+    "options": ["SELECT", "WHERE", "ORDER BY", "GROUP BY"],
+    "correctAnswer": "WHERE"
+  },
+  {
+    "id": 16,
+    "question": "Which query returns records where the 'Score' field is greater than 80?",
+    "options": ["Score < 80", "Score = 80", "Score > 80", "Score != 80"],
+    "correctAnswer": "Score > 80"
+  },
+  {
+    "id": 17,
+    "question": "What is the result of the query: SELECT * FROM Students WHERE Grade = 12 AND Average > 60?",
+    "options": ["All students", "Only Grade 12 students with Average above 60", "Only students with Average above 60", "Grade 12 students only"],
+    "correctAnswer": "Only Grade 12 students with Average above 60"
+  },
+  {
+    "id": 18,
+    "question": "Which object is best for entering data into a table using a friendly layout?",
+    "options": ["Form", "Query", "Report", "Macro"],
+    "correctAnswer": "Form"
+  },
+  {
+    "id": 19,
+    "question": "Which object is best for generating printable summaries?",
+    "options": ["Form", "Report", "Macro", "Table"],
+    "correctAnswer": "Report"
+  },
+  {
+    "id": 20,
+    "question": "In mail merge, which file stores the recipient details?",
+    "options": ["Main document", "Data source", "Merged result", "Form"],
+    "correctAnswer": "Data source"
+  },
+  {
+    "id": 21,
+    "question": "What tool allows you to integrate Excel charts into Word reports?",
+    "options": ["Mail Merge", "Insert Object", "Form Design", "Macro Builder"],
+    "correctAnswer": "Insert Object"
+  },
+  {
+    "id": 22,
+    "question": "What must be true to join two tables in a database?",
+    "options": ["They must have the same field names", "They must have a common field", "They must be in the same folder", "They must use only numbers"],
+    "correctAnswer": "They must have a common field"
+  },
+  {
+    "id": 23,
+    "question": "What is the purpose of validation rules in a database?",
+    "options": ["Prevent duplication", "Limit the data that can be entered", "Format text", "Encrypt data"],
+    "correctAnswer": "Limit the data that can be entered"
+  },
+  {
+    "id": 24,
+    "question": "Which graph type is best to show changes over time?",
+    "options": ["Pie chart", "Line graph", "Bar graph", "Doughnut chart"],
+    "correctAnswer": "Line graph"
+  },
+  {
+    "id": 25,
+    "question": "Which Excel feature calculates averages automatically?",
+    "options": ["Chart", "Pivot Table", "Formula bar", "AVERAGE function"],
+    "correctAnswer": "AVERAGE function"
+  },
+  {
+    "id": 26,
+    "question": "How can you protect your spreadsheet formulas?",
+    "options": ["Hide the rows", "Use conditional formatting", "Lock cells and protect sheet", "Use charts"],
+    "correctAnswer": "Lock cells and protect sheet"
+  },
+  {
+    "id": 27,
+    "question": "What is a key advantage of using reports in Access?",
+    "options": ["Real-time editing", "Query-based printing", "Simplifies table design", "Builds charts"],
+    "correctAnswer": "Query-based printing"
+  },
+  {
+    "id": 28,
+    "question": "Which property controls how numbers are displayed (e.g. currency, percent)?",
+    "options": ["Caption", "Format", "Field Size", "Indexed"],
+    "correctAnswer": "Format"
+  },
+  {
+    "id": 29,
+    "question": "What is the main purpose of integrating Excel with Word in a PAT?",
+    "options": ["To copy data as text", "To build databases", "To show charts in the report", "To send emails"],
+    "correctAnswer": "To show charts in the report"
+  },
+  {
+    "id": 30,
+    "question": "Which Excel feature helps analyze large datasets by summarizing values?",
+    "options": ["Chart", "Pivot Table", "Table", "Formula"],
+    "correctAnswer": "Pivot Table"
+  }
+]
+
+
 
 };
