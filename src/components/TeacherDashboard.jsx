@@ -1,106 +1,166 @@
-import React, { useState } from 'react';
-import { studentList } from '../data/studentData';
-import { db } from '../utils/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+// src/pages/TeacherDashboard.jsx
+import React, { useMemo, useState } from "react";
+import { studentList } from "../data/studentData";
+import { db } from "../utils/firebase";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+
+// If you really want a backfill button later, import the correct path and call it explicitly.
+// import { backfillExamResults } from "../utils/BackFillExamResults";
+
+function normalizeNameLower(name) {
+  return (name || "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+function parseGradeYear(grade) {
+  const m = String(grade || "").match(/\d{1,2}/);
+  return m ? Number(m[0]) : null;
+}
 
 export default function TeacherDashboard() {
-  const [selectedGrade, setSelectedGrade] = useState('');
-  const [selectedStudent, setSelectedStudent] = useState('');
-  const [examType, setExamType] = useState('theory');
-  const [examDate, setExamDate] = useState('');
-  const [comment, setComment] = useState('');
-  const [rows, setRows] = useState([{ question: '', type: '', score: '' }]);
+  const [selectedGrade, setSelectedGrade] = useState("");
+  const [selectedStudent, setSelectedStudent] = useState("");
+  const [examType, setExamType] = useState("theory");
+  const [examDate, setExamDate] = useState("");
+  const [comment, setComment] = useState("");
+  const [rows, setRows] = useState([{ question: "", type: "", score: "" }]);
 
   const typeOptions = [
-    'MCQ', 'MATCHING ITEMS', 'T/F', 'WORD PROCESSING', 'SPREADSHEETS',
-    'DATABASES', 'HTML', 'SYSTEMS TECHNOLOGIES', 'INTERNET & NETWORK TECH',
-    'INFORMATION MANAGEMENT', 'SOCIAL IMPLICATIONS', 'SOLUTION DEVELOPMENT',
-    'APPLICATION SCENARIO', 'TASK SCENARIO', 'GENERAL'
+    "MCQ",
+    "MATCHING ITEMS",
+    "T/F",
+    "WORD PROCESSING",
+    "SPREADSHEETS",
+    "DATABASES",
+    "HTML",
+    "SYSTEMS TECHNOLOGIES",
+    "INTERNET & NETWORK TECH",
+    "INFORMATION MANAGEMENT",
+    "SOCIAL IMPLICATIONS",
+    "SOLUTION DEVELOPMENT",
+    "APPLICATION SCENARIO",
+    "TASK SCENARIO",
+    "GENERAL",
   ];
-  const questionOptions = Array.from({ length: 10 }, (_, i) => (i + 1).toString());
+  const questionOptions = Array.from({ length: 10 }, (_, i) => String(i + 1));
 
-  // ✅ Map UI grade labels to your studentList keys
+  // ⚠️ Make sure these keys match your studentList exactly.
   const gradeKeyMap = {
-    "Grade 10": ["10A"],
-    "Grade 11": ["11"],
+    "Grade 10": ["10A"],        // add more sections if you have them
+    "Grade 11": ["11", "11A"],  // e.g. include "11A" if needed
     "Grade 12": ["12A", "12B"],
   };
 
-  // ✅ Dynamically load students based on grade selection
-  const gradeStudents = selectedGrade
-    ? gradeKeyMap[selectedGrade]
-        .flatMap(key => studentList[key] || [])
-    : [];
+  const gradeStudents = useMemo(() => {
+    if (!selectedGrade) return [];
+    const keys = gradeKeyMap[selectedGrade] || [];
+    return keys.flatMap((k) => studentList[k] || []);
+  }, [selectedGrade]);
 
-  const addRow = () => {
-    setRows([...rows, { question: '', type: '', score: '' }]);
-  };
+  const addRow = () => setRows((r) => [...r, { question: "", type: "", score: "" }]);
 
   const removeRow = (index) => {
-    const updated = [...rows];
-    updated.splice(index, 1);
-    setRows(updated);
+    setRows((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleChange = (index, field, value) => {
-    const updated = [...rows];
-    updated[index][field] = value;
-    setRows(updated);
-  };
-
-  const handleSubmit = async () => {
-    if (!selectedGrade || !selectedStudent || !examType) {
-      alert('Please select grade, student, and exam type.');
-      return;
-    }
-
-    try {
-      const docRef = doc(db, 'studentResults', selectedStudent);
-      const snap = await getDoc(docRef);
-      const existing = snap.exists() ? snap.data()[examType] || {} : {};
-
-      const payload = {
-        examTitle: examType === 'theory' ? 'Theory Exam' : 'Practical Exam',
-        examDate: examDate || existing.examDate || '',
-        results: rows.filter(r => r.question),
-        comment: comment.trim() || existing.comment || '',
-        grade: selectedGrade,
-      };
-
-      await setDoc(docRef, { [examType]: payload }, { merge: true });
-
-      alert(`${examType} results & comment saved!`);
-      setRows([{ question: '', type: '', score: '' }]);
-      setComment('');
-      setExamDate('');
-    } catch (err) {
-      console.error(err);
-      alert('Error saving. Check console.');
-    }
+    setRows((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
   };
 
   const totalScore = rows.reduce((sum, r) => sum + Number(r.score || 0), 0);
 
+  // You can customize the "possible total" logic per grade & exam type:
   let possibleTotal = 150;
-  if (selectedGrade === 'Grade 10') {
-    possibleTotal = examType === 'practical' ? 50 : 100;
-  } else if (selectedGrade === 'Grade 11') {
-    possibleTotal = examType === 'practical' ? 100 : 120;
+  if (selectedGrade === "Grade 10") {
+    possibleTotal = examType === "practical" ? 50 : 100;
+  } else if (selectedGrade === "Grade 11") {
+    possibleTotal = examType === "practical" ? 100 : 120;
   }
+  const percent = possibleTotal ? ((totalScore / possibleTotal) * 100).toFixed(2) : "0.00";
 
-  const percent = possibleTotal ? ((totalScore / possibleTotal) * 100).toFixed(2) : 0;
+  const handleSubmit = async () => {
+    if (!selectedGrade || !selectedStudent || !examType) {
+      alert("Please select grade, student, and exam type.");
+      return;
+    }
+
+    // sanitize rows: keep only rows with a question + numeric score
+    const cleanedRows = rows
+      .map((r) => ({
+        question: String(r.question || "").trim(),
+        type: String(r.type || "").trim(),
+        score: Number(r.score || 0),
+      }))
+      .filter((r) => r.question !== "" && !Number.isNaN(r.score));
+
+    // guard against negatives or weird values
+    for (const r of cleanedRows) {
+      if (r.score < 0) {
+        alert("Scores cannot be negative.");
+        return;
+      }
+    }
+
+    const name = selectedStudent; // we store by student name as docId (your current pattern)
+    const docRef = doc(db, "studentResults", name);
+
+    try {
+      const snap = await getDoc(docRef);
+      const existing = snap.exists() ? snap.data()[examType] || {} : {};
+
+      const payload = {
+        examTitle: examType === "theory" ? "Theory Exam" : "Practical Exam",
+        examDate: examDate || existing.examDate || "",
+        results: cleanedRows,
+        comment: comment.trim() || existing.comment || "",
+        grade: selectedGrade,
+        percentage: percent,
+        totalScore, // optional: keep a cached total
+      };
+
+      // Also keep normalized fields at the root for reliable queries elsewhere
+      const rootUpserts = {
+        name,
+        nameLower: normalizeNameLower(name),
+        grade: selectedGrade,
+        gradeYear: parseGradeYear(selectedGrade),
+        updatedAt: new Date().toISOString(),
+      };
+
+      await setDoc(
+        docRef,
+        {
+          ...rootUpserts,
+          [examType]: payload,
+        },
+        { merge: true }
+      );
+
+      alert(`${examType} results & comment saved!`);
+
+      // reset form bits
+      setRows([{ question: "", type: "", score: "" }]);
+      setComment("");
+      setExamDate("");
+    } catch (err) {
+      console.error(err);
+      alert("Error saving. Check console.");
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-4">Teacher Dashboard - Post Results</h2>
 
       {/* Grade Selection */}
-      <label>Select Grade:</label>
+      <label className="block mb-1">Select Grade:</label>
       <select
         value={selectedGrade}
         onChange={(e) => {
           setSelectedGrade(e.target.value);
-          setSelectedStudent('');
+          setSelectedStudent("");
         }}
         className="border p-2 mb-4 w-full"
       >
@@ -111,7 +171,7 @@ export default function TeacherDashboard() {
       </select>
 
       {/* Student Selection */}
-      <label>Select Student:</label>
+      <label className="block mb-1">Select Student:</label>
       <select
         value={selectedStudent}
         onChange={(e) => setSelectedStudent(e.target.value)}
@@ -120,12 +180,14 @@ export default function TeacherDashboard() {
       >
         <option value="">-- Select Student --</option>
         {gradeStudents.map((s, idx) => (
-          <option key={idx} value={s.name}>{s.name}</option>
+          <option key={`${s.name}-${idx}`} value={s.name}>
+            {s.name}
+          </option>
         ))}
       </select>
 
       {/* Exam Type */}
-      <label>Exam Type:</label>
+      <label className="block mb-1">Exam Type:</label>
       <select
         value={examType}
         onChange={(e) => setExamType(e.target.value)}
@@ -136,7 +198,7 @@ export default function TeacherDashboard() {
       </select>
 
       {/* Exam Date */}
-      <label>Date:</label>
+      <label className="block mb-1">Date:</label>
       <input
         type="date"
         value={examDate}
@@ -145,7 +207,7 @@ export default function TeacherDashboard() {
       />
 
       {/* Comment */}
-      <label>Teacher Comment:</label>
+      <label className="block mb-1">Teacher Comment:</label>
       <textarea
         value={comment}
         onChange={(e) => setComment(e.target.value)}
@@ -170,32 +232,37 @@ export default function TeacherDashboard() {
               <td className="border p-2">
                 <select
                   value={row.question}
-                  onChange={(e) => handleChange(idx, 'question', e.target.value)}
+                  onChange={(e) => handleChange(idx, "question", e.target.value)}
                   className="border p-1 w-full"
                 >
                   <option value="">--</option>
                   {questionOptions.map((q) => (
-                    <option key={q} value={q}>{q}</option>
+                    <option key={q} value={q}>
+                      {q}
+                    </option>
                   ))}
                 </select>
               </td>
               <td className="border p-2">
                 <select
                   value={row.type}
-                  onChange={(e) => handleChange(idx, 'type', e.target.value)}
+                  onChange={(e) => handleChange(idx, "type", e.target.value)}
                   className="border p-1 w-full"
                 >
                   <option value="">--</option>
                   {typeOptions.map((t) => (
-                    <option key={t} value={t}>{t}</option>
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
                   ))}
                 </select>
               </td>
               <td className="border p-2">
                 <input
                   type="number"
+                  min="0"
                   value={row.score}
-                  onChange={(e) => handleChange(idx, 'score', e.target.value)}
+                  onChange={(e) => handleChange(idx, "score", e.target.value)}
                   className="border p-1 w-full"
                 />
               </td>
@@ -213,31 +280,37 @@ export default function TeacherDashboard() {
             <td className="border p-2">TOTAL</td>
             <td className="border p-2">-</td>
             <td className="border p-2">{totalScore}</td>
-            <td className="border p-2"></td>
+            <td className="border p-2" />
           </tr>
           <tr className="font-bold bg-gray-100">
             <td className="border p-2">PERCENTAGE</td>
             <td className="border p-2">-</td>
             <td className="border p-2">{percent}%</td>
-            <td className="border p-2"></td>
+            <td className="border p-2" />
           </tr>
         </tbody>
       </table>
 
       {/* Buttons */}
       <div className="flex gap-4">
-        <button
-          onClick={addRow}
-          className="bg-green-600 text-white px-4 py-2 rounded"
-        >
+        <button onClick={addRow} className="bg-green-600 text-white px-4 py-2 rounded">
           Add Question
         </button>
-        <button
-          onClick={handleSubmit}
-          className="bg-blue-600 text-white px-6 py-2 rounded"
-        >
+        <button onClick={handleSubmit} className="bg-blue-600 text-white px-6 py-2 rounded">
           Post Results & Comment
         </button>
+
+         {/* Optional admin button: */}
+        {/* <button
+          onClick={async () => {
+            await backfillExamResults();
+            alert("Backfill complete");
+          }}
+          className="ml-auto bg-purple-600 text-white px-4 py-2 rounded"
+        >
+          Backfill examResults
+        </button> */}
+       
       </div>
     </div>
   );

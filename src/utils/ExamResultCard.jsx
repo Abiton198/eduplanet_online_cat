@@ -1,58 +1,156 @@
-import React, { useEffect, useState } from 'react';
-import { db } from './firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import React, { useEffect, useMemo, useState } from 'react';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { db } from './firebase'; // keep your path
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  query,
+  where,
+} from 'firebase/firestore';
 
 export default function ExamResultsCard({ studentName }) {
   const [data, setData] = useState({ theory: null, practical: null });
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [errMsg, setErrMsg] = useState('');
+  const [user, setUser] = useState(null);       // ✅ track auth user
+
+  const nameTidy = useMemo(() => (studentName || '').trim(), [studentName]);
+  const nameLower = useMemo(() => nameTidy.toLowerCase(), [nameTidy]);
+
+  // ✅ keep user state in sync with Firebase Auth
+  useEffect(() => {
+    const unsub = onAuthStateChanged(getAuth(), u => setUser(u || null));
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     const load = async () => {
+      setLoading(true);
+      setErrMsg('');
+      setData({ theory: null, practical: null });
+
       try {
-        const snap = await getDoc(doc(db, 'studentResults', studentName));
-        if (snap.exists()) {
-          setData({
-            theory: snap.data().theory || null,
-            practical: snap.data().practical || null,
-          });
+        if (!user) {
+          setErrMsg('Please sign in to view results.');
+          return;
         }
-      } catch (err) {
-        console.error(err);
+
+        // --- detect staff (admin/teacher) ---
+        let isAdmin = false;
+        let isTeacher = false;
+
+        try {
+          if (user.email) {
+            const adminSnap = await getDoc(doc(db, 'admins', user.email));
+            isAdmin = adminSnap.exists();
+          }
+          const token = await user.getIdTokenResult();
+          isTeacher = token?.claims?.role === 'teacher';
+        } catch {
+          // ignore; defaults to false
+        }
+
+        // --- load data depending on role ---
+        if (isAdmin || isTeacher) {
+          // STAFF: try by name as docId first
+          if (nameTidy) {
+            const byName = await getDoc(doc(db, 'studentResults', nameTidy));
+            if (byName.exists()) {
+              const d = byName.data();
+              if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
+              return;
+            }
+          }
+          // Fallback 1: query by exact 'name' field if stored
+          if (nameTidy) {
+            const q1 = query(
+              collection(db, 'studentResults'),
+              where('name', '==', nameTidy),
+              limit(1)
+            );
+            const s1 = await getDocs(q1);
+            if (!s1.empty) {
+              const d = s1.docs[0].data();
+              if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
+              return;
+            }
+          }
+          // Fallback 2: query by 'nameLower' if you store it
+          if (nameLower) {
+            const q2 = query(
+              collection(db, 'studentResults'),
+              where('nameLower', '==', nameLower),
+              limit(1)
+            );
+            const s2 = await getDocs(q2);
+            if (!s2.empty) {
+              const d = s2.docs[0].data();
+              if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
+              return;
+            }
+          }
+          if (!cancelled) setErrMsg('No main exam results found for this student.');
+          return;
+        } else {
+          // STUDENT: must read by own UID (ensure your docs store studentUid)
+          const uid = user.uid;
+          const qMe = query(
+            collection(db, 'studentResults'),
+            where('studentUid', '==', uid),
+            limit(1)
+          );
+          const sMe = await getDocs(qMe);
+          if (!sMe.empty) {
+            const d = sMe.docs[0].data();
+            if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
+          } else {
+            if (!cancelled) setErrMsg('Your main exam results are not available yet.');
+          }
+        }
+      } catch (e) {
+        console.error('ExamResultsCard load error:', e);
+        if (!cancelled) setErrMsg('Missing or insufficient permissions.');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
-    if (studentName) load();
-  }, [studentName]);
+
+    if (nameTidy) load();
+    return () => { cancelled = true; };
+  }, [nameTidy, nameLower, user]); // ✅ rerun when auth state changes
 
   const calcPercent = (rows, possible) =>
-    rows ? ((rows.reduce((sum, r) => sum + Number(r.score || 0), 0) / possible) * 100).toFixed(2) : 0;
+    rows && rows.length > 0
+      ? ((rows.reduce((sum, r) => sum + Number(r.score || 0), 0) / possible) * 100).toFixed(2)
+      : 0;
 
   const theoryPercent = data.theory ? calcPercent(data.theory.results, 150) : 0;
   const practicalPercent = data.practical ? calcPercent(data.practical.results, 150) : 0;
-
-  // ✅ Always average BOTH (missing treated as 0)
   const grandTotal = ((Number(theoryPercent) + Number(practicalPercent)) / 2).toFixed(2);
-
-  const toggleExpand = () => setExpanded(!expanded);
 
   return (
     <div className="max-w-xl mx-auto mb-8">
       <div
         className="p-6 rounded shadow-lg bg-gradient-to-br from-blue-200 to-blue-400 cursor-pointer transition hover:scale-105"
-        onClick={toggleExpand}
+        onClick={() => setExpanded(!expanded)}
       >
         <h3 className="text-xl font-bold mb-2 text-white">📊 JUNE Exam Results</h3>
         <p className="text-white">Click to {expanded ? 'hide' : 'view'} details</p>
 
         {loading && <p className="mt-2 text-white">Loading...</p>}
-        {!loading && !data.theory && !data.practical && (
+        {!loading && errMsg && <p className="mt-2 text-white italic">{errMsg}</p>}
+        {!loading && !errMsg && !data.theory && !data.practical && (
           <p className="mt-2 text-white italic">No results posted yet. Please wait for your teacher.</p>
         )}
       </div>
 
-      {expanded && (
+      {expanded && !loading && !errMsg && (
         <div className="bg-white shadow border p-6 mt-2 rounded">
           {/* Theory */}
           <div className="mb-6">
@@ -69,7 +167,7 @@ export default function ExamResultsCard({ studentName }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.theory.results.map((r, idx) => (
+                    {data.theory.results?.map((r, idx) => (
                       <tr key={idx}>
                         <td className="border p-1 text-center">{r.question}</td>
                         <td className="border p-1 text-center">{r.type}</td>
@@ -80,7 +178,7 @@ export default function ExamResultsCard({ studentName }) {
                       <td className="border p-1">TOTAL</td>
                       <td className="border p-1">-</td>
                       <td className="border p-1 text-center">
-                        {data.theory.results.reduce((sum, r) => sum + Number(r.score || 0), 0)}
+                        {data.theory.results?.reduce((s, r) => s + Number(r.score || 0), 0) ?? 0}
                       </td>
                     </tr>
                     <tr className="font-bold bg-gray-100">
@@ -112,7 +210,7 @@ export default function ExamResultsCard({ studentName }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.practical.results.map((r, idx) => (
+                    {data.practical.results?.map((r, idx) => (
                       <tr key={idx}>
                         <td className="border p-1 text-center">{r.question}</td>
                         <td className="border p-1 text-center">{r.type}</td>
@@ -123,7 +221,7 @@ export default function ExamResultsCard({ studentName }) {
                       <td className="border p-1">TOTAL</td>
                       <td className="border p-1">-</td>
                       <td className="border p-1 text-center">
-                        {data.practical.results.reduce((sum, r) => sum + Number(r.score || 0), 0)}
+                        {data.practical.results?.reduce((s, r) => s + Number(r.score || 0), 0) ?? 0}
                       </td>
                     </tr>
                     <tr className="font-bold bg-gray-100">
@@ -140,8 +238,12 @@ export default function ExamResultsCard({ studentName }) {
             )}
           </div>
 
-          {/* ✅ Always show Grand Total */}
-          <div className={`mt-6 p-4 text-center font-bold rounded ${grandTotal >= 50 ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
+          {/* Grand Total */}
+          <div
+            className={`mt-6 p-4 text-center font-bold rounded ${
+              Number(grandTotal) >= 50 ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
+            }`}
+          >
             🎓 Grand Total: {grandTotal}%
           </div>
         </div>
