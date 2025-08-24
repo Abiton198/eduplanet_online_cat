@@ -11,6 +11,8 @@ import { getAuth, onAuthStateChanged, signInAnonymously } from "firebase/auth";
 import { questions } from "../utils/Questions";
 import { ensureStudentProfile } from "../utils/pointsSystem/ensureStudentProfile";
 import { awardPointsFromExamHistory } from "../utils/pointsSystem/awardPointsFromExamHistory";
+import FloatingTopicCard from "../utils/FloatingTopicCard";
+import { catTopics } from "../data/catTopicsData";
 
 function formatTime(seconds) {
   const mins = Math.floor(seconds / 60);
@@ -272,17 +274,27 @@ export default function ExamPage({ studentInfo, addResult }) {
       <h2 className="text-2xl font-bold mb-6">
         Welcome {studentInfo?.name} ({studentInfo?.grade})
       </h2>
-
-      {/* 🏆 Floating leaderboard */}
+  
+      {/* 🏆 Floating leaderboard + 📚 Floating topics */}
       {currentStudentId && (
-        <LeaderboardCard grade={studentInfo?.grade} currentStudentId={currentStudentId} />
+        <>
+          <LeaderboardCard
+            grade={studentInfo?.grade}
+            currentStudentId={currentStudentId}
+          />
+          <FloatingTopicCard
+            topics={catTopics}
+            initiallyCollapsed={true}
+            locked={!!selectedExam}   // 🔒 Freeze when an exam is open
+          />
+        </>
       )}
-
+  
       {/* Exam list / Results card */}
       {!selectedExam && (
         <>
           <ExamResultsCard studentName={studentInfo?.name} />
-
+  
           <h3 className="text-xl mb-4">Select a Term</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {Object.keys(gradeData).map((term) => (
@@ -295,6 +307,8 @@ export default function ExamPage({ studentInfo, addResult }) {
               </div>
             ))}
           </div>
+        </>
+      )}
 
           {expandedTerm && (
             <div className="mt-4 bg-white p-4 rounded shadow">
@@ -309,9 +323,8 @@ export default function ExamPage({ studentInfo, addResult }) {
               ))}
             </div>
           )}
-        </>
-      )}
-
+      
+      
       {/* Exam taking view */}
       {authenticated && selectedExam && (
         <div className="mt-6" ref={formRef}>
