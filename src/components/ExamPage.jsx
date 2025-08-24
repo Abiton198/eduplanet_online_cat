@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { addDoc, collection } from "firebase/firestore";
 import { db } from "../utils/firebase";
-import ExamResultsCard from "../utils/ExamResultCard";
+// import ExamResultsCard from "../utils/ExamResultCard";
 import { termExams } from "../data/termExams";
 import LeaderboardCard from "./LeaderboardCard";
 import { getAuth, onAuthStateChanged, signInAnonymously } from "firebase/auth";
@@ -293,7 +293,8 @@ export default function ExamPage({ studentInfo, addResult }) {
       {/* Exam list / Results card */}
       {!selectedExam && (
         <>
-          <ExamResultsCard studentName={studentInfo?.name} />
+        {/* Displays Exams Results - MAIN (JUNE) */}
+          {/* <ExamResultsCard studentName={studentInfo?.name} />  */}
   
           <h3 className="text-xl mb-4">Select a Term</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

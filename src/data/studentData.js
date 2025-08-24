@@ -12,6 +12,7 @@ export const studentList = {
     { name: "Amzolele" },
     { name: "Caleb" },
     { name: "Chloe" },
+    { name: "Ashleigh" },
     { name: "Abiton_10" }
   ],
   "11": [
