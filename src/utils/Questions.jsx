@@ -4350,7 +4350,742 @@ export const questions = {
     "options": ["Chart", "Pivot Table", "Table", "Formula"],
     "correctAnswer": "Pivot Table"
   }
-]
+],
+"Internet Technologies-communications": [
+  {
+    "id": 1,
+    "question": "What is the main purpose of digital communication?",
+    "options": ["To send signals using analog waves", "To transmit information using discrete signals", "To improve handwriting", "To store data physically"],
+    "correctAnswer": "To transmit information using discrete signals"
+  },
+  {
+    "id": 2,
+    "question": "Which of the following is an example of digital communication?",
+    "options": ["Face-to-face conversation", "Letter writing", "Video conferencing", "Hand signals"],
+    "correctAnswer": "Video conferencing"
+  },
+  {
+    "id": 3,
+    "question": "Which device is commonly used to connect a computer to the internet?",
+    "options": ["Printer", "Modem", "Scanner", "Keyboard"],
+    "correctAnswer": "Modem"
+  },
+  {
+    "id": 4,
+    "question": "What is a key advantage of video conferencing?",
+    "options": ["It eliminates the need for digital devices", "It allows real-time communication across distances", "It does not require the internet", "It is always free"],
+    "correctAnswer": "It allows real-time communication across distances"
+  },
+  {
+    "id": 5,
+    "question": "Which of the following is NOT a digital communication method?",
+    "options": ["Email", "Telephone (landline analog)", "Instant messaging", "Video call"],
+    "correctAnswer": "Telephone (landline analog)"
+  },
+  {
+    "id": 6,
+    "question": "What is the function of a router?",
+    "options": ["To print documents", "To connect multiple networks and direct traffic", "To display web pages", "To store files permanently"],
+    "correctAnswer": "To connect multiple networks and direct traffic"
+  },
+  {
+    "id": 7,
+    "question": "Which protocol is mainly used for sending emails?",
+    "options": ["HTTP", "SMTP", "FTP", "DNS"],
+    "correctAnswer": "SMTP"
+  },
+  {
+    "id": 8,
+    "question": "Which feature of a web browser helps users revisit previously visited sites?",
+    "options": ["Tabs", "Bookmarks", "Cookies", "Extensions"],
+    "correctAnswer": "Bookmarks"
+  },
+  {
+    "id": 9,
+    "question": "What is the role of cookies in web browsers?",
+    "options": ["Store user data for personalization", "Print web pages", "Reduce internet speed", "Block viruses"],
+    "correctAnswer": "Store user data for personalization"
+  },
+  {
+    "id": 10,
+    "question": "Which of the following is a disadvantage of video conferencing?",
+    "options": ["Requires stable internet connection", "Saves travel time", "Allows collaboration", "Supports real-time communication"],
+    "correctAnswer": "Requires stable internet connection"
+  },
+  {
+    "id": 11,
+    "question": "What is an example of synchronous digital communication?",
+    "options": ["Email", "Video call", "Blogging", "Discussion forum"],
+    "correctAnswer": "Video call"
+  },
+  {
+    "id": 12,
+    "question": "Which of these is a communication device?",
+    "options": ["Mouse", "Modem", "Monitor", "Projector"],
+    "correctAnswer": "Modem"
+  },
+  {
+    "id": 13,
+    "question": "Which protocol is commonly used to access web pages?",
+    "options": ["SMTP", "HTTP", "FTP", "POP3"],
+    "correctAnswer": "HTTP"
+  },
+  {
+    "id": 14,
+    "question": "Which device converts digital signals into analog signals for transmission?",
+    "options": ["Scanner", "Printer", "Modem", "Router"],
+    "correctAnswer": "Modem"
+  },
+  {
+    "id": 15,
+    "question": "Which of the following is a feature of modern web browsers?",
+    "options": ["Tabbed browsing", "Analog signal conversion", "Paper storage", "Punch cards"],
+    "correctAnswer": "Tabbed browsing"
+  },
+  {
+    "id": 16,
+    "question": "What is the main use of FTP?",
+    "options": ["Transferring files over the internet", "Making phone calls", "Streaming videos", "Sending instant messages"],
+    "correctAnswer": "Transferring files over the internet"
+  },
+  {
+    "id": 17,
+    "question": "Which of these best describes digital communication?",
+    "options": ["Transmission of continuous waves", "Transmission of data using discrete signals", "Handwritten messages", "Face-to-face meetings"],
+    "correctAnswer": "Transmission of data using discrete signals"
+  },
+  {
+    "id": 18,
+    "question": "What is one use of computer communication in education?",
+    "options": ["Video conferencing for online classes", "Printing assignments", "Typing on a keyboard", "Drawing with a mouse"],
+    "correctAnswer": "Video conferencing for online classes"
+  },
+  {
+    "id": 19,
+    "question": "Which protocol is secure for transferring web data?",
+    "options": ["HTTP", "HTTPS", "FTP", "SMTP"],
+    "correctAnswer": "HTTPS"
+  },
+  {
+    "id": 20,
+    "question": "Which device connects a local network to the internet?",
+    "options": ["Router", "Projector", "Keyboard", "Monitor"],
+    "correctAnswer": "Router"
+  },
+  {
+    "id": 21,
+    "question": "What is one limitation of digital communication?",
+    "options": ["Requires power and internet", "Can be stored easily", "Allows instant sharing", "Provides global reach"],
+    "correctAnswer": "Requires power and internet"
+  },
+  {
+    "id": 22,
+    "question": "Which of the following is NOT a communication device?",
+    "options": ["Router", "Switch", "Scanner", "Modem"],
+    "correctAnswer": "Scanner"
+  },
+  {
+    "id": 23,
+    "question": "Which browser feature prevents unauthorized tracking?",
+    "options": ["Incognito/Private mode", "Tabs", "Bookmarks", "Zoom"],
+    "correctAnswer": "Incognito/Private mode"
+  },
+  {
+    "id": 24,
+    "question": "Which of these is an asynchronous communication method?",
+    "options": ["Chat room", "Video call", "Email", "Phone call"],
+    "correctAnswer": "Email"
+  },
+  {
+    "id": 25,
+    "question": "What is a benefit of using communication devices?",
+    "options": ["Faster and more reliable data transfer", "Reduced global connectivity", "Limited access to resources", "Slower communication"],
+    "correctAnswer": "Faster and more reliable data transfer"
+  },
+  {
+    "id": 26,
+    "question": "Which of these is an example of computer-mediated communication?",
+    "options": ["Instant messaging", "Speaking face to face", "Reading a newspaper", "Handwritten notes"],
+    "correctAnswer": "Instant messaging"
+  },
+  {
+    "id": 27,
+    "question": "Which feature allows users to install small programs into browsers?",
+    "options": ["Extensions/Add-ons", "Cookies", "Tabs", "Bookmarks"],
+    "correctAnswer": "Extensions/Add-ons"
+  },
+  {
+    "id": 28,
+    "question": "Which technology is essential for video conferencing?",
+    "options": ["High-speed internet connection", "Typewriter", "Floppy disks", "Printer"],
+    "correctAnswer": "High-speed internet connection"
+  },
+  {
+    "id": 29,
+    "question": "Which of these is a disadvantage of digital communication?",
+    "options": ["Data privacy concerns", "Faster transmission", "Global reach", "Convenience"],
+    "correctAnswer": "Data privacy concerns"
+  },
+  {
+    "id": 30,
+    "question": "Which of the following is an example of a web browser?",
+    "options": ["Google Chrome", "WhatsApp", "Microsoft Word", "Zoom"],
+    "correctAnswer": "Google Chrome"
+  }
+],
+"3D Printing, Wireless & Mobile Technologies": [
+  {
+    "id": 1,
+    "question": "What is the basic principle of 3D printing?",
+    "options": ["Removing material from a block", "Adding successive layers of material", "Pressing objects into molds", "Carving objects by hand"],
+    "correctAnswer": "Adding successive layers of material"
+  },
+  {
+    "id": 2,
+    "question": "Which type of file is usually required for 3D printing?",
+    "options": ["JPEG", "MP4", "3D printable file (CAD)", "TXT"],
+    "correctAnswer": "3D printable file (CAD)"
+  },
+  {
+    "id": 3,
+    "question": "What is one major advantage of 3D printing?",
+    "options": ["Models are created instantly", "It is cheaper than other manufacturing methods", "It can print any material", "It requires no electricity"],
+    "correctAnswer": "It is cheaper than other manufacturing methods"
+  },
+  {
+    "id": 4,
+    "question": "Which is a disadvantage of 3D printing?",
+    "options": ["Unlimited material choices", "Takes a long time to print", "No need for post-processing", "Suitable for mass production"],
+    "correctAnswer": "Takes a long time to print"
+  },
+  {
+    "id": 5,
+    "question": "Why is 3D printing useful in architecture?",
+    "options": ["It creates life-sized malls instantly", "It provides physical models for clients", "It replaces blueprints", "It eliminates CAD software"],
+    "correctAnswer": "It provides physical models for clients"
+  },
+  {
+    "id": 6,
+    "question": "Which of the following is a limitation of 3D printing?",
+    "options": ["Objects can only be flat", "Model size is limited to printer size", "Only text can be printed", "No need for materials"],
+    "correctAnswer": "Model size is limited to printer size"
+  },
+  {
+    "id": 7,
+    "question": "Which health risk is associated with 3D printing?",
+    "options": ["Toxic emissions", "Weak internet connection", "Radiation", "Eye strain"],
+    "correctAnswer": "Toxic emissions"
+  },
+  {
+    "id": 8,
+    "question": "Which wireless communication standard is identified by the letters a, b, g, n?",
+    "options": ["Ethernet", "802.11 Wi-Fi", "Bluetooth", "5G"],
+    "correctAnswer": "802.11 Wi-Fi"
+  },
+  {
+    "id": 9,
+    "question": "What does Wi-Fi stand for?",
+    "options": ["Wireless Fidelity", "Wired File transfer", "Wide Fiber", "Wireless Frequency"],
+    "correctAnswer": "Wireless Fidelity"
+  },
+  {
+    "id": 10,
+    "question": "What is the purpose of the 802.11 standards?",
+    "options": ["Specifies how wireless devices communicate", "Controls electricity flow", "Designs processors", "Stores large databases"],
+    "correctAnswer": "Specifies how wireless devices communicate"
+  },
+  {
+    "id": 11,
+    "question": "Which of the following is an application of Wi-Fi standards?",
+    "options": ["Cooking food", "Wi-Fi hotspots", "3D printing", "Scanning documents"],
+    "correctAnswer": "Wi-Fi hotspots"
+  },
+  {
+    "id": 12,
+    "question": "Which generation of cellular technology is LTE associated with?",
+    "options": ["2G", "3G", "4G", "5G"],
+    "correctAnswer": "4G"
+  },
+  {
+    "id": 13,
+    "question": "What is one key advantage of LTE over 3G?",
+    "options": ["Slower browsing", "Faster download/upload speeds", "Uses less battery", "Works without internet"],
+    "correctAnswer": "Faster download/upload speeds"
+  },
+  {
+    "id": 14,
+    "question": "Which of the following is a disadvantage of LTE?",
+    "options": ["Slower than 2G", "Consumes more battery", "No internet support", "Eliminates mobile gaming"],
+    "correctAnswer": "Consumes more battery"
+  },
+  {
+    "id": 15,
+    "question": "Which technology came after LTE/4G?",
+    "options": ["2G", "3G", "5G", "Dial-up"],
+    "correctAnswer": "5G"
+  },
+  {
+    "id": 16,
+    "question": "Which of these is NOT a use of LTE?",
+    "options": ["Streaming videos", "Online gaming", "High-speed browsing", "3D object modeling"],
+    "correctAnswer": "3D object modeling"
+  },
+  {
+    "id": 17,
+    "question": "What does NFC stand for?",
+    "options": ["Near Field Communication", "Network File Connection", "New Frequency Code", "Near Fiber Cable"],
+    "correctAnswer": "Near Field Communication"
+  },
+  {
+    "id": 18,
+    "question": "How does NFC typically connect devices?",
+    "options": ["By Bluetooth pairing", "By bringing devices close together", "By using long-range satellites", "By wired cables"],
+    "correctAnswer": "By bringing devices close together"
+  },
+  {
+    "id": 19,
+    "question": "Which of these is an example of NFC in practice?",
+    "options": ["Contactless payments", "Dial-up internet", "WiMAX towers", "3D printing"],
+    "correctAnswer": "Contactless payments"
+  },
+  {
+    "id": 20,
+    "question": "Which is a limitation of NFC?",
+    "options": ["Slow transfer speed", "Requires high internet speed", "Needs expensive equipment", "No security features"],
+    "correctAnswer": "Slow transfer speed"
+  },
+  {
+    "id": 21,
+    "question": "Which of the following wireless technologies is best for short-range data transfer?",
+    "options": ["Wi-Fi", "Bluetooth", "LTE", "WiMAX"],
+    "correctAnswer": "Bluetooth"
+  },
+  {
+    "id": 22,
+    "question": "Which wireless technology is commonly used for connecting printers and smartphones?",
+    "options": ["WiMAX", "Bluetooth", "LTE", "Fiber"],
+    "correctAnswer": "Bluetooth"
+  },
+  {
+    "id": 23,
+    "question": "Which technology provides long-distance wireless broadband?",
+    "options": ["Bluetooth", "Wi-Fi", "WiMAX", "NFC"],
+    "correctAnswer": "WiMAX"
+  },
+  {
+    "id": 24,
+    "question": "Which of the following best describes a Wi-Fi hotspot?",
+    "options": ["A device used for 3D printing", "A location where wireless internet is available", "A Bluetooth device", "A CAD model"],
+    "correctAnswer": "A location where wireless internet is available"
+  },
+  {
+    "id": 25,
+    "question": "Which is a common advantage of Bluetooth technology?",
+    "options": ["Low energy consumption", "Supports satellite communication", "Covers large city areas", "Prints objects"],
+    "correctAnswer": "Low energy consumption"
+  },
+  {
+    "id": 26,
+    "question": "Which technology is best suited for mobile phones streaming HD videos?",
+    "options": ["2G", "WiMAX", "Bluetooth", "LTE"],
+    "correctAnswer": "LTE"
+  },
+  {
+    "id": 27,
+    "question": "Which disadvantage is common to both LTE and Wi-Fi?",
+    "options": ["Battery consumption", "Analog transmission", "Slow internet", "No connectivity"],
+    "correctAnswer": "Battery consumption"
+  },
+  {
+    "id": 28,
+    "question": "Which of these allows tap-and-go card transactions?",
+    "options": ["Wi-Fi", "NFC", "Bluetooth", "3D printing"],
+    "correctAnswer": "NFC"
+  },
+  {
+    "id": 29,
+    "question": "Which limitation affects 3D printing when errors occur?",
+    "options": ["Printer can fix small errors", "Requires a complete re-print", "Errors are automatically corrected", "Does not affect the model"],
+    "correctAnswer": "Requires a complete re-print"
+  },
+  {
+    "id": 30,
+    "question": "Which of these technologies is mainly used to connect devices without cables over short distances?",
+    "options": ["Bluetooth", "WiMAX", "LTE", "802.11n"],
+    "correctAnswer": "Bluetooth"
+  }
+],
+"Video Communications, URL Shorteners, IoT & Autonomous Vehicles": [
+  {
+    "id": 1,
+    "question": "What is video communication?",
+    "options": ["Transmission of live or recorded video data", "Sending only text messages", "Radio broadcasting", "Handwritten notes online"],
+    "correctAnswer": "Transmission of live or recorded video data"
+  },
+  {
+    "id": 2,
+    "question": "Which of the following is NOT a type of video communication?",
+    "options": ["Video calling", "Video conferencing", "Video sharing", "Emailing"],
+    "correctAnswer": "Emailing"
+  },
+  {
+    "id": 3,
+    "question": "Which component in video conferencing selects and combines participants’ streams?",
+    "options": ["Multipoint Control Unit (MCU)", "Router", "Scanner", "Keyboard"],
+    "correctAnswer": "Multipoint Control Unit (MCU)"
+  },
+  {
+    "id": 4,
+    "question": "What is one advantage of video communication?",
+    "options": ["Requires no internet", "Connects people worldwide in real time", "Uses little data", "No software needed"],
+    "correctAnswer": "Connects people worldwide in real time"
+  },
+  {
+    "id": 5,
+    "question": "What is a disadvantage of video communication?",
+    "options": ["Needs fast internet and uses lots of data", "Cannot be used on smartphones", "Only supports text chat", "Prevents collaboration"],
+    "correctAnswer": "Needs fast internet and uses lots of data"
+  },
+  {
+    "id": 6,
+    "question": "Which of the following is required for video communication?",
+    "options": ["Webcam, microphone, software, internet", "Printer, scanner, paper", "Satellite dish, CD-ROM", "USB stick, keyboard"],
+    "correctAnswer": "Webcam, microphone, software, internet"
+  },
+  {
+    "id": 7,
+    "question": "Which application is an example of video conferencing software?",
+    "options": ["Zoom", "Microsoft Word", "Photoshop", "Notepad"],
+    "correctAnswer": "Zoom"
+  },
+  {
+    "id": 8,
+    "question": "What is the main purpose of a URL shortener?",
+    "options": ["Converts a long URL into a shorter, easier link", "Encrypts the URL for security", "Expands a URL into multiple links", "Deletes old URLs"],
+    "correctAnswer": "Converts a long URL into a shorter, easier link"
+  },
+  {
+    "id": 9,
+    "question": "Which of these is a benefit of URL shorteners?",
+    "options": ["Easier to remember/type", "Consumes more characters", "Decreases website speed", "Removes tracking ability"],
+    "correctAnswer": "Easier to remember/type"
+  },
+  {
+    "id": 10,
+    "question": "Which of the following is an example of a URL shortener service?",
+    "options": ["Bit.ly", "Google Chrome", "Zoom", "Photoshop"],
+    "correctAnswer": "Bit.ly"
+  },
+  {
+    "id": 11,
+    "question": "Which is a disadvantage of URL shorteners?",
+    "options": ["Some websites block shortened links", "They always cost money", "They require hardware", "They increase storage space"],
+    "correctAnswer": "Some websites block shortened links"
+  },
+  {
+    "id": 12,
+    "question": "Why are URL shorteners useful for platforms like Twitter?",
+    "options": ["They reduce the character count", "They improve video streaming", "They send audio files", "They translate messages"],
+    "correctAnswer": "They reduce the character count"
+  },
+  {
+    "id": 13,
+    "question": "What does IoT stand for?",
+    "options": ["Internet of Technology", "Internet of Things", "Information of Tools", "Integration of Transmission"],
+    "correctAnswer": "Internet of Things"
+  },
+  {
+    "id": 14,
+    "question": "What enables IoT devices to exchange data?",
+    "options": ["Embedded sensors and internet connectivity", "Paper notes", "Handwritten codes", "DVDs"],
+    "correctAnswer": "Embedded sensors and internet connectivity"
+  },
+  {
+    "id": 15,
+    "question": "Which is an advantage of IoT in homes?",
+    "options": ["Appliances can be controlled remotely", "It uses no electricity", "It cannot be hacked", "All devices work offline"],
+    "correctAnswer": "Appliances can be controlled remotely"
+  },
+  {
+    "id": 16,
+    "question": "Which is a potential disadvantage of IoT?",
+    "options": ["Privacy and security risks", "It reduces automation", "It prevents data transfer", "It has no effect on daily life"],
+    "correctAnswer": "Privacy and security risks"
+  },
+  {
+    "id": 17,
+    "question": "Which of these is an example of IoT in practice?",
+    "options": ["Smart fridge updating shopping list", "Printing photos", "Burning CDs", "Using floppy disks"],
+    "correctAnswer": "Smart fridge updating shopping list"
+  },
+  {
+    "id": 18,
+    "question": "Which technology might allow a manufacturer to diagnose appliances remotely?",
+    "options": ["IoT", "Video conferencing", "URL shortener", "Autonomous vehicles"],
+    "correctAnswer": "IoT"
+  },
+  {
+    "id": 19,
+    "question": "What is an autonomous vehicle?",
+    "options": ["A self-driving car using sensors and AI", "A manual car controlled by a driver", "A bicycle with GPS", "A motorbike with Wi-Fi"],
+    "correctAnswer": "A self-driving car using sensors and AI"
+  },
+  {
+    "id": 20,
+    "question": "Which technology do autonomous vehicles use to navigate safely?",
+    "options": ["GPS, radar, lasers, sensors", "Paper maps", "Typewriters", "MP3 players"],
+    "correctAnswer": "GPS, radar, lasers, sensors"
+  },
+  {
+    "id": 21,
+    "question": "Which is an advantage of autonomous vehicles?",
+    "options": ["Reduced accidents and traffic congestion", "Higher fuel use", "More driver fatigue", "Increased errors"],
+    "correctAnswer": "Reduced accidents and traffic congestion"
+  },
+  {
+    "id": 22,
+    "question": "Which is a disadvantage of autonomous vehicles?",
+    "options": ["Can be hacked or malfunction", "Requires no internet", "They never need fuel", "They replace GPS"],
+    "correctAnswer": "Can be hacked or malfunction"
+  },
+  {
+    "id": 23,
+    "question": "Which is a limitation of autonomous vehicles?",
+    "options": ["Movements can be tracked (loss of privacy)", "They never stop at signals", "They work without sensors", "They require no network coverage"],
+    "correctAnswer": "Movements can be tracked (loss of privacy)"
+  },
+  {
+    "id": 24,
+    "question": "Which group of people benefits from autonomous vehicles?",
+    "options": ["People with disabilities who cannot drive", "Professional race drivers", "People who dislike technology", "Those without smartphones"],
+    "correctAnswer": "People with disabilities who cannot drive"
+  },
+  {
+    "id": 25,
+    "question": "Which application area benefits from autonomous vehicles?",
+    "options": ["Delivery and taxi services", "CD burning", "Floppy disk storage", "Photo editing"],
+    "correctAnswer": "Delivery and taxi services"
+  },
+  {
+    "id": 26,
+    "question": "Which example best shows IoT in environmental monitoring?",
+    "options": ["DNA analysis devices detecting pathogens", "Video calling", "Shortened URLs", "Gaming consoles"],
+    "correctAnswer": "DNA analysis devices detecting pathogens"
+  },
+  {
+    "id": 27,
+    "question": "Which video calling apps are commonly used?",
+    "options": ["WhatsApp, FaceTime, Skype", "Photoshop, Illustrator, CorelDRAW", "Excel, Word, PowerPoint", "Bit.ly, TinyURL, Diggbar"],
+    "correctAnswer": "WhatsApp, FaceTime, Skype"
+  },
+  {
+    "id": 28,
+    "question": "Which is an advantage of URL tracking via shorteners?",
+    "options": ["Allows monitoring of how many times a link is clicked", "Increases storage size", "Removes internet need", "Eliminates passwords"],
+    "correctAnswer": "Allows monitoring of how many times a link is clicked"
+  },
+  {
+    "id": 29,
+    "question": "Which disadvantage applies to both IoT and autonomous vehicles?",
+    "options": ["Cybersecurity risks", "No use in real life", "Cannot connect to the internet", "No data involved"],
+    "correctAnswer": "Cybersecurity risks"
+  },
+  {
+    "id": 30,
+    "question": "Which video conferencing platforms allow text chat and file sharing?",
+    "options": ["MS Teams, Google Meet, Zoom", "Bit.ly, TinyURL, Su.pr", "Spotify, iTunes, YouTube Music", "Excel, Word, PowerPoint"],
+    "correctAnswer": "MS Teams, Google Meet, Zoom"
+  }
+],
+"Drone Technology, Wearables, Shaping & Throttling": [
+  {
+    "id": 1,
+    "question": "What is a drone?",
+    "options": ["A manned aircraft", "An unmanned flying robot controlled remotely or autonomously", "A type of wearable device", "A satellite communication system"],
+    "correctAnswer": "An unmanned flying robot controlled remotely or autonomously"
+  },
+  {
+    "id": 2,
+    "question": "Which two basic functions define drones?",
+    "options": ["Flight and navigation", "Printing and scanning", "Typing and saving", "Charging and cooling"],
+    "correctAnswer": "Flight and navigation"
+  },
+  {
+    "id": 3,
+    "question": "Which component is essential for drone flight?",
+    "options": ["Propellers and power source", "Printer cartridge", "Hard drive", "Monitor screen"],
+    "correctAnswer": "Propellers and power source"
+  },
+  {
+    "id": 4,
+    "question": "Which technology allows drones to navigate autonomously?",
+    "options": ["GPS and onboard sensors", "Barcode scanners", "3D printers", "Traffic shaping"],
+    "correctAnswer": "GPS and onboard sensors"
+  },
+  {
+    "id": 5,
+    "question": "Which of the following is a common use of drones in agriculture?",
+    "options": ["Measuring crop growth and insect infestation", "Replacing irrigation systems", "Sending text alerts to farmers", "Printing plant labels"],
+    "correctAnswer": "Measuring crop growth and insect infestation"
+  },
+  {
+    "id": 6,
+    "question": "Which is an advantage of drones?",
+    "options": ["Quick to deploy and inexpensive", "Unlimited flying time", "Never affected by weather", "No need for a controller"],
+    "correctAnswer": "Quick to deploy and inexpensive"
+  },
+  {
+    "id": 7,
+    "question": "Which is a disadvantage of drones?",
+    "options": ["Collateral damage and invasion of privacy", "Always free to use", "Unlimited battery life", "No regulations required"],
+    "correctAnswer": "Collateral damage and invasion of privacy"
+  },
+  {
+    "id": 8,
+    "question": "Which factor limits drone flying time?",
+    "options": ["Battery life", "Cloud storage", "High-speed internet", "Web browser compatibility"],
+    "correctAnswer": "Battery life"
+  },
+  {
+    "id": 9,
+    "question": "Which of the following industries makes use of drones?",
+    "options": ["Agriculture, disaster management, journalism", "Cooking, clothing, music", "Desktop publishing, typing, teaching", "Sewing, baking, painting"],
+    "correctAnswer": "Agriculture, disaster management, journalism"
+  },
+  {
+    "id": 10,
+    "question": "What is a wearable device?",
+    "options": ["A handheld printer", "A mobile electronic device worn as clothing or accessory", "A type of drone controller", "A small desktop computer"],
+    "correctAnswer": "A mobile electronic device worn as clothing or accessory"
+  },
+  {
+    "id": 11,
+    "question": "Which data can wearable devices track?",
+    "options": ["Heart rate, oxygen saturation, steps", "Battery charge, file storage, downloads", "Drone signals, GPS maps, video quality", "Printer ink, paper size, speed"],
+    "correctAnswer": "Heart rate, oxygen saturation, steps"
+  },
+  {
+    "id": 12,
+    "question": "What is one advantage of wearable devices?",
+    "options": ["Hands-free, portable, tracks health in real time", "Require no internet", "Never use batteries", "Work only when plugged in"],
+    "correctAnswer": "Hands-free, portable, tracks health in real time"
+  },
+  {
+    "id": 13,
+    "question": "Which is a disadvantage of wearable devices?",
+    "options": ["Privacy and security concerns", "They never connect to other devices", "They replace smartwatches entirely", "They are always 100% accurate"],
+    "correctAnswer": "Privacy and security concerns"
+  },
+  {
+    "id": 14,
+    "question": "Which wearable device can display GPS navigation and take calls?",
+    "options": ["Smart glasses", "Drone camera", "Fitness tracker", "Router"],
+    "correctAnswer": "Smart glasses"
+  },
+  {
+    "id": 15,
+    "question": "What limits the performance of wearables?",
+    "options": ["Small battery size", "Large screens", "Unlimited storage", "No sensor connectivity"],
+    "correctAnswer": "Small battery size"
+  },
+  {
+    "id": 16,
+    "question": "Which of these is an example of wearable technology in healthcare?",
+    "options": ["Implantable devices to track insulin levels", "Drones for crop monitoring", "Traffic shaping for emails", "Smartwatches for video calls"],
+    "correctAnswer": "Implantable devices to track insulin levels"
+  },
+  {
+    "id": 17,
+    "question": "What is traffic shaping?",
+    "options": ["Prioritising certain internet services over others", "Printing documents faster", "Flying drones more safely", "Slowing down wearable devices"],
+    "correctAnswer": "Prioritising certain internet services over others"
+  },
+  {
+    "id": 18,
+    "question": "Why do ISPs use shaping for home users?",
+    "options": ["To reduce speed during peak periods", "To allow unlimited downloads", "To increase electricity supply", "To boost drone signals"],
+    "correctAnswer": "To reduce speed during peak periods"
+  },
+  {
+    "id": 19,
+    "question": "Which type of traffic is often shaped by ISPs?",
+    "options": ["Torrent downloads", "Email communication", "Critical business data", "Health monitoring data"],
+    "correctAnswer": "Torrent downloads"
+  },
+  {
+    "id": 20,
+    "question": "What is one benefit of shaping for businesses?",
+    "options": ["Ensures critical services get priority bandwidth", "Allows drones to fly longer", "Improves smartwatch accuracy", "Eliminates privacy concerns"],
+    "correctAnswer": "Ensures critical services get priority bandwidth"
+  },
+  {
+    "id": 21,
+    "question": "What is a disadvantage of shaping?",
+    "options": ["Users may experience slower internet speeds", "Drones crash more easily", "Wearables malfunction", "Emails cannot be sent"],
+    "correctAnswer": "Users may experience slower internet speeds"
+  },
+  {
+    "id": 22,
+    "question": "Which scenario best illustrates shaping?",
+    "options": ["A company slows down video downloads to prioritise email traffic", "A smartwatch tracks calories burned", "A drone records wildlife footage", "A URL is shortened for easy sharing"],
+    "correctAnswer": "A company slows down video downloads to prioritise email traffic"
+  },
+  {
+    "id": 23,
+    "question": "What is throttling (policing)?",
+    "options": ["When an ISP slows down internet after excessive data usage", "When drones are forced to land", "When wearables measure fatigue", "When shaping prioritises emails"],
+    "correctAnswer": "When an ISP slows down internet after excessive data usage"
+  },
+  {
+    "id": 24,
+    "question": "Which ISP policy determines throttling rules?",
+    "options": ["Acceptable Usage Policy (AUP)", "Flight Control Policy", "Smartwatch Data Policy", "Drone Safety Law"],
+    "correctAnswer": "Acceptable Usage Policy (AUP)"
+  },
+  {
+    "id": 25,
+    "question": "What is one advantage of throttling?",
+    "options": ["Prevents server congestion and crashes", "Unlimited high-speed access", "Extends drone battery life", "Improves smartwatch GPS"],
+    "correctAnswer": "Prevents server congestion and crashes"
+  },
+  {
+    "id": 26,
+    "question": "What is a disadvantage of throttling?",
+    "options": ["Slows internet even for paying users", "Drones become unstable", "Smartwatches fail to sync", "Traffic shaping stops working"],
+    "correctAnswer": "Slows internet even for paying users"
+  },
+  {
+    "id": 27,
+    "question": "Which scenario best illustrates throttling?",
+    "options": ["A user downloads too much and their ISP reduces their speed", "A smartwatch syncs fitness data", "A drone uses GPS for navigation", "An ISP prioritises business traffic"],
+    "correctAnswer": "A user downloads too much and their ISP reduces their speed"
+  },
+  {
+    "id": 28,
+    "question": "Which is a common result of both shaping and throttling?",
+    "options": ["Users experience slower internet speeds", "Drones fly higher", "Wearables last longer", "URLs are shortened"],
+    "correctAnswer": "Users experience slower internet speeds"
+  },
+  {
+    "id": 29,
+    "question": "Which wearable device is commonly used for tracking steps and calories?",
+    "options": ["Fitness tracker", "Drone camera", "Traffic shaper", "Router"],
+    "correctAnswer": "Fitness tracker"
+  },
+  {
+    "id": 30,
+    "question": "Which drone application is common in conservation?",
+    "options": ["Tracking animals with geospatial imagery", "Cooking food", "Printing 3D objects", "Replacing email servers"],
+    "correctAnswer": "Tracking animals with geospatial imagery"
+  }
+],
+
+
+
+
+
+
+
 
 
 

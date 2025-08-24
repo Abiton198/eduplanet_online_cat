@@ -20,7 +20,11 @@ export const termExams = {
         { id: 103, title: "Operating Systems & File Management", password: "grade12pass" },
         { id: 104, title: "Internet Technologies & Digital Communications", password: "grade12pass" },
         { id: 105, title: "Databases & Integration", password: "grade12pass" },
-        { id: 106, title: "Operating Systems & Utilities", password: "grade12pass" }
+        { id: 106, title: "Operating Systems & Utilities", password: "grade12pass" },
+        { id: 107, title: "Internet Technologies-communications", password: "grade12pass" },
+        { id: 108, title: "3D Printing, Wireless & Mobile Technologies", password: "grade12pass" },
+        { id: 109, title: "Video Communications, URL Shorteners, IoT & Autonomous Vehicles", password: "grade12pass" },
+        { id: 110, title: "Drone Technology, Wearables, Shaping & Throttling", password: "grade12pass" },
       ],
       "Term 4": [
         { id: 107, title: "Mock Exam Paper 1", password: "grade12pass" },

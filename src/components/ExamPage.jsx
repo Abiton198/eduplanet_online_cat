@@ -339,43 +339,145 @@ export default function ExamPage({ studentInfo, addResult }) {
           {submitted ? (
             <p className="text-center">Submitting your answers…</p>
           ) : (
-            <form>
-              {(questions[selectedExam.title] || []).map((q, idx) => (
-                <div key={q.id} className="p-4 mb-4 border rounded bg-white">
-                  <h4>
-                    Q{idx + 1}: {q.question}
-                  </h4>
-                  <div className="mt-2 space-y-1">
-                    {q.options.map((opt, i) => (
-                      <label key={i} className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          name={q.id}
-                          value={opt}
-                          checked={answers[q.id] === opt}
-                          onChange={() => handleChange(q.id, opt)}
-                        />
-                        <span>{opt}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <form className="space-y-6">
+  {(questions[selectedExam.title] || []).map((q, idx) => {
+    const selected = answers[q.id];
 
-              <button
-                type="button"
-                onClick={() =>
-                  Swal.fire({
-                    title: "Submit now?",
-                    showCancelButton: true,
-                    confirmButtonText: "Yes",
-                  }).then((r) => r.isConfirmed && handleSubmitExam())
-                }
-                className="w-full py-2 bg-green-600 text-white rounded"
+    return (
+      <section
+        key={q.id}
+        className="rounded-2xl border bg-white shadow-sm hover:shadow-md transition-shadow"
+      >
+        {/* Question header */}
+        <header className="flex items-start gap-3 p-5 border-b bg-gradient-to-r from-slate-50 to-transparent rounded-t-2xl">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 font-semibold">
+            {idx + 1}
+          </div>
+          <h4 className="text-slate-800 font-semibold leading-snug">
+            {q.question}
+          </h4>
+        </header>
+
+        {/* Options */}
+        <div
+          role="radiogroup"
+          aria-label={`Question ${idx + 1}`}
+          className="grid grid-cols-1 md:grid-cols-2 gap-3 p-5"
+        >
+          {q.options.map((opt, i) => {
+            const isChecked = selected === opt;
+            return (
+              <label
+                key={i}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleChange(q.id, opt);
+                  }
+                }}
+                className={[
+                  "group relative cursor-pointer rounded-xl border p-4",
+                  "transition-all hover:border-indigo-400 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300",
+                  isChecked
+                    ? "border-indigo-600 bg-indigo-50"
+                    : "border-slate-200 bg-white"
+                ].join(" ")}
               >
-                Submit Exam
-              </button>
-            </form>
+                {/* Visually hidden native input for form semantics */}
+                <input
+                  type="radio"
+                  className="sr-only"
+                  name={`q-${q.id}`}
+                  value={opt}
+                  checked={isChecked}
+                  onChange={() => handleChange(q.id, opt)}
+                />
+
+                <div className="flex items-start gap-3">
+                  <span
+                    aria-hidden
+                    className={[
+                      "mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full border",
+                      "transition-colors",
+                      isChecked
+                        ? "border-indigo-600 bg-indigo-600 ring-2 ring-indigo-200"
+                        : "border-slate-300 bg-white"
+                    ].join(" ")}
+                  >
+                    {isChecked && (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        className="h-3.5 w-3.5 text-white"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.07 7.162a1 1 0 0 1-1.437.006L3.29 9.957a1 1 0 1 1 1.42-1.406l3.05 3.084 6.356-6.439a1 1 0 0 1 1.588.094Z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                  </span>
+
+                  <span
+                    className={[
+                      "text-sm md:text-base",
+                      isChecked ? "text-indigo-900 font-medium" : "text-slate-700"
+                    ].join(" ")}
+                  >
+                    {opt}
+                  </span>
+                </div>
+
+                {/* subtle highlight ring on hover */}
+                <span
+                  className="pointer-events-none absolute inset-0 rounded-xl ring-0 ring-indigo-200 group-hover:ring-2"
+                  aria-hidden
+                />
+              </label>
+            );
+          })}
+        </div>
+
+        {/* Footer: selected indicator */}
+        <footer className="flex items-center justify-between border-t px-5 py-3 rounded-b-2xl text-sm text-slate-600">
+          <span>
+            {selected ? (
+              <>
+                Selected:{" "}
+                <span className="font-medium text-slate-800">{selected}</span>
+              </>
+            ) : (
+              <span className="italic text-slate-400">No option selected</span>
+            )}
+          </span>
+        </footer>
+      </section>
+    );
+  })}
+
+  {/* Sticky submit bar */}
+  <div className="sticky bottom-4 z-10">
+    <div className="rounded-2xl border bg-white/80 backdrop-blur p-3 shadow-lg">
+      <button
+        type="button"
+        onClick={() =>
+          Swal.fire({
+            title: "Submit now?",
+            showCancelButton: true,
+            confirmButtonText: "Yes",
+          }).then((r) => r.isConfirmed && handleSubmitExam())
+        }
+        className="w-full rounded-xl px-4 py-3 font-semibold bg-green-600 text-white hover:bg-green-700 active:scale-[0.99] transition"
+      >
+        Submit Exam
+      </button>
+    </div>
+  </div>
+</form>
+
           )}
         </div>
       )}
