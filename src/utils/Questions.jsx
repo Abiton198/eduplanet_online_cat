@@ -5079,6 +5079,189 @@ export const questions = {
     "correctAnswer": "Tracking animals with geospatial imagery"
   }
 ],
+"Cybersecurity & Safe Internet": [
+  {
+    "id": 1,
+    "question": "What is malware?",
+    "options": ["Hardware that overheats a computer", "Software designed to disrupt normal functioning and exploit security loopholes", "A legal program that improves performance", "A type of printer driver"],
+    "correctAnswer": "Software designed to disrupt normal functioning and exploit security loopholes"
+  },
+  {
+    "id": 2,
+    "question": "Which statement best describes a computer virus?",
+    "options": ["It is a harmless file cleaner", "It attaches to a host program and reproduces when the program runs", "It is a device that scans flash drives", "It only spreads through CDs"],
+    "correctAnswer": "It attaches to a host program and reproduces when the program runs"
+  },
+  {
+    "id": 3,
+    "question": "Which is a defining feature of a computer worm?",
+    "options": ["Requires a person to run an infected program", "Self-replicates and spreads across networks without user action", "Can only spread via USB", "Repairs corrupted files automatically"],
+    "correctAnswer": "Self-replicates and spreads across networks without user action"
+  },
+  {
+    "id": 4,
+    "question": "What is a Trojan horse (Trojan)?",
+    "options": ["A program that looks legitimate but contains malicious code", "A self-replicating network program", "A hardware device that blocks viruses", "An email filter that removes spam"],
+    "correctAnswer": "A program that looks legitimate but contains malicious code"
+  },
+  {
+    "id": 5,
+    "question": "What is spam?",
+    "options": ["Unsolicited bulk messages, usually email", "Encrypted business mail", "Files sent only to teachers", "Messages sent by antivirus software"],
+    "correctAnswer": "Unsolicited bulk messages, usually email"
+  },
+  {
+    "id": 6,
+    "question": "Phishing is best described as:",
+    "options": ["Scanning flash drives for malware", "Tricking users into revealing personal information via fake emails or sites", "A secure login method", "Compressing email attachments"],
+    "correctAnswer": "Tricking users into revealing personal information via fake emails or sites"
+  },
+  {
+    "id": 7,
+    "question": "Pharming refers to:",
+    "options": ["Sending many emails at once", "Redirecting users to fake websites even when the correct address is typed", "Encrypting a website with HTTPS", "Blocking pop-up adverts"],
+    "correctAnswer": "Redirecting users to fake websites even when the correct address is typed"
+  },
+  {
+    "id": 8,
+    "question": "Email spoofing means:",
+    "options": ["Blocking emails from unknown senders", "Forging the sender address to make an email look legitimate", "Compressing email content to save space", "Auto-responding to emails after hours"],
+    "correctAnswer": "Forging the sender address to make an email look legitimate"
+  },
+  {
+    "id": 9,
+    "question": "Hoaxes and scams typically:",
+    "options": ["Contain false warnings or promises to trick users into actions or payments", "Provide verified security updates", "Come only from school domains", "Encrypt your data for safety"],
+    "correctAnswer": "Contain false warnings or promises to trick users into actions or payments"
+  },
+  {
+    "id": 10,
+    "question": "Which statement about malware targets is MOST accurate for Grade 10 CAT?",
+    "options": ["Malware usually damages physical hardware directly", "Malware targets software that manages and controls hardware", "Malware only affects printers", "Malware only affects phones"],
+    "correctAnswer": "Malware targets software that manages and controls hardware"
+  },
+  {
+    "id": 11,
+    "question": "Which is a common sign of malware infection?",
+    "options": ["Files suddenly start disappearing", "Battery charges faster than usual", "Screen becomes brighter", "The clock shows the correct time"],
+    "correctAnswer": "Files suddenly start disappearing"
+  },
+  {
+    "id": 12,
+    "question": "Your computer becomes extremely slow without a clear reason. This could indicate:",
+    "options": ["New RAM was installed", "Malware infection", "Printer is offline", "Monitor refresh rate is too high"],
+    "correctAnswer": "Malware infection"
+  },
+  {
+    "id": 13,
+    "question": "Programs stop working properly. Which is the BEST explanation?",
+    "options": ["You changed the wallpaper", "There is likely malware on the system", "You connected to Wi-Fi", "The mouse battery is low"],
+    "correctAnswer": "There is likely malware on the system"
+  },
+  {
+    "id": 14,
+    "question": "Free disk space is suddenly much lower than before. A possible cause is:",
+    "options": ["Malware creating or copying hidden files", "A brighter screen setting", "Using a different keyboard", "Switching to dark mode"],
+    "correctAnswer": "Malware creating or copying hidden files"
+  },
+  {
+    "id": 15,
+    "question": "You start seeing strange error messages you have never seen before. This may indicate:",
+    "options": ["A themed desktop pack", "Malware activity", "A new screensaver", "Faster internet speed"],
+    "correctAnswer": "Malware activity"
+  },
+  {
+    "id": 16,
+    "question": "The computer no longer boots up. Which is a possible reason?",
+    "options": ["A recent malware infection has damaged system files", "You closed the lid", "You changed the wallpaper", "You muted the speakers"],
+    "correctAnswer": "A recent malware infection has damaged system files"
+  },
+  {
+    "id": 17,
+    "question": "Your antivirus reports a threat. What should you conclude?",
+    "options": ["It is always a false alarm", "It indicates the presence or risk of malware", "It means your keyboard is broken", "It means your router is unplugged"],
+    "correctAnswer": "It indicates the presence or risk of malware"
+  },
+  {
+    "id": 18,
+    "question": "Which action is a core prevention step?",
+    "options": ["Installing a reputable antivirus program", "Ignoring updates", "Disabling the firewall", "Downloading random tools to test"],
+    "correctAnswer": "Installing a reputable antivirus program"
+  },
+  {
+    "id": 19,
+    "question": "Keeping antivirus definitions (signatures) up to date is important because:",
+    "options": ["It reduces screen brightness", "It helps the antivirus recognise new threats", "It speeds up the printer", "It blocks all Wi-Fi networks"],
+    "correctAnswer": "It helps the antivirus recognise new threats"
+  },
+  {
+    "id": 20,
+    "question": "Before using a flash drive from a friend you should:",
+    "options": ["Format the hard drive", "Scan the flash drive with antivirus", "Turn off the monitor", "Uninstall the browser"],
+    "correctAnswer": "Scan the flash drive with antivirus"
+  },
+  {
+    "id": 21,
+    "question": "Safe practice for email attachments and downloads:",
+    "options": ["Open them immediately to save time", "Scan attachments and downloaded files before opening", "Ignore antivirus warnings", "Forward them to everyone first"],
+    "correctAnswer": "Scan attachments and downloaded files before opening"
+  },
+  {
+    "id": 22,
+    "question": "A good antivirus setting for email is to:",
+    "options": ["Scan incoming and outgoing email automatically", "Disable all email scanning", "Only scan emails from friends", "Delete all attachments"],
+    "correctAnswer": "Scan incoming and outgoing email automatically"
+  },
+  {
+    "id": 23,
+    "question": "Why should you avoid pirated software?",
+    "options": ["It is always slower", "Malware is often packaged with pirated software", "It cannot run on laptops", "It does not need internet"],
+    "correctAnswer": "Malware is often packaged with pirated software"
+  },
+  {
+    "id": 24,
+    "question": "Which is the safest approach to software from unknown websites?",
+    "options": ["Run it to see what it does", "Only run programs from trusted sources", "Disable antivirus first", "Share it with classmates"],
+    "correctAnswer": "Only run programs from trusted sources"
+  },
+  {
+    "id": 25,
+    "question": "You receive an email saying you won a prize and must click a link to claim it. This is most likely:",
+    "options": ["A secure school notice", "A phishing or scam attempt", "A normal system update", "A hardware issue"],
+    "correctAnswer": "A phishing or scam attempt"
+  },
+  {
+    "id": 26,
+    "question": "Typing your bank’s correct URL but being redirected to a fake site is an example of:",
+    "options": ["Phishing", "Pharming", "Spam filtering", "Cloud backup"],
+    "correctAnswer": "Pharming"
+  },
+  {
+    "id": 27,
+    "question": "An email looks like it is from your principal, but the sender address is forged. This is:",
+    "options": ["Email spoofing", "Legitimate school mail", "Spam filtering", "Two-factor authentication"],
+    "correctAnswer": "Email spoofing"
+  },
+  {
+    "id": 28,
+    "question": "Which guideline BEST helps avoid infection from spam emails?",
+    "options": ["Open all attachments to finish quickly", "Do not open suspicious emails or links; scan attachments first", "Turn off antivirus to save power", "Reply to unsubscribe from every spam"],
+    "correctAnswer": "Do not open suspicious emails or links; scan attachments first"
+  },
+  {
+    "id": 29,
+    "question": "How does a worm differ from a traditional virus?",
+    "options": ["A worm spreads without user action; a virus needs a host program to run", "A worm is hardware; a virus is software", "A worm only spreads on USB; a virus only spreads on Wi-Fi", "There is no difference"],
+    "correctAnswer": "A worm spreads without user action; a virus needs a host program to run"
+  },
+  {
+    "id": 30,
+    "question": "Which combination shows good safe-use practice?",
+    "options": ["Install antivirus, keep signatures updated, scan media and emails", "Disable antivirus, use pirated software, ignore warnings", "Open all attachments, run unknown programs, disable updates", "Share passwords via email, skip scans, trust all links"],
+    "correctAnswer": "Install antivirus, keep signatures updated, scan media and emails"
+  }
+]
+
 
 
 

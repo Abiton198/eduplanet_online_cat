@@ -94,9 +94,10 @@ export const termExams = {
         { id: 1, title: "Networks", password: "grade10pass" },
         { id: 2, title: "Internet & communications", password: "grade10pass" }, 
         { id: 3, title: "E-communication & Netiquette", password: "grade10pass" },
-        { id: 4, title: "Spreadsheets 2", password: "grade10pass" }, 
-        { id: 5, title: "Word Processing & Presentations", password: "grade10pass" },
-        { id: 6, title: "HTML & Information", password: "grade10pass" },
+        { id: 4, title: "Cybersecurity & Safe Internet", password: "grade10pass" },
+        { id: 5, title: "Spreadsheets 2", password: "grade10pass" }, 
+        { id: 6, title: "Word Processing & Presentations", password: "grade10pass" },
+        { id: 7, title: "HTML & Information", password: "grade10pass" },
       ],
       "Term 4": [
         { id: 305, title: "Mock Exam 1", password: "grade10pass" },

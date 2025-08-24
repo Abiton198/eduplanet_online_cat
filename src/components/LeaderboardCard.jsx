@@ -17,8 +17,104 @@ const LeaderboardCard = ({ grade, currentStudentId }) => {
   const [err, setErr] = useState("");
   const [open, setOpen] = useState(false);
   const [source, setSource] = useState(""); // which query matched
-  const myRowRef = useRef(null);
 
+  // ===== Collapsible + Draggable state =====
+  const cardRef = useRef(null);
+  const draggingRef = useRef(false);
+  const offsetRef = useRef({ x: 0, y: 0 });
+
+  const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+  const getPoint = (e) =>
+    e.touches?.[0]
+      ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      : { x: e.clientX, y: e.clientY };
+
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("leaderboardCollapsed") || "true"); // default collapsed
+    } catch {
+      return true;
+    }
+  });
+
+  const [pos, setPos] = useState(() => {
+    if (typeof window === "undefined") return { x: 24, y: 96 };
+    try {
+      const saved = JSON.parse(localStorage.getItem("leaderboardPos") || "null");
+      if (saved) return saved;
+    } catch {}
+    // Default near top-right
+    const defaultWidth = 352; // ~22rem
+    return { x: Math.max(16, window.innerWidth - defaultWidth - 16), y: 96 };
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("leaderboardCollapsed", JSON.stringify(collapsed));
+    } catch {}
+  }, [collapsed]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("leaderboardPos", JSON.stringify(pos));
+    } catch {}
+  }, [pos]);
+
+  // Keep within viewport on resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (!cardRef.current) return;
+      const w = cardRef.current.offsetWidth || (collapsed ? 160 : 352);
+      const h = cardRef.current.offsetHeight || (collapsed ? 48 : 300);
+      setPos((p) => ({
+        x: clamp(p.x, 8, window.innerWidth - w - 8),
+        y: clamp(p.y, 8, window.innerHeight - h - 8),
+      }));
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [collapsed]);
+
+  const onDragStart = (e) => {
+    if (!cardRef.current) return;
+    draggingRef.current = true;
+    const pt = getPoint(e);
+    const rect = cardRef.current.getBoundingClientRect();
+    offsetRef.current = { x: pt.x - rect.left, y: pt.y - rect.top };
+  };
+
+  const onDrag = (e) => {
+    if (!draggingRef.current || !cardRef.current) return;
+    e.preventDefault(); // avoid scroll on touch
+    const pt = getPoint(e);
+    const w = cardRef.current.offsetWidth || (collapsed ? 160 : 352);
+    const h = cardRef.current.offsetHeight || (collapsed ? 48 : 300);
+    const x = clamp(pt.x - offsetRef.current.x, 8, window.innerWidth - w - 8);
+    const y = clamp(pt.y - offsetRef.current.y, 8, window.innerHeight - h - 8);
+    setPos({ x, y });
+  };
+
+  const onDragEnd = () => {
+    draggingRef.current = false;
+  };
+
+  useEffect(() => {
+    const move = (e) => onDrag(e);
+    const up = () => onDragEnd();
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+    window.addEventListener("touchmove", move, { passive: false });
+    window.addEventListener("touchend", up);
+    return () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      window.removeEventListener("touchmove", move);
+      window.removeEventListener("touchend", up);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ===== Firestore logic (unchanged) =====
   const { raw, year, gradeKey } = useMemo(() => parseGradeBits(grade), [grade]);
 
   useEffect(() => {
@@ -31,9 +127,10 @@ const LeaderboardCard = ({ grade, currentStudentId }) => {
     const col = collection(db, "students");
 
     // Primary: by gradeYear (number) + orderBy
-    const q1 = year != null
-      ? query(col, where("gradeYear", "==", year), orderBy("totalPoints", "desc"))
-      : null;
+    const q1 =
+      year != null
+        ? query(col, where("gradeYear", "==", year), orderBy("totalPoints", "desc"))
+        : null;
 
     // Fallback A: by gradeKey (e.g. "11a")
     const q2 = query(col, where("gradeKey", "==", gradeKey), orderBy("totalPoints", "desc"));
@@ -45,56 +142,63 @@ const LeaderboardCard = ({ grade, currentStudentId }) => {
     let unsub2 = null;
     let unsub3 = null;
 
-    // We’ll try q1 first; if empty on the first emission, we switch to q2; then q3.
-    const startFallback2 = () => {
-      if (unsub2) return;
-      unsub2 = onSnapshot(q2, (snap) => {
-        if (snap.empty) {
-          setSource((s) => (s || "gradeKey (empty)"));
-          startFallback3();
-          return;
-        }
-        setSource("gradeKey");
-        setStudents(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setErr("");
-      }, (e) => {
-        setErr(e.message || "Failed to load leaderboard.");
-      });
-    };
-
     const startFallback3 = () => {
       if (unsub3) return;
-      unsub3 = onSnapshot(q3, (snap) => {
-        if (snap.empty) {
-          setSource((s) => (s || "grade (empty)"));
-          setStudents([]);
-          return;
+      unsub3 = onSnapshot(
+        q3,
+        (snap) => {
+          if (snap.empty) {
+            setSource((s) => s || "grade (empty)");
+            setStudents([]);
+            return;
+          }
+          setSource("grade");
+          setStudents(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+          setErr("");
+        },
+        (e) => setErr(e.message || "Failed to load leaderboard.")
+      );
+    };
+
+    const startFallback2 = () => {
+      if (unsub2) return;
+      unsub2 = onSnapshot(
+        q2,
+        (snap) => {
+          if (snap.empty) {
+            setSource((s) => s || "gradeKey (empty)");
+            startFallback3();
+            return;
+          }
+          setSource("gradeKey");
+          setStudents(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+          setErr("");
+        },
+        (e) => {
+          setErr(e.message || "Failed to load leaderboard.");
         }
-        setSource("grade");
-        setStudents(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setErr("");
-      }, (e) => {
-        setErr(e.message || "Failed to load leaderboard.");
-      });
+      );
     };
 
     if (q1) {
-      unsub1 = onSnapshot(q1, (snap) => {
-        if (snap.empty) {
-          setSource("gradeYear (empty)");
+      unsub1 = onSnapshot(
+        q1,
+        (snap) => {
+          if (snap.empty) {
+            setSource("gradeYear (empty)");
+            startFallback2();
+            return;
+          }
+          setSource("gradeYear");
+          setStudents(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+          setErr("");
+        },
+        (e) => {
+          setErr(e.message || "Failed to load leaderboard.");
           startFallback2();
-          return;
         }
-        setSource("gradeYear");
-        setStudents(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setErr("");
-      }, (e) => {
-        // If q1 fails (e.g. missing index), jump straight to q2
-        setErr(e.message || "Failed to load leaderboard.");
-        startFallback2();
-      });
+      );
     } else {
-      // No year parsed → go straight to fallbacks
       startFallback2();
     }
 
@@ -108,9 +212,9 @@ const LeaderboardCard = ({ grade, currentStudentId }) => {
   const currentIndex = students.findIndex((s) => s.id === currentStudentId);
   const me = currentIndex >= 0 ? students[currentIndex] : null;
   const top5 = students.slice(0, 5);
-
   const rankIcon = (i) => (i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`);
 
+  const myRowRef = useRef(null);
   useEffect(() => {
     if (open && myRowRef.current) {
       setTimeout(() => myRowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
@@ -119,44 +223,77 @@ const LeaderboardCard = ({ grade, currentStudentId }) => {
 
   return (
     <>
-      {/* Compact floating card */}
-      <div className="fixed top-24 right-6 w-[22rem] bg-white shadow-xl z-[9999] rounded-xl p-5 border">
-        <h3 className="text-lg font-bold text-center mb-1">🏆 Leaderboard</h3>
-        <p className="text-xs text-center text-gray-500 mb-3">Grade: {raw} • source: {source || "…"}</p>
-
-        {err ? (
-          <div className="text-sm text-red-600">{err}</div>
-        ) : students.length === 0 ? (
-          <div className="text-sm text-gray-600">
-            No students found for <b>{raw}</b>.  
-            Ask your app to store <code>gradeYear</code> and <code>gradeKey</code> on student docs.
+      {/* Floating, collapsible, draggable card */}
+      <div
+        ref={cardRef}
+        className={[
+          "fixed z-[9999] select-none",
+          "rounded-xl border bg-white shadow-xl",
+          collapsed ? "w-auto" : "w-[22rem]"
+        ].join(" ")}
+        style={{ left: pos.x, top: pos.y }}
+      >
+        {/* Header (drag handle) */}
+        <div
+          className="flex items-center justify-between gap-3 px-4 py-2 bg-slate-50 border-b rounded-t-xl cursor-grab active:cursor-grabbing"
+          onMouseDown={onDragStart}
+          onTouchStart={onDragStart}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🏆</span>
+            <span className="font-semibold">Leaderboard</span>
           </div>
-        ) : (
-          <>
-            <ul className="divide-y divide-gray-200">
-              {top5.map((s, idx) => (
-                <li
-                  key={s.id}
-                  className={`p-2 ${s.id === currentStudentId ? "bg-yellow-100 font-semibold" : ""}`}
-                >
-                  {rankIcon(idx)} • {Number(s.totalPoints || 0)} pts — {s.name || "Unnamed"}
-                  {s.gradeSection ? ` (${s.gradeSection})` : ""}
-                </li>
-              ))}
-              {currentIndex > 4 && me && (
-                <li className="p-2 bg-blue-100 font-semibold">
-                  #{currentIndex + 1} • {Number(me.totalPoints || 0)} pts — You
-                  {me.gradeSection ? ` (${me.gradeSection})` : ""}
-                </li>
-              )}
-            </ul>
+          <button
+            type="button"
+            onClick={() => setCollapsed((c) => !c)}
+            className="rounded-md px-2 py-1 text-xs font-medium bg-slate-200 hover:bg-slate-300"
+          >
+            {collapsed ? "Show" : "Hide"}
+          </button>
+        </div>
 
-            <div className="text-center mt-2">
-              <button onClick={() => setOpen(true)} className="text-blue-600 underline text-sm">
-                Read more…
-              </button>
-            </div>
-          </>
+        {/* Body (hidden when collapsed) */}
+        {!collapsed && (
+          <div className="p-5">
+            <p className="text-xs text-center text-gray-500 mb-3">
+              Grade: {raw} • source: {source || "…"}
+            </p>
+
+            {err ? (
+              <div className="text-sm text-red-600">{err}</div>
+            ) : students.length === 0 ? (
+              <div className="text-sm text-gray-600">
+                No students found for <b>{raw}</b>.{" "}
+                Ask your app to store <code>gradeYear</code> and <code>gradeKey</code> on student docs.
+              </div>
+            ) : (
+              <>
+                <ul className="divide-y divide-gray-200">
+                  {top5.map((s, idx) => (
+                    <li
+                      key={s.id}
+                      className={`p-2 ${s.id === currentStudentId ? "bg-yellow-100 font-semibold" : ""}`}
+                    >
+                      {rankIcon(idx)} • {Number(s.totalPoints || 0)} pts — {s.name || "Unnamed"}
+                      {s.gradeSection ? ` (${s.gradeSection})` : ""}
+                    </li>
+                  ))}
+                  {currentIndex > 4 && me && (
+                    <li className="p-2 bg-blue-100 font-semibold">
+                      #{currentIndex + 1} • {Number(me.totalPoints || 0)} pts — You
+                      {me.gradeSection ? ` (${me.gradeSection})` : ""}
+                    </li>
+                  )}
+                </ul>
+
+                <div className="text-center mt-2">
+                  <button onClick={() => setOpen(true)} className="text-blue-600 underline text-sm">
+                    Read more…
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
 
