@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// /utils/FloatingTopicCard.jsx
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { catTopics } from "../data/catTopicsData"; // topics list
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
@@ -7,7 +8,7 @@ export default function FloatingTopicCard({
   topics,                // optional: override list
   startId,
   initiallyCollapsed = true,
-  locked = false         // NEW: freeze card during exam
+  locked = false         // freeze card during exam
 }) {
   // merge base topics if no override provided
   const allTopics = useMemo(
@@ -26,7 +27,7 @@ export default function FloatingTopicCard({
 
   // draggable
   const cardRef = useRef(null);
-  const [pos, setPos] = useState({ x: 24, y: 100 });
+  const [pos, setPos] = useState({ x: 0, y: 0 }); // we'll center after mount
   const drag = useRef({ active: false, dx: 0, dy: 0 });
 
   const keepInBounds = useCallback((x, y) => {
@@ -39,6 +40,23 @@ export default function FloatingTopicCard({
       y: Math.max(m, Math.min(y, vh - r.height - m))
     };
   }, []);
+
+  const centerCard = useCallback(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const x = Math.round((window.innerWidth  - r.width)  / 2);
+    const y = Math.round((window.innerHeight - r.height) / 2);
+    setPos(keepInBounds(x, y));
+  }, [keepInBounds]);
+
+  // Center on first mount
+  useLayoutEffect(() => {
+    centerCard();
+    // also re-center after short delay to account for fonts/layout
+    const t = setTimeout(centerCard, 50);
+    return () => clearTimeout(t);
+  }, [centerCard]);
 
   const onPointerDown = (e) => {
     if (locked) return; // freeze drag
@@ -66,14 +84,16 @@ export default function FloatingTopicCard({
     };
   }, [keepInBounds]);
 
-  // When locked, auto-dock to a corner and collapse
+  // When locked, collapse and **center** (instead of docking to a corner)
   useEffect(() => {
     if (locked) {
       setCollapsed(true);
       setReadMore(false);
-      setPos((p) => keepInBounds(16, 16));
+      // wait a tick so collapse completes before centering
+      const t = setTimeout(centerCard, 0);
+      return () => clearTimeout(t);
     }
-  }, [locked, keepInBounds]);
+  }, [locked, centerCard]);
 
   const topic = allTopics[index] || allTopics[0];
   const go = (d) => setIndex((i) => Math.max(0, Math.min(i + d, allTopics.length - 1)));
@@ -108,7 +128,7 @@ export default function FloatingTopicCard({
           onTouchStart={onPointerDown}
         >
           <div className="font-semibold flex items-center gap-2">
-            📚 Glossary of Terms
+            📚 Knowledge Bank
             {locked && (
               <span className="text-[10px] font-normal bg-white/20 px-2 py-0.5 rounded">
                 Locked during exam
@@ -119,7 +139,7 @@ export default function FloatingTopicCard({
           <button
             type="button"
             onClick={() => !locked && setCollapsed((c) => !c)}
-            className={`rounded-md px-2 py-1 text-sm ${locked ? "bg-white/10" : "bg-white/20 hover:bg-white/30"}`}
+            className={`rounded-md ml-2 px-2 py-1 text-sm ${locked ? "bg-white/10" : "bg-white/20 hover:bg-white/30"}`}
             aria-expanded={!collapsed}
             aria-controls="glossary-body"
             aria-disabled={locked ? "true" : "false"}
@@ -261,14 +281,14 @@ export default function FloatingTopicCard({
               </div>
             </div>
 
-            {/* Dock */}
-            <div className="px-4 py-2 bg-gray-50 flex justify-end">
+            {/* Tools */}
+            <div className="px-4 py-2 bg-gray-50 flex justify-end gap-4">
               <button
                 className="text-xs text-gray-500 underline"
-                onClick={() => setPos({ x: 24, y: 100 })}
+                onClick={centerCard}
                 disabled={locked}
               >
-                Dock to corner
+                Center
               </button>
             </div>
           </div>
