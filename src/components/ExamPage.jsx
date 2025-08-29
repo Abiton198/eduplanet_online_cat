@@ -13,6 +13,8 @@ import { ensureStudentProfile } from "../utils/pointsSystem/ensureStudentProfile
 import { awardPointsFromExamHistory } from "../utils/pointsSystem/awardPointsFromExamHistory";
 import FloatingTopicCard from "../utils/FloatingTopicCard";
 import { catTopics } from "../data/catTopicsData";
+import FloatingAbbreviationsCard from "../utils/FloatingAbbreviationsCard";
+import { abbreviationsData } from "../data/abbreviationsData";
 
 function formatTime(seconds) {
   const mins = Math.floor(seconds / 60);
@@ -287,6 +289,14 @@ export default function ExamPage({ studentInfo, addResult }) {
             initiallyCollapsed={true}
             locked={!!selectedExam}   // 🔒 Freeze when an exam is open
           />
+
+        <FloatingAbbreviationsCard
+          data={abbreviationsData}     
+          initiallyCollapsed={true}     // same default as FloatingTopicCard
+          locked={false}                // set true to freeze + auto-collapse + center
+          title="Abbreviations"
+        />
+
         </>
       )}
   
