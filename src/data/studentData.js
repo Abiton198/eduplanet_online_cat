@@ -20,11 +20,11 @@ export const studentList = {
     { name: "Naomi" },
     { name: "Lutho" },
     { name: "Asakhile" },
-    { name: "Emihle" },
+    { name: "Emihle P" },
     { name: "Liyabona" },
     { name: "Aluve" },
     { name: "Lebogang" },
-    { name: "Emihle" },
+    { name: "Emihle M" },
     { name: "Thabani" },
     { name: "Usenathi" },
     { name: "Taneesha" },
@@ -50,7 +50,7 @@ export const studentList = {
     { name: "Nhlakanipho" },
     { name: "Anda N" },
     { name: "Likhanye" },
-    { name: "Isenathis" },
+    { name: "Isenathi" },
     { name: "Anda T" },
     { name: "Abiton_12A" }
 
