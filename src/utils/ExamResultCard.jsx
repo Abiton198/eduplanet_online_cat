@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { db } from './firebase'; // keep your path
+import { db } from './firebase';
 import {
   collection,
   doc,
@@ -11,19 +11,26 @@ import {
   where,
 } from 'firebase/firestore';
 
-export default function ExamResultsCard({ studentName }) {
+/** Reusable card: pass title + collectionName */
+export function ExamResultsCard({
+  studentName,
+  title = '📊 Exam Results',
+  collectionName = 'studentResults', // 'studentResults' (June) | 'prelimResults' (Prelim)
+  headerGradientFrom = 'from-blue-200',
+  headerGradientTo = 'to-blue-400',
+}) {
   const [data, setData] = useState({ theory: null, practical: null });
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState('');
-  const [user, setUser] = useState(null);       // ✅ track auth user
+  const [user, setUser] = useState(null);
 
   const nameTidy = useMemo(() => (studentName || '').trim(), [studentName]);
   const nameLower = useMemo(() => nameTidy.toLowerCase(), [nameTidy]);
 
-  // ✅ keep user state in sync with Firebase Auth
+  // auth
   useEffect(() => {
-    const unsub = onAuthStateChanged(getAuth(), u => setUser(u || null));
+    const unsub = onAuthStateChanged(getAuth(), (u) => setUser(u || null));
     return () => unsub();
   }, []);
 
@@ -41,10 +48,9 @@ export default function ExamResultsCard({ studentName }) {
           return;
         }
 
-        // --- detect staff (admin/teacher) ---
+        // role detection
         let isAdmin = false;
         let isTeacher = false;
-
         try {
           if (user.email) {
             const adminSnap = await getDoc(doc(db, 'admins', user.email));
@@ -53,56 +59,56 @@ export default function ExamResultsCard({ studentName }) {
           const token = await user.getIdTokenResult();
           isTeacher = token?.claims?.role === 'teacher';
         } catch {
-          // ignore; defaults to false
+          // default false
         }
 
-        // --- load data depending on role ---
         if (isAdmin || isTeacher) {
-          // STAFF: try by name as docId first
-          if (nameTidy) {
-            const byName = await getDoc(doc(db, 'studentResults', nameTidy));
-            if (byName.exists()) {
-              const d = byName.data();
-              if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
-              return;
-            }
+          // STAFF needs a name to look up
+          if (!nameTidy) {
+            setErrMsg('Enter/select a student name to view results.');
+            return;
           }
-          // Fallback 1: query by exact 'name' field if stored
-          if (nameTidy) {
-            const q1 = query(
-              collection(db, 'studentResults'),
-              where('name', '==', nameTidy),
-              limit(1)
-            );
-            const s1 = await getDocs(q1);
-            if (!s1.empty) {
-              const d = s1.docs[0].data();
-              if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
-              return;
-            }
+
+          // Try by docId = name
+          const byName = await getDoc(doc(db, collectionName, nameTidy));
+          if (byName.exists()) {
+            const d = byName.data();
+            if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
+            return;
           }
-          // Fallback 2: query by 'nameLower' if you store it
-          if (nameLower) {
-            const q2 = query(
-              collection(db, 'studentResults'),
-              where('nameLower', '==', nameLower),
-              limit(1)
-            );
-            const s2 = await getDocs(q2);
-            if (!s2.empty) {
-              const d = s2.docs[0].data();
-              if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
-              return;
-            }
+
+          // Fallback by fields
+          const q1 = query(
+            collection(db, collectionName),
+            where('name', '==', nameTidy),
+            limit(1)
+          );
+          const s1 = await getDocs(q1);
+          if (!s1.empty) {
+            const d = s1.docs[0].data();
+            if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
+            return;
           }
-          if (!cancelled) setErrMsg('No main exam results found for this student.');
+
+          const q2 = query(
+            collection(db, collectionName),
+            where('nameLower', '==', nameLower),
+            limit(1)
+          );
+          const s2 = await getDocs(q2);
+          if (!s2.empty) {
+            const d = s2.docs[0].data();
+            if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
+            return;
+          }
+
+          if (!cancelled) setErrMsg('No results found for this student.');
           return;
         } else {
-          // STUDENT: must read by own UID (ensure your docs store studentUid)
-          const uid = user.uid;
+          // STUDENT: read by own UID
           const qMe = query(
-            collection(db, 'studentResults'),
-            where('studentUid', '==', uid),
+            collection(db, collectionName),
+            where('studentUid', '==', user.uid),
             limit(1)
           );
           const sMe = await getDocs(qMe);
@@ -110,7 +116,7 @@ export default function ExamResultsCard({ studentName }) {
             const d = sMe.docs[0].data();
             if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
           } else {
-            if (!cancelled) setErrMsg('Your main exam results are not available yet.');
+            if (!cancelled) setErrMsg('Your results are not available yet.');
           }
         }
       } catch (e) {
@@ -121,13 +127,20 @@ export default function ExamResultsCard({ studentName }) {
       }
     };
 
-    if (nameTidy) load();
-    return () => { cancelled = true; };
-  }, [nameTidy, nameLower, user]); // ✅ rerun when auth state changes
+    // ✅ Trigger when user (auth) is ready or selected name changes
+    if (user) load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, nameTidy, nameLower, collectionName]);
 
   const calcPercent = (rows, possible) =>
     rows && rows.length > 0
-      ? ((rows.reduce((sum, r) => sum + Number(r.score || 0), 0) / possible) * 100).toFixed(2)
+      ? (
+          (rows.reduce((sum, r) => sum + Number(r.score || 0), 0) / possible) *
+          100
+        ).toFixed(2)
       : 0;
 
   const theoryPercent = data.theory ? calcPercent(data.theory.results, 150) : 0;
@@ -135,12 +148,12 @@ export default function ExamResultsCard({ studentName }) {
   const grandTotal = ((Number(theoryPercent) + Number(practicalPercent)) / 2).toFixed(2);
 
   return (
-    <div className="max-w-xl mx-auto mb-8">
+    <div className="w-full">
       <div
-        className="p-6 rounded shadow-lg bg-gradient-to-br from-blue-200 to-blue-400 cursor-pointer transition hover:scale-105"
+        className={`p-6 rounded shadow-lg bg-gradient-to-br ${headerGradientFrom} ${headerGradientTo} cursor-pointer transition hover:scale-105`}
         onClick={() => setExpanded(!expanded)}
       >
-        <h3 className="text-xl font-bold mb-2 text-white">📊 JUNE Exam Results</h3>
+        <h3 className="text-xl font-bold mb-2 text-white">{title}</h3>
         <p className="text-white">Click to {expanded ? 'hide' : 'view'} details</p>
 
         {loading && <p className="mt-2 text-white">Loading...</p>}
@@ -248,6 +261,30 @@ export default function ExamResultsCard({ studentName }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Section showing June + Prelim side by side */
+export default function ExamResultsSection({ studentName }) {
+  return (
+    <div className="max-w-5xl mx-auto mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ExamResultsCard
+          studentName={studentName}
+          title="📊 JUNE Exam Results"
+          collectionName="studentResults"
+          headerGradientFrom="from-blue-200"
+          headerGradientTo="to-blue-400"
+        />
+        <ExamResultsCard
+          studentName={studentName}
+          title="📝 Prelim Exam Results"
+          collectionName="prelimResults"
+          headerGradientFrom="from-amber-200"
+          headerGradientTo="to-amber-400"
+        />
+      </div>
     </div>
   );
 }

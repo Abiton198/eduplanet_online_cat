@@ -1,11 +1,9 @@
 // src/pages/TeacherDashboard.jsx
 import React, { useMemo, useState } from "react";
+import { getAuth } from "firebase/auth";
 import { studentList } from "../data/studentData";
 import { db } from "../utils/firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
-
-// If you really want a backfill button later, import the correct path and call it explicitly.
-// import { backfillExamResults } from "../utils/BackFillExamResults";
 
 function normalizeNameLower(name) {
   return (name || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -18,7 +16,8 @@ function parseGradeYear(grade) {
 export default function TeacherDashboard() {
   const [selectedGrade, setSelectedGrade] = useState("");
   const [selectedStudent, setSelectedStudent] = useState("");
-  const [examType, setExamType] = useState("theory");
+  const [examSeries, setExamSeries] = useState("prelim"); // 'june' | 'prelim'
+  const [examType, setExamType] = useState("theory");     // 'theory' | 'practical'
   const [examDate, setExamDate] = useState("");
   const [comment, setComment] = useState("");
   const [rows, setRows] = useState([{ question: "", type: "", score: "" }]);
@@ -42,10 +41,10 @@ export default function TeacherDashboard() {
   ];
   const questionOptions = Array.from({ length: 10 }, (_, i) => String(i + 1));
 
-  // ⚠️ Make sure these keys match your studentList exactly.
+  // ⚠️ Ensure these keys match your studentList structure.
   const gradeKeyMap = {
-    "Grade 10": ["10A"],        // add more sections if you have them
-    "Grade 11": ["11", "11A"],  // e.g. include "11A" if needed
+    "Grade 10": ["10A"],
+    "Grade 11": ["11", "11A"],
     "Grade 12": ["12A", "12B"],
   };
 
@@ -56,11 +55,7 @@ export default function TeacherDashboard() {
   }, [selectedGrade]);
 
   const addRow = () => setRows((r) => [...r, { question: "", type: "", score: "" }]);
-
-  const removeRow = (index) => {
-    setRows((prev) => prev.filter((_, i) => i !== index));
-  };
-
+  const removeRow = (index) => setRows((prev) => prev.filter((_, i) => i !== index));
   const handleChange = (index, field, value) => {
     setRows((prev) => {
       const copy = [...prev];
@@ -71,7 +66,7 @@ export default function TeacherDashboard() {
 
   const totalScore = rows.reduce((sum, r) => sum + Number(r.score || 0), 0);
 
-  // You can customize the "possible total" logic per grade & exam type:
+  // Customize totals per grade/exam type if needed
   let possibleTotal = 150;
   if (selectedGrade === "Grade 10") {
     possibleTotal = examType === "practical" ? 50 : 100;
@@ -86,7 +81,7 @@ export default function TeacherDashboard() {
       return;
     }
 
-    // sanitize rows: keep only rows with a question + numeric score
+    // sanitize rows
     const cleanedRows = rows
       .map((r) => ({
         question: String(r.question || "").trim(),
@@ -95,7 +90,6 @@ export default function TeacherDashboard() {
       }))
       .filter((r) => r.question !== "" && !Number.isNaN(r.score));
 
-    // guard against negatives or weird values
     for (const r of cleanedRows) {
       if (r.score < 0) {
         alert("Scores cannot be negative.");
@@ -103,8 +97,19 @@ export default function TeacherDashboard() {
       }
     }
 
-    const name = selectedStudent; // we store by student name as docId (your current pattern)
-    const docRef = doc(db, "studentResults", name);
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+
+    const name = selectedStudent.trim();
+    const nameLower = normalizeNameLower(name);
+
+    // Try to get the student's UID from studentList, if present
+    const selectedObj = gradeStudents.find((s) => normalizeNameLower(s.name) === nameLower);
+    const studentUid = selectedObj?.uid || null; // ✅ fill this if your data has uid
+
+    // Choose the correct collection
+    const collectionName = examSeries === "prelim" ? "prelimResults" : "studentResults";
+    const docRef = doc(db, collectionName, name);
 
     try {
       const snap = await getDoc(docRef);
@@ -117,15 +122,19 @@ export default function TeacherDashboard() {
         comment: comment.trim() || existing.comment || "",
         grade: selectedGrade,
         percentage: percent,
-        totalScore, // optional: keep a cached total
+        totalScore,
       };
 
-      // Also keep normalized fields at the root for reliable queries elsewhere
       const rootUpserts = {
+        // fields for reads + rules
         name,
-        nameLower: normalizeNameLower(name),
+        nameLower,
         grade: selectedGrade,
         gradeYear: parseGradeYear(selectedGrade),
+        series: examSeries, // 'june' | 'prelim'
+        // include studentUid if known (helps student reads by UID)
+        ...(studentUid ? { studentUid } : {}),
+        createdBy: currentUser?.uid || null,
         updatedAt: new Date().toISOString(),
       };
 
@@ -133,12 +142,12 @@ export default function TeacherDashboard() {
         docRef,
         {
           ...rootUpserts,
-          [examType]: payload,
+          [examType]: payload, // theory | practical
         },
         { merge: true }
       );
 
-      alert(`${examType} results & comment saved!`);
+      alert(`${examSeries === "prelim" ? "Prelim" : "June"} ${examType} results saved!`);
 
       // reset form bits
       setRows([{ question: "", type: "", score: "" }]);
@@ -153,6 +162,17 @@ export default function TeacherDashboard() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-4">Teacher Dashboard - Post Results</h2>
+
+      {/* Exam Series */}
+      <label className="block mb-1">Exam Series:</label>
+      <select
+        value={examSeries}
+        onChange={(e) => setExamSeries(e.target.value)}
+        className="border p-2 mb-4 w-full"
+      >
+        <option value="june">June (Main Exams)</option>
+        <option value="prelim">Prelim Exams</option>
+      </select>
 
       {/* Grade Selection */}
       <label className="block mb-1">Select Grade:</label>
@@ -299,18 +319,6 @@ export default function TeacherDashboard() {
         <button onClick={handleSubmit} className="bg-blue-600 text-white px-6 py-2 rounded">
           Post Results & Comment
         </button>
-
-         {/* Optional admin button: */}
-        {/* <button
-          onClick={async () => {
-            await backfillExamResults();
-            alert("Backfill complete");
-          }}
-          className="ml-auto bg-purple-600 text-white px-4 py-2 rounded"
-        >
-          Backfill examResults
-        </button> */}
-       
       </div>
     </div>
   );

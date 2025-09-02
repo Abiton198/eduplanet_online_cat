@@ -1,14 +1,35 @@
 // /utils/FloatingTopicCard.jsx
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { catTopics } from "../data/catTopicsData"; // topics list
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
 export default function FloatingTopicCard({
-  topics,                // optional: override list
+  topics,                 // optional: override list
   startId,
   initiallyCollapsed = true,
-  locked = false         // freeze card during exam
+  locked = false,         // freeze card during exam
+
+  /** ──────────────────────────────────────────────────────────────
+   * POSITIONING / SAFE-AREA SETTINGS (tweak these as you like)
+   * - baseMargin: the normal margin applied to all edges
+   * - reserveRight: extra gap to leave on the RIGHT side
+   *   (e.g., because another floating card sits at bottom-right)
+   * - reserveBottom: extra gap to leave on the BOTTOM side
+   * - startDock: where to place the card initially
+   *   options: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center'
+   * ---------------------------------------------------------------- */
+  baseMargin = 8,
+  reserveRight = 96,      // 👈 Increase if you need a bigger gap on the right
+  reserveBottom = 16,     // 👈 Increase if you need a bigger gap on the bottom
+  startDock = "bottom-right",
 }) {
   // merge base topics if no override provided
   const allTopics = useMemo(
@@ -27,36 +48,95 @@ export default function FloatingTopicCard({
 
   // draggable
   const cardRef = useRef(null);
-  const [pos, setPos] = useState({ x: 0, y: 0 }); // we'll center after mount
+  const [pos, setPos] = useState({ x: 0, y: 0 }); // will dock after mount
   const drag = useRef({ active: false, dx: 0, dy: 0 });
 
-  const keepInBounds = useCallback((x, y) => {
-    const el = cardRef.current;
-    if (!el) return { x, y };
-    const r = el.getBoundingClientRect();
-    const vw = window.innerWidth, vh = window.innerHeight, m = 8;
-    return {
-      x: Math.max(m, Math.min(x, vw - r.width - m)),
-      y: Math.max(m, Math.min(y, vh - r.height - m))
-    };
-  }, []);
+  /** Keep the card inside the viewport, honoring the "safe area".
+   *  The safe area adds extra padding on the right/bottom so we avoid overlap
+   *  with your other floating element at bottom-right.
+   */
+  const keepInBounds = useCallback(
+    (x, y) => {
+      const el = cardRef.current;
+      if (!el) return { x, y };
+      const r = el.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
 
+      // LEFT/TOP margins are baseMargin; RIGHT/BOTTOM include your reserved gaps.
+      const leftPad = baseMargin;
+      const topPad = baseMargin;
+      const rightPad = baseMargin + reserveRight;   // 👈 safe gap on the right
+      const bottomPad = baseMargin + reserveBottom; // 👈 safe gap on the bottom
+
+      return {
+        x: clamp(x, leftPad, vw - r.width - rightPad),
+        y: clamp(y, topPad, vh - r.height - bottomPad),
+      };
+    },
+    [baseMargin, reserveRight, reserveBottom]
+  );
+
+  /** Dock the card to a corner (or center) on first render. */
+  const dockCard = useCallback(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    const leftPad = baseMargin;
+    const topPad = baseMargin;
+    const rightPad = baseMargin + reserveRight;
+    const bottomPad = baseMargin + reserveBottom;
+
+    let x = leftPad;
+    let y = topPad;
+
+    switch (startDock) {
+      case "bottom-right":
+        x = vw - r.width - rightPad;
+        y = vh - r.height - bottomPad;
+        break;
+      case "bottom-left":
+        x = leftPad;
+        y = vh - r.height - bottomPad;
+        break;
+      case "top-right":
+        x = vw - r.width - rightPad;
+        y = topPad;
+        break;
+      case "center":
+        x = Math.round((vw - r.width) / 2);
+        y = Math.round((vh - r.height) / 2);
+        break;
+      case "top-left":
+      default:
+        x = leftPad;
+        y = topPad;
+        break;
+    }
+
+    setPos(keepInBounds(x, y));
+  }, [baseMargin, reserveRight, reserveBottom, startDock, keepInBounds]);
+
+  // A helper to re-center (used when 'locked'). You can change it to 'dockCard()' if preferred.
   const centerCard = useCallback(() => {
     const el = cardRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    const x = Math.round((window.innerWidth  - r.width)  / 2);
+    const x = Math.round((window.innerWidth - r.width) / 2);
     const y = Math.round((window.innerHeight - r.height) / 2);
     setPos(keepInBounds(x, y));
   }, [keepInBounds]);
 
-  // Center on first mount
+  // Dock on first mount (instead of centering)
   useLayoutEffect(() => {
-    centerCard();
-    // also re-center after short delay to account for fonts/layout
-    const t = setTimeout(centerCard, 50);
+    dockCard();
+    // also re-dock after short delay to account for fonts/layout shifts
+    const t = setTimeout(dockCard, 50);
     return () => clearTimeout(t);
-  }, [centerCard]);
+  }, [dockCard]);
 
   const onPointerDown = (e) => {
     if (locked) return; // freeze drag
@@ -84,19 +164,19 @@ export default function FloatingTopicCard({
     };
   }, [keepInBounds]);
 
-  // When locked, collapse and **center** (instead of docking to a corner)
+  // When locked, collapse and **center** (you can change to 'dockCard()' if you prefer)
   useEffect(() => {
     if (locked) {
       setCollapsed(true);
       setReadMore(false);
-      // wait a tick so collapse completes before centering
+      // wait a tick so collapse completes before reposition
       const t = setTimeout(centerCard, 0);
       return () => clearTimeout(t);
     }
   }, [locked, centerCard]);
 
   const topic = allTopics[index] || allTopics[0];
-  const go = (d) => setIndex((i) => Math.max(0, Math.min(i + d, allTopics.length - 1)));
+  const go = (d) => setIndex((i) => clamp(i + d, 0, allTopics.length - 1));
   const jump = (e) => setIndex(Number(e.target.value));
 
   // scrollable content ref (when readMore is open)
@@ -108,7 +188,7 @@ export default function FloatingTopicCard({
   const containerClasses = [
     "fixed z-[9999] select-none",
     collapsed ? "w-auto" : "w-[22rem]",
-    locked ? "opacity-70 pointer-events-none" : ""
+    locked ? "opacity-70 pointer-events-none" : "",
   ].join(" ");
 
   return (
@@ -139,7 +219,9 @@ export default function FloatingTopicCard({
           <button
             type="button"
             onClick={() => !locked && setCollapsed((c) => !c)}
-            className={`rounded-md ml-2 px-2 py-1 text-sm ${locked ? "bg-white/10" : "bg-white/20 hover:bg-white/30"}`}
+            className={`rounded-md ml-2 px-2 py-1 text-sm ${
+              locked ? "bg-white/10" : "bg-white/20 hover:bg-white/30"
+            }`}
             aria-expanded={!collapsed}
             aria-controls="glossary-body"
             aria-disabled={locked ? "true" : "false"}
@@ -153,8 +235,12 @@ export default function FloatingTopicCard({
           <div id="glossary-body" className="flex flex-col">
             {/* Topic title / definition */}
             <div className="px-4 pt-4">
-              <h4 className="text-base font-semibold text-slate-800">{topic.title}</h4>
-              <p className="text-xs text-slate-500">{index + 1} / {allTopics.length}</p>
+              <h4 className="text-base font-semibold text-slate-800">
+                {topic.title}
+              </h4>
+              <p className="text-xs text-slate-500">
+                {index + 1} / {allTopics.length}
+              </p>
 
               {/* Definition first */}
               {topic.definition && (
@@ -172,7 +258,7 @@ export default function FloatingTopicCard({
                 "px-4",
                 readMore
                   ? "mt-2 pb-4 max-h-[60vh] overflow-y-auto overscroll-contain"
-                  : "p-4"
+                  : "p-4",
               ].join(" ")}
               style={readMore ? { WebkitOverflowScrolling: "touch" } : undefined}
             >
@@ -181,13 +267,22 @@ export default function FloatingTopicCard({
                 <h5 className="mb-1 font-semibold text-sm">Function & Purpose</h5>
                 <ul className="list-disc pl-5 space-y-2 text-[0.95rem]">
                   {(topic.bullets || []).map((b, i) => (
-                    <li key={i} className="leading-snug">{b}</li>
+                    <li key={i} className="leading-snug">
+                      {b}
+                    </li>
                   ))}
                 </ul>
               </div>
 
               {/* Read more toggle */}
-              {(topic.details || topic.facts || topic.examples || topic.advantages || topic.uses || topic.disadvantages || topic.limitations || topic.applicationsICT) && (
+              {(topic.details ||
+                topic.facts ||
+                topic.examples ||
+                topic.advantages ||
+                topic.uses ||
+                topic.disadvantages ||
+                topic.limitations ||
+                topic.applicationsICT) && (
                 <div className="mt-3">
                   {!readMore ? (
                     <button
@@ -200,39 +295,53 @@ export default function FloatingTopicCard({
                   ) : (
                     <>
                       <div className="mt-2 space-y-2 text-[0.95rem]">
-                        {(topic.details || []).map((d, i) => <p key={`d-${i}`}>{d}</p>)}
+                        {(topic.details || []).map((d, i) => (
+                          <p key={`d-${i}`}>{d}</p>
+                        ))}
 
                         {topic.facts && (
                           <div>
-                            <h5 className="mt-2 mb-1 font-semibold text-sm">Quick Facts</h5>
+                            <h5 className="mt-2 mb-1 font-semibold text-sm">
+                              Quick Facts
+                            </h5>
                             <ul className="list-disc pl-5 space-y-1">
-                              {topic.facts.map((f, i) => <li key={`f-${i}`}>{f}</li>)}
+                              {topic.facts.map((f, i) => (
+                                <li key={`f-${i}`}>{f}</li>
+                              ))}
                             </ul>
                           </div>
                         )}
 
                         {topic.examples && (
                           <div>
-                            <h5 className="mt-2 mb-1 font-semibold text-sm">Examples</h5>
+                            <h5 className="mt-2 mb-1 font-semibold text-sm">
+                              Examples
+                            </h5>
                             <ul className="list-disc pl-5 space-y-1">
-                              {topic.examples.map((ex, i) => <li key={`e-${i}`}>{ex}</li>)}
+                              {topic.examples.map((ex, i) => (
+                                <li key={`e-${i}`}>{ex}</li>
+                              ))}
                             </ul>
                           </div>
                         )}
 
-                        {["advantages","uses","disadvantages","limitations","applicationsICT"].map((k) => (
-                          topic[k] ? (
-                            <div key={k}>
-                              <h5 className="mt-2 mb-1 font-semibold text-sm">
-                                {k === "applicationsICT" ? "Applications in ICT" :
-                                  k.charAt(0).toUpperCase() + k.slice(1)}
-                              </h5>
-                              <ul className="list-disc pl-5 space-y-1">
-                                {topic[k].map((v, i) => <li key={`${k}-${i}`}>{v}</li>)}
-                              </ul>
-                            </div>
-                          ) : null
-                        ))}
+                        {["advantages", "uses", "disadvantages", "limitations", "applicationsICT"].map(
+                          (k) =>
+                            topic[k] ? (
+                              <div key={k}>
+                                <h5 className="mt-2 mb-1 font-semibold text-sm">
+                                  {k === "applicationsICT"
+                                    ? "Applications in ICT"
+                                    : k.charAt(0).toUpperCase() + k.slice(1)}
+                                </h5>
+                                <ul className="list-disc pl-5 space-y-1">
+                                  {topic[k].map((v, i) => (
+                                    <li key={`${k}-${i}`}>{v}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null
+                        )}
                       </div>
 
                       <button
@@ -275,7 +384,9 @@ export default function FloatingTopicCard({
                   disabled={locked}
                 >
                   {allTopics.map((t, i) => (
-                    <option key={t.id} value={i}>{i + 1}. {t.title}</option>
+                    <option key={t.id} value={i}>
+                      {i + 1}. {t.title}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -283,6 +394,13 @@ export default function FloatingTopicCard({
 
             {/* Tools */}
             <div className="px-4 py-2 bg-gray-50 flex justify-end gap-4">
+              <button
+                className="text-xs text-gray-500 underline"
+                onClick={dockCard /* 👈 quick re-dock to your configured corner */}
+                disabled={locked}
+              >
+                Dock
+              </button>
               <button
                 className="text-xs text-gray-500 underline"
                 onClick={centerCard}
