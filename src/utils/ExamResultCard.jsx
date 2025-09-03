@@ -1,6 +1,7 @@
+// /utils/ExamResultCard.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { db } from './firebase';
+import { db } from '../utils/firebase';
 import {
   collection,
   doc,
@@ -11,11 +12,17 @@ import {
   where,
 } from 'firebase/firestore';
 
-/** Reusable card: pass title + collectionName */
-export function ExamResultsCard({
-  studentName,
-  title = '📊 Exam Results',
-  collectionName = 'studentResults', // 'studentResults' (June) | 'prelimResults' (Prelim)
+function tidyName(s) {
+  return (s || '').trim();
+}
+function toLowerKey(s) {
+  return tidyName(s).toLowerCase().replace(/\s+/g, ' ');
+}
+
+export default function ExamResultsCard({
+  studentName,                       // optional (staff lookup)
+  title = '📊 JUNE Exam Results',
+  collectionName = 'studentResults', // 'studentResults' | 'prelimResults'
   headerGradientFrom = 'from-blue-200',
   headerGradientTo = 'to-blue-400',
 }) {
@@ -25,10 +32,10 @@ export function ExamResultsCard({
   const [errMsg, setErrMsg] = useState('');
   const [user, setUser] = useState(null);
 
-  const nameTidy = useMemo(() => (studentName || '').trim(), [studentName]);
-  const nameLower = useMemo(() => nameTidy.toLowerCase(), [nameTidy]);
+  const nameTidy = useMemo(() => tidyName(studentName), [studentName]);
+  const nameLowerProp = useMemo(() => toLowerKey(studentName || ''), [studentName]);
 
-  // auth
+  // Auth
   useEffect(() => {
     const unsub = onAuthStateChanged(getAuth(), (u) => setUser(u || null));
     return () => unsub();
@@ -48,7 +55,7 @@ export function ExamResultsCard({
           return;
         }
 
-        // role detection
+        // detect staff
         let isAdmin = false;
         let isTeacher = false;
         try {
@@ -56,20 +63,20 @@ export function ExamResultsCard({
             const adminSnap = await getDoc(doc(db, 'admins', user.email));
             isAdmin = adminSnap.exists();
           }
-          const token = await user.getIdTokenResult();
+          const token = await user.getIdTokenResult(true);
           isTeacher = token?.claims?.role === 'teacher';
         } catch {
-          // default false
+          /* no-op */
         }
 
+        // ---------- STAFF LOOKUP (by name) ----------
         if (isAdmin || isTeacher) {
-          // STAFF needs a name to look up
           if (!nameTidy) {
             setErrMsg('Enter/select a student name to view results.');
             return;
           }
 
-          // Try by docId = name
+          // Try docId = name
           const byName = await getDoc(doc(db, collectionName, nameTidy));
           if (byName.exists()) {
             const d = byName.data();
@@ -77,7 +84,7 @@ export function ExamResultsCard({
             return;
           }
 
-          // Fallback by fields
+          // Try field 'name'
           const q1 = query(
             collection(db, collectionName),
             where('name', '==', nameTidy),
@@ -90,9 +97,10 @@ export function ExamResultsCard({
             return;
           }
 
+          // Try field 'nameLower'
           const q2 = query(
             collection(db, collectionName),
-            where('nameLower', '==', nameLower),
+            where('nameLower', '==', nameLowerProp),
             limit(1)
           );
           const s2 = await getDocs(q2);
@@ -104,21 +112,61 @@ export function ExamResultsCard({
 
           if (!cancelled) setErrMsg('No results found for this student.');
           return;
-        } else {
-          // STUDENT: read by own UID
-          const qMe = query(
+        }
+
+        // ---------- STUDENT LOOKUP (robust fallbacks) ----------
+        const uid = user.uid;
+
+        // 1) Preferred: match by studentUid
+        const qByUid = query(
+          collection(db, collectionName),
+          where('studentUid', '==', uid),
+          limit(1)
+        );
+        const sByUid = await getDocs(qByUid);
+        if (!sByUid.empty) {
+          const d = sByUid.docs[0].data();
+          if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
+          return;
+        }
+
+        // 2) Fallback: use student's profile nameLower
+        let profileLower = '';
+        try {
+          const prof = await getDoc(doc(db, 'students', uid));
+          profileLower = prof.exists() ? (prof.data().nameLower || '') : '';
+        } catch { /* ignore */ }
+
+        if (profileLower) {
+          const qByProfileName = query(
             collection(db, collectionName),
-            where('studentUid', '==', user.uid),
+            where('nameLower', '==', profileLower),
             limit(1)
           );
-          const sMe = await getDocs(qMe);
-          if (!sMe.empty) {
-            const d = sMe.docs[0].data();
+          const sByProfileName = await getDocs(qByProfileName);
+          if (!sByProfileName.empty) {
+            const d = sByProfileName.docs[0].data();
             if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
-          } else {
-            if (!cancelled) setErrMsg('Your results are not available yet.');
+            return;
           }
         }
+
+        // 3) Last fallback: use the passed studentName prop (if provided)
+        if (nameLowerProp) {
+          const qByProp = query(
+            collection(db, collectionName),
+            where('nameLower', '==', nameLowerProp),
+            limit(1)
+          );
+          const sByProp = await getDocs(qByProp);
+          if (!sByProp.empty) {
+            const d = sByProp.docs[0].data();
+            if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
+            return;
+          }
+        }
+
+        if (!cancelled) setErrMsg('Your results are not available yet.');
       } catch (e) {
         console.error('ExamResultsCard load error:', e);
         if (!cancelled) setErrMsg('Missing or insufficient permissions.');
@@ -127,20 +175,13 @@ export function ExamResultsCard({
       }
     };
 
-    // ✅ Trigger when user (auth) is ready or selected name changes
-    if (user) load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user, nameTidy, nameLower, collectionName]);
+    if (user) load(); // run when auth ready
+    return () => { cancelled = true; };
+  }, [user, nameTidy, nameLowerProp, collectionName]);
 
   const calcPercent = (rows, possible) =>
     rows && rows.length > 0
-      ? (
-          (rows.reduce((sum, r) => sum + Number(r.score || 0), 0) / possible) *
-          100
-        ).toFixed(2)
+      ? ((rows.reduce((sum, r) => sum + Number(r.score || 0), 0) / possible) * 100).toFixed(2)
       : 0;
 
   const theoryPercent = data.theory ? calcPercent(data.theory.results, 150) : 0;
@@ -261,30 +302,6 @@ export function ExamResultsCard({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-/** Section showing June + Prelim side by side */
-export default function ExamResultsSection({ studentName }) {
-  return (
-    <div className="max-w-5xl mx-auto mb-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ExamResultsCard
-          studentName={studentName}
-          title="📊 JUNE Exam Results"
-          collectionName="studentResults"
-          headerGradientFrom="from-blue-200"
-          headerGradientTo="to-blue-400"
-        />
-        <ExamResultsCard
-          studentName={studentName}
-          title="📝 Prelim Exam Results"
-          collectionName="prelimResults"
-          headerGradientFrom="from-amber-200"
-          headerGradientTo="to-amber-400"
-        />
-      </div>
     </div>
   );
 }

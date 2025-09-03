@@ -19,6 +19,7 @@ export const studentList = {
     { name: "Lwando" },
     { name: "Naomi" },
     { name: "Lutho" },
+    { name: "Andisiwe" },
     { name: "Asakhile" },
     { name: "Emihle P" },
     { name: "Liyabona" },

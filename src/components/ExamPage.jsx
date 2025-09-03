@@ -304,7 +304,23 @@ export default function ExamPage({ studentInfo, addResult }) {
       {!selectedExam && (
         <>
         {/* Displays Exams Results - MAIN (JUNE) */}
-         <ExamResultsCard studentName={studentInfo?.name} /> 
+         {/* <ExamResultsCard studentName={studentInfo?.name} />  */}
+
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+<ExamResultsCard
+  studentName={studentInfo?.name}
+  title="📊 JUNE Exam Results"
+  collectionName="studentResults"
+/>
+
+<ExamResultsCard
+  studentName={studentInfo?.name}
+  title="📝 Prelim Exam Results"
+  collectionName="prelimResults"
+  headerGradientFrom="from-amber-200"
+  headerGradientTo="to-amber-400"
+/>
+</div>
 
   
           <h3 className="text-xl mb-4">Select a Term</h3>
