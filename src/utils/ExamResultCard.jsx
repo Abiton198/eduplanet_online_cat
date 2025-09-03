@@ -1,4 +1,4 @@
-// /utils/ExamResultCard.jsx
+// /utils/ExamResultsCard.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { db } from '../utils/firebase';
@@ -16,6 +16,7 @@ function tidyName(s) {
   return (s || '').trim();
 }
 function toLowerKey(s) {
+  // optional helper if you maintain nameLower in Firestore
   return tidyName(s).toLowerCase().replace(/\s+/g, ' ');
 }
 
@@ -55,18 +56,23 @@ export default function ExamResultsCard({
           return;
         }
 
-        // detect staff
+        // ---- Role detection (matches rules) ----
         let isAdmin = false;
         let isTeacher = false;
         try {
           if (user.email) {
+            // /admins/{email} is case-sensitive per current rules
             const adminSnap = await getDoc(doc(db, 'admins', user.email));
             isAdmin = adminSnap.exists();
           }
           const token = await user.getIdTokenResult(true);
-          isTeacher = token?.claims?.role === 'teacher';
+          const claims = token?.claims || {};
+          // Supports role: "teacher" OR roles: ["teacher"]
+          isTeacher =
+            claims.role === 'teacher' ||
+            (Array.isArray(claims.roles) && claims.roles.includes('teacher'));
         } catch {
-          /* no-op */
+          /* ignore claim/admin lookup errors */
         }
 
         // ---------- STAFF LOOKUP (by name) ----------
@@ -76,82 +82,121 @@ export default function ExamResultsCard({
             return;
           }
 
-          // Try docId = name
-          const byName = await getDoc(doc(db, collectionName, nameTidy));
-          if (byName.exists()) {
-            const d = byName.data();
-            if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
-            return;
+          // Try docId = name (rules allow name vs docId match)
+          {
+            const byName = await getDoc(doc(db, collectionName, nameTidy));
+            if (byName.exists()) {
+              const d = byName.data();
+              if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
+              return;
+            }
           }
 
-          // Try field 'name'
-          const q1 = query(
-            collection(db, collectionName),
-            where('name', '==', nameTidy),
-            limit(1)
-          );
-          const s1 = await getDocs(q1);
-          if (!s1.empty) {
-            const d = s1.docs[0].data();
-            if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
-            return;
+          // Try field 'name' == provided name
+          {
+            const q1 = query(
+              collection(db, collectionName),
+              where('name', '==', nameTidy),
+              limit(1)
+            );
+            const s1 = await getDocs(q1);
+            if (!s1.empty) {
+              const d = s1.docs[0].data();
+              if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
+              return;
+            }
           }
 
-          // Try field 'nameLower'
-          const q2 = query(
-            collection(db, collectionName),
-            where('nameLower', '==', nameLowerProp),
-            limit(1)
-          );
-          const s2 = await getDocs(q2);
-          if (!s2.empty) {
-            const d = s2.docs[0].data();
-            if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
-            return;
+          // Optional: if you maintain nameLower, try it too
+          if (nameLowerProp) {
+            const q2 = query(
+              collection(db, collectionName),
+              where('nameLower', '==', nameLowerProp),
+              limit(1)
+            );
+            const s2 = await getDocs(q2);
+            if (!s2.empty) {
+              const d = s2.docs[0].data();
+              if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
+              return;
+            }
           }
 
           if (!cancelled) setErrMsg('No results found for this student.');
           return;
         }
 
-        // ---------- STUDENT LOOKUP (robust fallbacks) ----------
+        // ---------- STUDENT LOOKUP (aligns with rules) ----------
         const uid = user.uid;
 
         // 1) Preferred: match by studentUid
-        const qByUid = query(
-          collection(db, collectionName),
-          where('studentUid', '==', uid),
-          limit(1)
-        );
-        const sByUid = await getDocs(qByUid);
-        if (!sByUid.empty) {
-          const d = sByUid.docs[0].data();
-          if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
-          return;
-        }
-
-        // 2) Fallback: use student's profile nameLower
-        let profileLower = '';
-        try {
-          const prof = await getDoc(doc(db, 'students', uid));
-          profileLower = prof.exists() ? (prof.data().nameLower || '') : '';
-        } catch { /* ignore */ }
-
-        if (profileLower) {
-          const qByProfileName = query(
+        {
+          const qByUid = query(
             collection(db, collectionName),
-            where('nameLower', '==', profileLower),
+            where('studentUid', '==', uid),
             limit(1)
           );
-          const sByProfileName = await getDocs(qByProfileName);
-          if (!sByProfileName.empty) {
-            const d = sByProfileName.docs[0].data();
+          const sByUid = await getDocs(qByUid);
+          if (!sByUid.empty) {
+            const d = sByUid.docs[0].data();
             if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
             return;
           }
         }
 
-        // 3) Last fallback: use the passed studentName prop (if provided)
+        // 2) Get profile display name from students/{uid}
+        let profileName = '';
+        let profileLower = '';
+        try {
+          const prof = await getDoc(doc(db, 'students', uid));
+          if (prof.exists()) {
+            profileName = tidyName(prof.data().name || '');
+            // optional lower variant if you maintain it
+            profileLower = prof.data().nameLower || '';
+          }
+        } catch { /* ignore */ }
+
+        // 2a) Try docId == profile display name (rules allow this fallback)
+        if (profileName) {
+          const byDocId = await getDoc(doc(db, collectionName, profileName));
+          if (byDocId.exists()) {
+            const d = byDocId.data();
+            if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
+            return;
+          }
+        }
+
+        // 2b) Try field 'name' == profile display name
+        if (profileName) {
+          const qByProfileNameField = query(
+            collection(db, collectionName),
+            where('name', '==', profileName),
+            limit(1)
+          );
+          const sByProfileNameField = await getDocs(qByProfileNameField);
+          if (!sByProfileNameField.empty) {
+            const d = sByProfileNameField.docs[0].data();
+            if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
+            return;
+          }
+        }
+
+        // 2c) Optional: if you maintain nameLower, try that too
+        if (profileLower) {
+          const qByProfileNameLower = query(
+            collection(db, collectionName),
+            where('nameLower', '==', profileLower),
+            limit(1)
+          );
+          const sByProfileNameLower = await getDocs(qByProfileNameLower);
+          if (!sByProfileNameLower.empty) {
+            const d = sByProfileNameLower.docs[0].data();
+            if (!cancelled) setData({ theory: d.theory || null, practical: d.practical || null });
+            return;
+          }
+        }
+
+        // 3) Last-resort: if a studentName prop was passed, try its nameLower
         if (nameLowerProp) {
           const qByProp = query(
             collection(db, collectionName),
@@ -169,13 +214,19 @@ export default function ExamResultsCard({
         if (!cancelled) setErrMsg('Your results are not available yet.');
       } catch (e) {
         console.error('ExamResultsCard load error:', e);
-        if (!cancelled) setErrMsg('Missing or insufficient permissions.');
+        if (!cancelled) {
+          const msg =
+            e && typeof e === 'object' && 'code' in e && e.code === 'permission-denied'
+              ? 'Missing or insufficient permissions.'
+              : 'Could not load results.';
+          setErrMsg(msg);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
 
-    if (user) load(); // run when auth ready
+    if (user) load();
     return () => { cancelled = true; };
   }, [user, nameTidy, nameLowerProp, collectionName]);
 
