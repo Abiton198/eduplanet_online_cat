@@ -15,6 +15,8 @@ import FloatingTopicCard from "../utils/FloatingTopicCard";
 import { catTopics } from "../data/catTopicsData";
 import FloatingAbbreviationsCard from "../utils/FloatingAbbreviationsCard";
 import { abbreviationsData } from "../data/abbreviationsData";
+import FloatingStudyHub from "../utils/FloatingStudyHub";
+
 
 function formatTime(seconds) {
   const mins = Math.floor(seconds / 60);
@@ -279,27 +281,18 @@ export default function ExamPage({ studentInfo, addResult }) {
   
       {/* 🏆 Floating leaderboard + 📚 Floating topics */}
       {currentStudentId && (
-        <>
-          <LeaderboardCard
-            grade={studentInfo?.grade}
-            currentStudentId={currentStudentId}
-          />
-          <FloatingTopicCard
-            topics={catTopics}
-            initiallyCollapsed={true}
-            locked={!!selectedExam}   // 🔒 Freeze when an exam is open
-          />
+  <FloatingStudyHub
+    grade={studentInfo?.grade}
+    currentStudentId={currentStudentId}
+    topics={catTopics}
+    abbreviationsData={abbreviationsData}
+    selectedExam={selectedExam}
+    LeaderboardCard={LeaderboardCard}
+    FloatingTopicCard={FloatingTopicCard}
+    FloatingAbbreviationsCard={FloatingAbbreviationsCard}
+  />
+)}
 
-        <FloatingAbbreviationsCard
-          data={abbreviationsData}     
-          initiallyCollapsed={true}     // same default as FloatingTopicCard   
-          locked={!!selectedExam}            // set true to freeze + auto-collapse + center
-          title="Abbreviations"
-        />
-
-        </>
-      )}
-  
       {/* Exam list / Results card */}
       {!selectedExam && (
         <>
