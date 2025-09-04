@@ -1,90 +1,23 @@
-// src/components/AnalysisComponent.jsx
+
+// ==============================
+// File: src/components/AnalysisComponent.jsx (UPDATED)
+// Adds: PRELIM vs JUNE comparisons (theory), per-student, per-topic,
+// overall, grouping students by need, and extra chart mode.
+// ==============================
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { db } from "../utils/firebase";
-import {
-  collection,
-  onSnapshot,
-  query,
-  where,
-  doc,
-  getDoc,
-} from "firebase/firestore";
+import { collection, onSnapshot, query, where, doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  LineChart,
-  Line,
-  ResponsiveContainer,
+  PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, ResponsiveContainer, Legend
 } from "recharts";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import * as XLSX from "xlsx";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
-// Chart colors
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AA00FF", "#FF4081"];
-
-// Grade 11 theory max scores
-const GRADE_11_MAX_SCORES = {
-  MCQ: 10,
-  "MATCHING ITEMS": 5,
-  "T/F": 5,
-  SPREADSHEETS: 20,
-  DATABASES: 20,
-  "INTERNET & NETWORK TECH": 20,
-  "INTERNET & TECHNOLOGY SCENARIO": 20,
-  "DATABASES SCENARIO": 20,
-};
-
-// Grade 11 practical max scores
-const GRADE_11_PRACTICAL = {
-  "WORD PROCESSING": 33,
-  SPREADSHEETS: 21,
-  DATABASES: 26,
-  HTML: 20,
-};
-
-// Grade 12 practical scores
-const GRADE_12_PRAC_SCORES = {
-  "WORD PROCESSING Q1": 25,
-  "WORD PROCESSING Q2": 19,
-  SPREADSHEETS: 24,
-  DATABASES: 40,
-  HTML: 33,
-  GENERAL: 9,
-};
-
-// Grade 12 theory scores
-const GRADE_12_THEORY_SCORES = {
-  MCQ: 10,
-  "MATCHING ITEMS": 10,
-  "T/F": 5,
-  "SYSTEMS TECHNOLOGIES": 20,
-  "INTERNET & NETWORKS": 15,
-  "INTERNET & NETWORK TECH": 15,
-  "INFORMATION MANAGEMENT": 10,
-  "SOCIAL IMPLICATIONS": 10,
-  "SOLUTION DEVELOPMENT": 20,
-  "APPLICATION SCENARIO": 25,
-  "TASK SCENARIO": 25,
-};
-
-// Default fallback
-const DEFAULT_MAX_SCORES = {
-  "WORD PROCESSING": 25,
-  SPREADSHEETS: 24,
-  DATABASES: 40,
-  HTML: 33,
-  GENERAL: 9,
-};
 
 export default function AnalysisComponent() {
   const navigate = useNavigate();
@@ -97,24 +30,21 @@ export default function AnalysisComponent() {
   const [selfName, setSelfName] = useState("");
 
   // ---------- Data stores ------------
-  const [mainExamData, setMainExamData] = useState({}); // studentResults (per student)
-  const [generalExamData, setGeneralExamData] = useState([]); // examResults (attempts)
+  const [mainExamData, setMainExamData] = useState({}); // studentResults per student
+  const [generalExamData, setGeneralExamData] = useState([]); // examResults attempts
+  const [prelimData, setPrelimData] = useState({}); // NEW: prelimResults per student
 
   // ---------- UI / Filters -----------
-  const [dataset, setDataset] = useState("main"); // "main" | "general"
-  const [analysisType, setAnalysisType] = useState("overall"); // dynamic per dataset
+  const [dataset, setDataset] = useState("main");
+  const [analysisType, setAnalysisType] = useState("overall");
   const [chartType, setChartType] = useState("pie");
   const [selectedGrade, setSelectedGrade] = useState("All Grades");
   const [selectedStudent, setSelectedStudent] = useState("");
-
-  // General exam filters
-  const [generalDateFrom, setGeneralDateFrom] = useState("");
-  const [generalDateTo, setGeneralDateTo] = useState("");
-  const [generalExamFilter, setGeneralExamFilter] = useState("");
-  const [generalNameFilter, setGeneralNameFilter] = useState("");
+  const [selectedTopic, setSelectedTopic] = useState("All Topics");
 
   const [chartData, setChartData] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
+  const [groupings, setGroupings] = useState({});
   const chartRef = useRef(null);
   const unsubsRef = useRef([]);
 
@@ -131,23 +61,17 @@ export default function AnalysisComponent() {
       if (!u) return;
 
       try {
-        // admin: /admins/{email} exists AND Email/Password sign-in
         let admin = false;
         if (u.email) {
           const adminSnap = await getDoc(doc(db, "admins", u.email));
-          const isEmailPassword = (u.providerData || []).some(
-            (p) => p?.providerId === "password"
-          );
+          const isEmailPassword = (u.providerData || []).some((p) => p?.providerId === "password");
           admin = adminSnap.exists() && isEmailPassword;
         }
-
-        // teacher via custom claim
         let teacher = false;
         if (u.getIdTokenResult) {
           const token = await u.getIdTokenResult();
           teacher = token?.claims?.role === "teacher";
         }
-
         setIsAdmin(admin);
         setIsTeacher(teacher);
       } catch (e) {
@@ -157,33 +81,8 @@ export default function AnalysisComponent() {
     return () => stop();
   }, []);
 
-  // ---------- Load self student profile (for legacy fallback on examResults) ----------
+  // ---------- Subscriptions (studentResults + prelimResults + examResults) ----------
   useEffect(() => {
-    let cancelled = false;
-    const loadSelf = async () => {
-      if (!user?.uid) return;
-      try {
-        const sSnap = await getDoc(doc(db, "students", user.uid));
-        if (!cancelled && sSnap.exists()) {
-          const data = sSnap.data() || {};
-          const name = (data.name || "").trim();
-          const lower = (data.nameLower || name.toLowerCase()).trim();
-          setSelfName(name);
-          setSelfNameLower(lower);
-        }
-      } catch (e) {
-        console.warn("Load self student profile failed:", e?.message || e);
-      }
-    };
-    loadSelf();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.uid]);
-
-  // ---------- Subscriptions (studentResults + examResults) ----------
-  useEffect(() => {
-    // cleanup old listeners
     unsubsRef.current.forEach((fn) => fn && fn());
     unsubsRef.current = [];
     if (!user?.uid) return;
@@ -191,27 +90,27 @@ export default function AnalysisComponent() {
     const unsubs = [];
     const canSeeAll = isAdmin || isTeacher;
 
-    // studentResults (main)
+    // studentResults
     try {
-      const srRef = canSeeAll
-        ? collection(db, "studentResults")
-        : query(collection(db, "studentResults"), where("studentUid", "==", user.uid));
-
-      const unsubMain = onSnapshot(
-        srRef,
-        (snap) => {
-          const obj = {};
-          snap.forEach((d) => {
-            obj[d.id] = d.data();
-          });
-          setMainExamData(obj);
-        },
-        (e) => console.error("studentResults listen failed:", e)
-      );
+      const srRef = canSeeAll ? collection(db, "studentResults") : query(collection(db, "studentResults"), where("studentUid", "==", user.uid));
+      const unsubMain = onSnapshot(srRef, (snap) => {
+        const obj = {};
+        snap.forEach((d) => (obj[d.id] = d.data()));
+        setMainExamData(obj);
+      });
       unsubs.push(unsubMain);
-    } catch (e) {
-      console.warn("Attach studentResults failed:", e);
-    }
+    } catch (e) {}
+
+    // prelimResults (NEW)
+    try {
+      const prRef = canSeeAll ? collection(db, "prelimResults") : query(collection(db, "prelimResults"), where("studentUid", "==", user.uid));
+      const unsubPre = onSnapshot(prRef, (snap) => {
+        const obj = {};
+        snap.forEach((d) => (obj[d.id] = d.data()));
+        setPrelimData(obj);
+      });
+      unsubs.push(unsubPre);
+    } catch (e) {}
 
     // examResults (general attempts)
     try {
@@ -220,67 +119,21 @@ export default function AnalysisComponent() {
         docs.forEach((d) => resultsMap.set(d.id, { id: d.id, ...d.data() }));
         setGeneralExamData(Array.from(resultsMap.values()));
       };
-
       if (canSeeAll) {
-        const unsubAll = onSnapshot(
-          collection(db, "examResults"),
-          (snap) => upsert(snap.docs),
-          (e) => console.error("examResults listen failed:", e)
-        );
-        unsubs.push(unsubAll);
+        unsubs.push(onSnapshot(collection(db, "examResults"), (snap) => upsert(snap.docs)));
       } else {
-        // primary: self-scoped by uid
-        const unsubSelf = onSnapshot(
-          query(collection(db, "examResults"), where("studentUid", "==", user.uid)),
-          (snap) => upsert(snap.docs),
-          (e) => console.error("examResults (self) listen failed:", e)
-        );
-        unsubs.push(unsubSelf);
-
-        // legacy fallback by nameLower/name if no docs arrive initially
-        const t = setTimeout(() => {
-          if (resultsMap.size === 0) {
-            if (selfNameLower) {
-              unsubs.push(
-                onSnapshot(
-                  query(
-                    collection(db, "examResults"),
-                    where("nameLower", "==", selfNameLower)
-                  ),
-                  (snap) => upsert(snap.docs),
-                  (e) => console.warn("legacy nameLower listen failed:", e)
-                )
-              );
-            }
-            if (selfName) {
-              unsubs.push(
-                onSnapshot(
-                  query(collection(db, "examResults"), where("name", "==", selfName)),
-                  (snap) => upsert(snap.docs),
-                  (e) => console.warn("legacy name listen failed:", e)
-                )
-              );
-            }
-          }
-        }, 300);
-        unsubs.push(() => clearTimeout(t));
+        unsubs.push(onSnapshot(query(collection(db, "examResults"), where("studentUid", "==", user.uid)), (snap) => upsert(snap.docs)));
       }
-    } catch (e) {
-      console.warn("Attach examResults failed:", e);
-    }
+    } catch (e) {}
 
     unsubsRef.current = unsubs;
     return () => unsubs.forEach((fn) => fn && fn());
-  }, [db, user?.uid, isAdmin, isTeacher, selfNameLower, selfName]);
+  }, [db, user?.uid, isAdmin, isTeacher]);
 
-  // ---------- Helpers ----------
-  const grades = useMemo(
-    () => ["All Grades", "Grade 10", "Grade 11", "Grade 12", "12A", "12B"],
-    []
-  );
+  const grades = useMemo(() => ["All Grades", "Grade 10", "Grade 11", "Grade 12", "12A", "12B"], []);
   const normalize = (s = "") => String(s).replace(/\s+/g, "").toLowerCase();
 
-  // ---------- Build analysis options per dataset ----------
+  // ---------- Analysis Options (now with comparisons) ----------
   const analysisOptions = useMemo(() => {
     if (dataset === "general") {
       return [
@@ -290,360 +143,134 @@ export default function AnalysisComponent() {
         { value: "g_by_student", label: "General: By Student (Avg %)" },
       ];
     }
-    // main dataset
     return [
       { value: "overall", label: "Overall Performance" },
       { value: "overallQuestions", label: "Overall Per-Question Focus" },
-      { value: "question", label: "Per-Question (Single Student)" },
+      { value: "compare_overall", label: "COMPARE: Prelim vs June (Theory) — Overall" },
+      { value: "compare_by_student", label: "COMPARE: Prelim vs June (Theory) — By Student" },
+      { value: "compare_by_topic", label: "COMPARE: Prelim vs June (Theory) — By Topic" },
+      { value: "needs_grouping", label: "Group Students by Need (Topic/Overall)" },
       { value: "individual", label: "Individual Summary" },
+      { value: "question", label: "Per-Question (Single Student)" },
     ];
   }, [dataset]);
 
-  // ---------- Core analysis ----------
-  useEffect(() => {
-    // reset student picker if not needed
-    if (dataset === "main") {
-      if (analysisType === "overall" || analysisType === "overallQuestions") {
-        setSelectedStudent("");
-      }
-    } else {
-      // general dataset analysis doesn't need a specific student selection
-      setSelectedStudent("");
-    }
+  // ---------- Utility to pull theory arrays ----------
+  const grabTheory = (entry) => {
+    if (!entry) return [];
+    const arr = entry?.theory?.results || entry?.theory || entry?.results || [];
+    return Array.isArray(arr) ? arr : [];
+  };
 
-    const isGrade11 = selectedGrade === "Grade 11";
-    const isGrade12 =
-      selectedGrade === "Grade 12" ||
-      selectedGrade === "12A" ||
-      selectedGrade === "12B";
+  const pct = (s, m) => (m > 0 ? (Number(s || 0) / Number(m || 0)) * 100 : 0);
+
+  // ---------- Core analysis (extended) ----------
+  useEffect(() => {
+    const isGradeMatch = (grade) =>
+      selectedGrade === "All Grades" || (grade || "").toLowerCase().includes(selectedGrade.toLowerCase());
 
     let data = [];
     let recs = [];
+    let groups = {};
 
-    // ------------ MAIN (studentResults) ------------
-    if (dataset === "main") {
-      const entries = Object.entries(mainExamData)
-        .filter(([_, entry]) => {
-          const grade =
-            entry?.grade || entry?.theory?.grade || entry?.practical?.grade || "";
-          return (
-            selectedGrade === "All Grades" ||
-            grade.toLowerCase().includes(selectedGrade.toLowerCase())
-          );
-        })
-        .map(([name, entry]) => ({ name, entry }));
+    const mainEntries = Object.values(mainExamData).filter((e) => isGradeMatch(e?.grade || e?.theory?.grade));
+    const prelimEntries = Object.values(prelimData).filter((e) => isGradeMatch(e?.grade || e?.theory?.grade));
 
-      // 1) Cohort overall
-      if (analysisType === "overall") {
-        let sumTheory = 0,
-          sumPrac = 0,
-          sumGrand = 0;
-        entries.forEach(({ entry }) => {
-          const prac =
-            entry.practical?.results?.reduce(
-              (s, r) => s + Number(r.score || 0),
-              0
-            ) || 0;
-          const theo =
-            entry.theory?.results?.reduce(
-              (s, r) => s + Number(r.score || 0),
-              0
-            ) || 0;
+    // Index prelim by name for quick join
+    const prelimByName = new Map();
+    prelimEntries.forEach((p) => {
+      const key = (p?.name || p?.studentName || p?.theory?.name || "Unknown").trim();
+      prelimByName.set(key, p);
+    });
 
-          let pracMax = isGrade12 ? 150 : isGrade11 ? 100 : 100;
-          let theoMax = isGrade12 ? 150 : isGrade11 ? 120 : 120;
+    // ------- COMPARISONS: June (main) vs Prelim (prelimData), theory only -------
+    if (dataset === "main" && analysisType.startsWith("compare_")) {
+      const byTopicAgg = new Map();
+      const perStudent = [];
 
-          sumPrac += (prac / pracMax) * 100;
-          sumTheory += (theo / theoMax) * 100;
-          sumGrand += ((prac + theo) / (pracMax + theoMax)) * 100;
+      mainEntries.forEach((j) => {
+        const name = (j?.name || j?.studentName || j?.theory?.name || "Unknown").trim();
+        if (selectedStudent && selectedStudent !== name) return;
+        const p = prelimByName.get(name);
+
+        const juneT = grabTheory(j);
+        const preT = grabTheory(p);
+
+        // Aggregate by topic for this student
+        const merged = mergeByTopic(juneT, preT);
+
+        // Per-student overall
+        const js = merged.reduce((a, b) => ({ s: a.s + b.june.score, m: a.m + b.june.max }), { s: 0, m: 0 });
+        const ps = merged.reduce((a, b) => ({ s: a.s + b.prelim.score, m: a.m + b.prelim.max }), { s: 0, m: 0 });
+        perStudent.push({ name, June: pct(js.s, js.m), Prelim: pct(ps.s, ps.m) });
+
+        // cohort by topic
+        merged.forEach((row) => {
+          if (selectedTopic !== "All Topics" && row.topic !== selectedTopic) return;
+          if (!byTopicAgg.has(row.topic)) byTopicAgg.set(row.topic, { topic: row.topic, j: { s: 0, m: 0 }, p: { s: 0, m: 0 } });
+          const agg = byTopicAgg.get(row.topic);
+          agg.j.s += row.june.score; agg.j.m += row.june.max;
+          agg.p.s += row.prelim.score; agg.p.m += row.prelim.max;
         });
-        const n = entries.length || 1;
-        data = [
-          { name: "Theory", value: parseFloat((sumTheory / n).toFixed(2)) },
-          { name: "Practical", value: parseFloat((sumPrac / n).toFixed(2)) },
-          {
-            name: "Grand Total %",
-            value: parseFloat((sumGrand / n).toFixed(2)),
-          },
-        ];
-        recs = data.map((c) =>
-          c.value < 50
-            ? `${c.name} is ${c.value}% (below 50%).`
-            : `${c.name} is ${c.value}%.`
-        );
+      });
+
+      if (analysisType === "compare_by_student") {
+        data = perStudent.sort((a, b) => a.name.localeCompare(b.name));
+        recs = buildCompareRecs(perStudent);
       }
 
-      // 2) Cohort per-question (aggregated by type)
-      else if (analysisType === "overallQuestions") {
-        const agg = {};
-        entries.forEach(({ entry }) => {
-          const results = [
-            ...(entry.theory?.results || []),
-            ...(entry.practical?.results || []),
-          ];
-          // group each student's scores by type once
-          const perStudentType = {};
-          results.forEach((r) => {
-            const type = r.type || "Unknown";
-            const score = Number(r.score || 0);
-            const max = isGrade11
-              ? GRADE_11_MAX_SCORES[type] ||
-                GRADE_11_PRACTICAL[type] ||
-                DEFAULT_MAX_SCORES[type] ||
-                10
-              : isGrade12
-              ? GRADE_12_THEORY_SCORES[type] ||
-                GRADE_12_PRAC_SCORES[type] ||
-                DEFAULT_MAX_SCORES[type] ||
-                10
-              : DEFAULT_MAX_SCORES[type] || 10;
-
-            if (!perStudentType[type]) perStudentType[type] = { score: 0, max: 0 };
-            perStudentType[type].score += score;
-            perStudentType[type].max += max;
-          });
-
-          for (const [type, { score, max }] of Object.entries(perStudentType)) {
-            if (!agg[type]) agg[type] = { score: 0, max: 0 };
-            agg[type].score += Math.min(score, max);
-            agg[type].max += max;
-          }
-        });
-
-        data = Object.entries(agg).map(([type, { score, max }]) => ({
-          name: type,
-          value: parseFloat(((score / max) * 100).toFixed(2)),
-        }));
-
-        recs = data.map((c) =>
-          c.value < 50 ? `${c.name}: ${c.value}% (focus).` : `${c.name}: ${c.value}%.`
-        );
+      if (analysisType === "compare_overall") {
+        const J = Array.from(byTopicAgg.values()).reduce((a, r) => ({ s: a.s + r.j.s, m: a.m + r.j.m }), { s: 0, m: 0 });
+        const P = Array.from(byTopicAgg.values()).reduce((a, r) => ({ s: a.s + r.p.s, m: a.m + r.p.m }), { s: 0, m: 0 });
+        data = [{ name: "Theory (Cohort)", Prelim: pct(P.s, P.m), June: pct(J.s, J.m) }];
+        recs = buildCompareRecs(data);
       }
 
-      // 3) Individual summary
-      else if (analysisType === "individual" && selectedStudent) {
-        const entry = mainExamData[selectedStudent] || {};
-        const prac =
-          entry.practical?.results?.reduce(
-            (s, r) => s + Number(r.score || 0),
-            0
-          ) || 0;
-        const theo =
-          entry.theory?.results?.reduce((s, r) => s + Number(r.score || 0), 0) ||
-          0;
-
-        let pracMax = isGrade12 ? 150 : isGrade11 ? 100 : 100;
-        let theoMax = isGrade12 ? 150 : isGrade11 ? 120 : 120;
-        const grand = ((prac + theo) / (pracMax + theoMax)) * 100;
-
-        data = [
-          {
-            name: "Theory",
-            value: parseFloat(((theo / theoMax) * 100).toFixed(2)),
-          },
-          {
-            name: "Practical",
-            value: parseFloat(((prac / pracMax) * 100).toFixed(2)),
-          },
-          { name: "Grand Total %", value: parseFloat(grand.toFixed(2)) },
-        ];
-        recs = data.map((c) =>
-          c.value < 50
-            ? `${c.name}: ${c.value}% (needs improvement).`
-            : `${c.name}: ${c.value}%.`
-        );
-      }
-
-      // 4) Per-question (single student)
-      else if (analysisType === "question" && selectedStudent) {
-        const entry = mainExamData[selectedStudent] || {};
-        const results = [
-          ...(entry.theory?.results || []),
-          ...(entry.practical?.results || []),
-        ];
-        const seen = new Set();
-        results.forEach((r) => {
-          const key = `${r.type}-${r.question}`;
-          if (seen.has(key)) return;
-          seen.add(key);
-
-          const type = r.type || "Unknown";
-          const max = isGrade11
-            ? GRADE_11_MAX_SCORES[type] ||
-              GRADE_11_PRACTICAL[type] ||
-              DEFAULT_MAX_SCORES[type] ||
-              10
-            : isGrade12
-            ? GRADE_12_THEORY_SCORES[type] ||
-              GRADE_12_PRAC_SCORES[type] ||
-              DEFAULT_MAX_SCORES[type] ||
-              10
-            : DEFAULT_MAX_SCORES[type] || 10;
-
-          const pct = (Number(r.score || 0) / max) * 100;
-          data.push({
-            name: `${type}-Q${r.question}`,
-            value: parseFloat(pct.toFixed(1)),
-          });
-          recs.push(
-            pct < 50
-              ? `${type}-Q${r.question}: ${pct.toFixed(1)}% (work needed).`
-              : `${type}-Q${r.question}: ${pct.toFixed(1)}%.`
-          );
-        });
+      if (analysisType === "compare_by_topic") {
+        data = Array.from(byTopicAgg.values()).map((r) => ({ name: r.topic, Prelim: pct(r.p.s, r.p.m), June: pct(r.j.s, r.j.m) }));
+        recs = data
+          .slice()
+          .sort((a, b) => a.June - b.June)
+          .slice(0, 5)
+          .map((r) => `${r.name}: June ${r.June.toFixed(1)}% vs Prelim ${r.Prelim.toFixed(1)}%`);
       }
     }
 
-    // ------------ GENERAL (examResults) ------------
-    else if (dataset === "general") {
-      // base filter
-      const arr = generalExamData.filter((r) => {
-        const g = r.grade ? normalize(r.grade) : "";
-        const sel = normalize(selectedGrade);
-        const gradeMatch = selectedGrade === "All Grades" || g.includes(sel);
-
-        const date = r.completedDate || ""; // "YYYY-MM-DD"
-        const fromOk = !generalDateFrom || (date && date >= generalDateFrom);
-        const toOk = !generalDateTo || (date && date <= generalDateTo);
-
-        const examMatch =
-          !generalExamFilter ||
-          (r.exam || "").toLowerCase().includes(generalExamFilter.toLowerCase());
-
-        const nameMatch =
-          !generalNameFilter ||
-          (r.name || "")
-            .toLowerCase()
-            .includes(generalNameFilter.toLowerCase());
-
-        return gradeMatch && fromOk && toOk && examMatch && nameMatch;
+    // ------- Grouping by need (below 50%) -------
+    if (dataset === "main" && analysisType === "needs_grouping") {
+      const pass = 30;
+      const buckets = { overall: { prelim: [], june: [] }, topics: {} };
+      mainEntries.forEach((j) => {
+        const name = (j?.name || j?.studentName || j?.theory?.name || "Unknown").trim();
+        const p = prelimByName.get(name);
+        const merged = mergeByTopic(grabTheory(j), grabTheory(p));
+        const js = merged.reduce((a, b) => ({ s: a.s + b.june.score, m: a.m + b.june.max }), { s: 0, m: 0 });
+        const ps = merged.reduce((a, b) => ({ s: a.s + b.prelim.score, m: a.m + b.prelim.max }), { s: 0, m: 0 });
+        const jPct = pct(js.s, js.m);
+        const pPct = pct(ps.s, ps.m);
+        if (jPct < pass) buckets.overall.june.push({ name, pct: jPct });
+        if (pPct < pass) buckets.overall.prelim.push({ name, pct: pPct });
+        merged.forEach((row) => {
+          const t = row.topic;
+          if (!buckets.topics[t]) buckets.topics[t] = { prelim: [], june: [] };
+          const jP = pct(row.june.score, row.june.max);
+          const pP = pct(row.prelim.score, row.prelim.max);
+          if (jP < pass) buckets.topics[t].june.push({ name, pct: jP });
+          if (pP < pass) buckets.topics[t].prelim.push({ name, pct: pP });
+        });
       });
-
-      // A) Overall: pass/fail counts + average %
-      if (analysisType === "g_overall") {
-        const passThreshold = 50;
-        let pass = 0;
-        let fail = 0;
-        let sumPct = 0;
-
-        arr.forEach((r) => {
-          const pct = Number(r.percentage) || 0;
-          sumPct += pct;
-          if (pct >= passThreshold) pass++;
-          else fail++;
-        });
-
-        const avg = arr.length ? sumPct / arr.length : 0;
-
-        data = [
-          { name: "Pass", value: pass },
-          { name: "Fail", value: fail },
-        ];
-
-        recs = [
-          `Average percentage: ${avg.toFixed(1)}% across ${arr.length} attempt${arr.length === 1 ? "" : "s"}.`,
-          `Pass rate: ${
-            arr.length ? ((pass / arr.length) * 100).toFixed(1) : "0.0"
-          }%. Focus on reducing fails.`,
-        ];
-      }
-
-      // B) By Exam: average percentage per exam
-      else if (analysisType === "g_by_exam") {
-        const agg = {};
-        arr.forEach((r) => {
-          const exam = r.exam || "Unknown";
-          const pct = Number(r.percentage) || 0;
-          if (!agg[exam]) agg[exam] = { sum: 0, n: 0 };
-          agg[exam].sum += pct;
-          agg[exam].n += 1;
-        });
-
-        data = Object.entries(agg).map(([exam, { sum, n }]) => ({
-          name: exam,
-          value: parseFloat((sum / n).toFixed(2)),
-        }));
-
-        recs = data
-          .sort((a, b) => a.value - b.value)
-          .slice(0, 5)
-          .map(
-            (d) =>
-              `${d.name}: ${d.value}% avg. ${
-                d.value < 50 ? "⚠️ needs attention" : ""
-              }`
-          );
-      }
-
-      // C) Trend by Date: average % per date
-      else if (analysisType === "g_trend") {
-        const agg = {};
-        arr.forEach((r) => {
-          const date = r.completedDate || "Unknown";
-          const pct = Number(r.percentage) || 0;
-          if (!agg[date]) agg[date] = { sum: 0, n: 0 };
-          agg[date].sum += pct;
-          agg[date].n += 1;
-        });
-
-        data = Object.entries(agg)
-          .map(([date, { sum, n }]) => ({
-            name: date,
-            value: parseFloat((sum / n).toFixed(2)),
-          }))
-          .sort((a, b) => a.name.localeCompare(b.name));
-
-        if (data.length >= 2) {
-          const first = data[0].value;
-          const last = data[data.length - 1].value;
-          recs = [
-            `Trend: ${last >= first ? "improving" : "declining"} (from ${first.toFixed(
-              1
-            )}% to ${last.toFixed(1)}%).`,
-          ];
-        } else {
-          recs = ["Not enough data points to infer a trend."];
-        }
-      }
-
-      // D) By Student: average % per student
-      else if (analysisType === "g_by_student") {
-        const agg = {};
-        arr.forEach((r) => {
-          const name = r.name || "Unknown";
-          const pct = Number(r.percentage) || 0;
-          if (!agg[name]) agg[name] = { sum: 0, n: 0 };
-          agg[name].sum += pct;
-          agg[name].n += 1;
-        });
-
-        data = Object.entries(agg).map(([student, { sum, n }]) => ({
-          name: student,
-          value: parseFloat((sum / n).toFixed(2)),
-        }));
-
-        // highlight bottom performers
-        recs = data
-          .sort((a, b) => a.value - b.value)
-          .slice(0, 5)
-          .map((d) => `${d.name}: ${d.value}% avg. ${d.value < 50 ? "⚠️" : ""}`);
-      }
+      groups = buckets;
+      data = Object.entries(buckets.topics).map(([t, v]) => ({ name: t, Prelim: v.prelim.length, June: v.june.length }));
+      recs = [
+        `Overall: Prelim <30% = ${groups.overall.prelim.length}, June <50% = ${groups.overall.june.length}.`,
+        `Top topics with most students under 50% are shown in the chart.`,
+      ];
     }
 
     setChartData(data);
     setRecommendations(recs);
-  }, [
-    dataset,
-    analysisType,
-    selectedGrade,
-    selectedStudent,
-    mainExamData,
-    generalExamData,
-    generalDateFrom,
-    generalDateTo,
-    generalExamFilter,
-    generalNameFilter,
-  ]);
+    setGroupings(groups);
+  }, [dataset, analysisType, selectedGrade, selectedStudent, selectedTopic, mainExamData, prelimData]);
 
   const hasData = chartData.length > 0;
 
@@ -657,18 +284,13 @@ export default function AnalysisComponent() {
     const props = pdf.getImageProperties(imgData);
     const height = (props.height * width) / props.width;
     pdf.addImage(imgData, "PNG", 0, 0, width, height);
-    pdf.save(
-      `analysis_${dataset}_${selectedStudent || selectedGrade || "all"}.pdf`
-    );
+    pdf.save(`analysis_${dataset}_${selectedStudent || selectedGrade || "all"}.pdf`);
   };
   const exportToExcel = () => {
     const ws = XLSX.utils.json_to_sheet(chartData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Analysis");
-    XLSX.writeFile(
-      wb,
-      `analysis_${dataset}_${selectedStudent || selectedGrade || "all"}.xlsx`
-    );
+    XLSX.writeFile(wb, `analysis_${dataset}_${selectedStudent || selectedGrade || "all"}.xlsx`);
   };
   const exportToCSV = () => {
     const ws = XLSX.utils.json_to_sheet(chartData);
@@ -676,46 +298,22 @@ export default function AnalysisComponent() {
     const blob = new Blob([csv], { type: "text/csv" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `analysis_${dataset}_${
-      selectedStudent || selectedGrade || "all"
-    }.csv`;
+    link.download = `analysis_${dataset}_${selectedStudent || selectedGrade || "all"}.csv`;
     link.click();
   };
 
-  const resetGeneralFilters = () => {
-    setGeneralDateFrom("");
-    setGeneralDateTo("");
-    setGeneralExamFilter("");
-    setGeneralNameFilter("");
-  };
-
+  // ---------- UI ----------
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <h2 className="text-3xl font-bold text-center mb-6">
-        📊 Exam Analysis Dashboard
-      </h2>
+    <div className="max-w-7xl mx-auto p-6">
+      <h2 className="text-3xl font-bold text-center mb-6">📊 Exam Analysis Dashboard</h2>
 
-      <button
-        onClick={() => navigate("/all-results")}
-        className="mb-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-      >
-        ← Return to All Results
-      </button>
+      <button onClick={() => navigate("/all-results")} className="mb-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">← Return to All Results</button>
 
       {/* Top controls */}
       <div className="flex flex-wrap gap-4 mb-4 items-end">
         <div>
           <label className="font-medium mr-2">Dataset:</label>
-          <select
-            value={dataset}
-            onChange={(e) => {
-              const next = e.target.value;
-              setDataset(next);
-              // set sensible default analysis type per dataset
-              setAnalysisType(next === "general" ? "g_overall" : "overall");
-            }}
-            className="border rounded px-3 py-1"
-          >
+          <select value={dataset} onChange={(e) => { const next = e.target.value; setDataset(next); setAnalysisType(next === "general" ? "g_overall" : "overall"); }} className="border rounded px-3 py-1">
             <option value="main">Main Exams (Theory + Practical)</option>
             <option value="general">General Exams (Attempts)</option>
           </select>
@@ -723,141 +321,104 @@ export default function AnalysisComponent() {
 
         <div>
           <label className="font-medium mr-2">Grade:</label>
-          <select
-            value={selectedGrade}
-            onChange={(e) => setSelectedGrade(e.target.value)}
-            className="border rounded px-3 py-1"
-          >
-            {grades.map((g) => (
-              <option key={g}>{g}</option>
-            ))}
+          <select value={selectedGrade} onChange={(e) => setSelectedGrade(e.target.value)} className="border rounded px-3 py-1">
+            { ["All Grades","Grade 10","Grade 11","Grade 12","12A","12B"].map((g) => (<option key={g}>{g}</option>)) }
           </select>
         </div>
 
         <div>
           <label className="font-medium mr-2">Analysis:</label>
-          <select
-            value={analysisType}
-            onChange={(e) => setAnalysisType(e.target.value)}
-            className="border rounded px-3 py-1"
-          >
-            {analysisOptions.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
+          <select value={analysisType} onChange={(e) => setAnalysisType(e.target.value)} className="border rounded px-3 py-1">
+            {analysisOptions.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
           </select>
         </div>
 
-        {dataset === "main" &&
-          (analysisType === "question" || analysisType === "individual") && (
-            <div>
-              <label className="font-medium mr-2">Student:</label>
-              <select
-                value={selectedStudent}
-                onChange={(e) => setSelectedStudent(e.target.value)}
-                className="border rounded px-3 py-1"
-              >
-                <option value="">Select</option>
-                {Object.keys(mainExamData).map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+        {(analysisType === "compare_by_topic") && (
+          <div>
+            <label className="font-medium mr-2">Topic:</label>
+            <select value={selectedTopic} onChange={(e) => setSelectedTopic(e.target.value)} className="border rounded px-3 py-1">
+              <option>All Topics</option>
+              <option>MCQ</option>
+              <option>MATCHING ITEMS</option>
+              <option>T/F</option>
+              <option>SYSTEMS TECHNOLOGIES</option>
+              <option>INTERNET & NETWORKS</option>
+              <option>INTERNET & NETWORK TECH</option>
+              <option>INFORMATION MANAGEMENT</option>
+              <option>SOCIAL IMPLICATIONS</option>
+              <option>SOLUTION DEVELOPMENT</option>
+              <option>APPLICATION SCENARIO</option>
+              <option>TASK SCENARIO</option>
+            </select>
+          </div>
+        )}
+
+        {(dataset === "main" && (analysisType === "question" || analysisType === "individual" || analysisType === "compare_by_student")) && (
+          <div>
+            <label className="font-medium mr-2">Student:</label>
+            <select value={selectedStudent} onChange={(e) => setSelectedStudent(e.target.value)} className="border rounded px-3 py-1">
+              <option value="">Select</option>
+              {Object.values(mainExamData).map((e) => {
+                const nm = (e?.name || e?.studentName || e?.theory?.name || e?.id || "Unknown").trim();
+                return <option key={nm} value={nm}>{nm}</option>;
+              })}
+            </select>
+          </div>
+        )}
 
         <div>
           <label className="font-medium mr-2">Chart Type:</label>
-          <select
-            value={chartType}
-            onChange={(e) => setChartType(e.target.value)}
-            className="border rounded px-3 py-1"
-          >
-            <option value="pie">Pie</option>
+          <select value={chartType} onChange={(e) => setChartType(e.target.value)} className="border rounded px-3 py-1">
             <option value="bar">Bar</option>
             <option value="line">Line</option>
+            <option value="pie">Pie</option>
           </select>
         </div>
       </div>
-
-      {/* General dataset filters */}
-      {dataset === "general" && (
-        <div className="grid md:grid-cols-5 sm:grid-cols-2 grid-cols-1 gap-3 mb-5">
-          <div className="flex flex-col">
-            <label className="text-xs text-gray-600">Date from</label>
-            <input
-              type="date"
-              value={generalDateFrom}
-              onChange={(e) => setGeneralDateFrom(e.target.value)}
-              className="border rounded px-3 py-2"
-            />
-          </div>
-          <div className="flex flex-col">
-            <label className="text-xs text-gray-600">Date to</label>
-            <input
-              type="date"
-              value={generalDateTo}
-              onChange={(e) => setGeneralDateTo(e.target.value)}
-              className="border rounded px-3 py-2"
-            />
-          </div>
-          <div className="flex flex-col">
-            <label className="text-xs text-gray-600">Exam</label>
-            <input
-              value={generalExamFilter}
-              onChange={(e) => setGeneralExamFilter(e.target.value)}
-              placeholder="e.g. Algebra Quiz"
-              className="border rounded px-3 py-2"
-            />
-          </div>
-          <div className="flex flex-col">
-            <label className="text-xs text-gray-600">Student name</label>
-            <input
-              value={generalNameFilter}
-              onChange={(e) => setGeneralNameFilter(e.target.value)}
-              placeholder="e.g. Sipho"
-              className="border rounded px-3 py-2"
-            />
-          </div>
-          <div className="flex items-end">
-            <button
-              onClick={resetGeneralFilters}
-              className="w-full border rounded px-3 py-2 hover:bg-gray-100"
-            >
-              Reset filters
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Chart + Recommendations */}
       <div ref={chartRef} className="bg-white p-4 rounded shadow">
         {hasData ? (
           <>
-            {chartType === "pie" && (
+            {/* When comparing, prefer grouped Bar/Line */}
+            {analysisType.startsWith("compare_") && (
+              <ResponsiveContainer width="100%" height={420}>
+                {chartType === 'line' ? (
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis domain={[0, 100]} tickFormatter={(v)=>`${v}%`} />
+                    <Tooltip formatter={(v)=>`${Number(v).toFixed(1)}%`} />
+                    <Legend />
+                    <Line type="monotone" dataKey="Prelim" stroke="#8884d8" dot />
+                    <Line type="monotone" dataKey="June" stroke="#00C49F" dot />
+                  </LineChart>
+                ) : (
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis domain={[0, 100]} tickFormatter={(v)=>`${v}%`} />
+                    <Tooltip formatter={(v)=>`${Number(v).toFixed(1)}%`} />
+                    <Legend />
+                    <Bar dataKey="Prelim" fill="#8884d8" />
+                    <Bar dataKey="June" fill="#00C49F" />
+                  </BarChart>
+                )}
+              </ResponsiveContainer>
+            )}
+
+            {!analysisType.startsWith("compare_") && chartType === "pie" && (
               <ResponsiveContainer width="100%" height={400}>
                 <PieChart>
-                  <Pie
-                    data={chartData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={150}
-                    label
-                  >
-                    {chartData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
+                  <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={150} label>
+                    {chartData.map((_, i) => (<Cell key={i} fill={COLORS[i % COLORS.length]} />))}
                   </Pie>
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
             )}
 
-            {chartType === "bar" && (
+            {!analysisType.startsWith("compare_") && chartType === "bar" && (
               <ResponsiveContainer width="100%" height={400}>
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -869,7 +430,7 @@ export default function AnalysisComponent() {
               </ResponsiveContainer>
             )}
 
-            {chartType === "line" && (
+            {!analysisType.startsWith("compare_") && chartType === "line" && (
               <ResponsiveContainer width="100%" height={400}>
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -882,51 +443,102 @@ export default function AnalysisComponent() {
             )}
 
             <ul className="list-disc list-inside mt-4 space-y-1">
-              {recommendations.map((rec, idx) => (
-                <li key={idx}>{rec}</li>
-              ))}
+              {recommendations.map((rec, idx) => (<li key={idx}>{rec}</li>))}
             </ul>
+
+            {analysisType === "needs_grouping" && (
+              <NeedsTable groups={groupings} />
+            )}
           </>
         ) : (
-          <p className="text-center text-gray-500">
-            No data for selected options.
-          </p>
+          <p className="text-center text-gray-500">No data for selected options.</p>
         )}
       </div>
 
       {/* Exports */}
       {hasData && (
         <div className="mt-4 flex gap-4">
-          <button
-            onClick={exportToPDF}
-            className="bg-blue-600 text-white px-4 py-2 rounded"
-          >
-            📄 PDF
-          </button>
-          <button
-            onClick={exportToExcel}
-            className="bg-green-600 text-white px-4 py-2 rounded"
-          >
-            📊 Excel
-          </button>
-          <button
-            onClick={exportToCSV}
-            className="bg-yellow-500 text-white px-4 py-2 rounded"
-          >
-            📁 CSV
-          </button>
+          <button onClick={exportToPDF} className="bg-blue-600 text-white px-4 py-2 rounded">📄 PDF</button>
+          <button onClick={exportToExcel} className="bg-green-600 text-white px-4 py-2 rounded">📊 Excel</button>
+          <button onClick={exportToCSV} className="bg-yellow-500 text-white px-4 py-2 rounded">📁 CSV</button>
         </div>
       )}
 
-      {/* CTA to weak-students grouping */}
-      <div
-        onClick={() => navigate("/group-weak-students")}
-        className="mt-6 cursor-pointer bg-pink-600 text-white rounded-xl shadow p-4 hover:scale-105 transition"
-      >
+      {/* CTA */}
+      <div onClick={() => navigate("/group-weak-students")} className="mt-6 cursor-pointer bg-pink-600 text-white rounded-xl shadow p-4 hover:scale-105 transition">
         <h3 className="text-xl font-bold">👥 Group Students Needing Attention</h3>
-        <p className="text-center">
-          Identify and plan extra lessons for students scoring less than 50%
-        </p>
+        <p className="text-center">Identify and plan extra lessons for students scoring less than 50%</p>
+      </div>
+    </div>
+  );
+}
+
+// ----- local helpers (mirror those from ResultsAnalysisHub) -----
+function pct(s, m) { return m > 0 ? (Number(s || 0) / Number(m || 0)) * 100 : 0; }
+function mergeByTopic(juneTheory, prelimTheory) {
+  const map = new Map();
+  const add = (list, key) => {
+    (list || []).forEach((r) => {
+      const topic = r.type || r.topic || "Unknown";
+      const score = Number(r.score || 0);
+      const max = Number(r.max || r.total || r.outOf || 0) || guessMaxForTopic(topic, score);
+      if (!map.has(topic)) map.set(topic, { topic, june: { score: 0, max: 0 }, prelim: { score: 0, max: 0 } });
+      const bucket = map.get(topic)[key];
+      bucket.score += score; bucket.max += max || 0;
+    });
+  };
+  add(juneTheory, "june");
+  add(prelimTheory, "prelim");
+  return Array.from(map.values());
+}
+function guessMaxForTopic(topic, fallbackScore) {
+  const T = String(topic).toLowerCase();
+  if (T.includes("mcq")) return 10;
+  if (T.includes("matching")) return 10;
+  if (T.includes("t/")) return 5;
+  if (T.includes("scenario")) return 25;
+  if (T.includes("systems")) return 20;
+  if (T.includes("internet")) return 20;
+  if (T.includes("information management")) return 10;
+  if (T.includes("social")) return 10;
+  if (T.includes("solution") || T.includes("development")) return 20;
+  return Math.max(10, Number(fallbackScore || 10));
+}
+
+function buildCompareRecs(rows) {
+  const improving = rows.filter((r) => (r.June || 0) - (r.Prelim || 0) >= 5).length;
+  const regressing = rows.filter((r) => (r.June || 0) - (r.Prelim || 0) <= -5).length;
+  return [
+    `${improving} improving (≥ +5%), ${regressing} regressing (≤ -5%).`,
+    `Focus on students/topics below 50% and those regressing.`,
+  ];
+}
+
+function NeedsTable({ groups }) {
+  if (!groups?.topics) return null;
+  const rows = Object.entries(groups.topics).map(([topic, v]) => ({ topic, prelim: v.prelim.length, june: v.june.length }));
+  return (
+    <div className="mt-6">
+      <h4 className="font-semibold mb-2">Students under 50% by Topic</h4>
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-left border-b">
+              <th className="py-2 pr-4">Topic</th>
+              <th className="py-2 pr-4">{"#<50% (Prelim)"}</th>
+              <th className="py-2 pr-4">{"#<50% (June)"}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.topic} className="border-b">
+                <td className="py-2 pr-4">{r.topic}</td>
+                <td className="py-2 pr-4">{r.prelim}</td>
+                <td className="py-2 pr-4">{r.june}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ export { default as ReviewPage } from "./ReviewPage";
 export { default as ResultsListPage } from "./ResultsListPage";
 export { default as AllResults } from "./AllResults";
 export { default as TeacherDashboard } from "./TeacherDashboard";
-export { default as AnalysisComponent } from "./AnalysisComponent";
 export { default as AdminGoogleLogin } from "./AdminGoogleLogin";
 export { default as StudentGoogleLogin } from "./StudentGoogleLogin";
 export { default as LeaderboardCard } from "./LeaderboardCard";
+export { default as AnalysisComponent } from "./AnalysisComponent";
