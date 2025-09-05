@@ -36,11 +36,16 @@ export const termExams = {
     // GRADE 11
     "Grade 11": {
       "Term 1": [
-        { id: 201, title: "Databases Intro", password: "grade11pass" },
-        { id: 202, title: "Spreadsheet Basics", password: "grade11pass" },
+        { id: 201, title: "SYSTEM TECHNOLOGIES - Hardware", password: "grade11pass" },
+        { id: 202, title: "SOCIAL IMPLICATIONS - Accessibility, Security, Health & Careers", password: "grade11pass" },
+        { id: 203, title: "SYSTEM TECHNOLOGIES - Computer Management", password: "grade11pass" },
+        { id: 204, title: "SOLUTION DEVELOPMENT - Word Processing", password: "grade11pass" },
+        { id: 205, title: "Spreadsheet Basics", password: "grade11pass" },
+        
+
       ],
       "Term 2": [
-        { id: 1, title: "Databases - Grade 11", password: "grade11pass" },
+        { id: 1, title: "Databases - Grade 11", password: "grade11pass1" },
         { id: 2, title: "SPREADSHEETS - Grade 11", password: "grade11pass1" },
         { id: 3, title: "NETWORKS - Grade 11", password: "grade11pass1" },
         { id: 4, title: "Internet & WWW - Grade 11", password: "grade11pass1" },
@@ -61,6 +66,11 @@ export const termExams = {
         { id: 7, title: "Spreadsheets 2", password: "grade11pass" },
         { id: 8, title: "Word Processing 2", password: "grade11pass" },
         { id: 9, title: "HTML 2", password: "grade11pass" },
+        { id: 10, title: "SYSTEM TECHNOLOGIES - Software", password: "grade11pass" },
+        { id: 11, title: "INTERNET TECHNOLOGIES - Internet, www and communications", password: "grade11pass" },
+        { id: 12, title: "SYSTEM TECHNOLOGIES - Hardware, Software & Computer Management", password: "grade11pass" },
+        { id: 13, title: "SOCIAL IMPLICATIONS", password: "grade11pass" },
+
       ],
       "Term 4": [
         { id: 205, title: "Mock Paper 1", password: "grade11pass" },
