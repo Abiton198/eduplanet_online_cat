@@ -3,720 +3,483 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { addDoc, collection } from "firebase/firestore";
-import { db } from "../utils/firebase";
+import { db, auth } from "../utils/firebase";
+import { signOut } from "firebase/auth";
 import ExamResultsCard from "../utils/ExamResultCard";
 import { termExams } from "../data/termExams";
-import LeaderboardCard from "./LeaderboardCard";
-import { getAuth, onAuthStateChanged, signInAnonymously } from "firebase/auth";
 import { questions } from "../utils/Questions";
 import { ensureStudentProfile } from "../utils/pointsSystem/ensureStudentProfile";
 import { awardPointsFromExamHistory } from "../utils/pointsSystem/awardPointsFromExamHistory";
-import FloatingTopicCard from "../utils/FloatingTopicCard";
-import { catTopics } from "../data/catTopicsData";
-import FloatingAbbreviationsCard from "../utils/FloatingAbbreviationsCard";
-import { abbreviationsData } from "../data/abbreviationsData";
 import FloatingStudyHub from "../utils/FloatingStudyHub";
+import { Sun, Moon, LogOut, Clock, BookOpen } from "lucide-react";
 
+// SweetAlert2 with consistent styling
+const swal = Swal.mixin({
+  confirmButtonColor: "#10b981", // emerald-500
+  cancelButtonColor: "#ef4444",  // red-500
+});
+
+// Format seconds → MM:SS
 function formatTime(seconds) {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
-
-// helpers to normalize fields we rely on elsewhere
-function makeNameKey(name) {
-  return (name || "").toLowerCase().replace(/[,\s]+/g, " ").trim();
-}
-function parseGradeYear(grade) {
-  const m = String(grade || "").match(/\d{1,2}/);
-  return m ? Number(m[0]) : null;
-}
-
-// Reusable SweetAlert2 with consistent green/red buttons
-const swal = Swal.mixin({
-  confirmButtonColor: "#16a34a", // green-600
-  cancelButtonColor: "#dc2626",  // red-600
-});
 
 export default function ExamPage({ studentInfo, addResult }) {
   const navigate = useNavigate();
 
+  // Exam State
   const [selectedExam, setSelectedExam] = useState(null);
   const [authenticated, setAuthenticated] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 mins
+  const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutes
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [expandedTerm, setExpandedTerm] = useState(null);
+
+  // Firebase & User
   const [user, setUser] = useState(null);
   const [didAward, setDidAward] = useState(false);
 
-  // UI/validation
+  // UI & Anti-Cheat
   const [triedSubmit, setTriedSubmit] = useState(false);
   const [unansweredIds, setUnansweredIds] = useState(new Set());
-  const questionRefs = useRef({}); // q.id -> element
-
-  // Anti-cheat
   const [focusStrikes, setFocusStrikes] = useState(0);
   const [disqualified, setDisqualified] = useState(false);
-  const lastFocusEventTsRef = useRef(0); // debounce blur/visibilitychange
 
-  // Submission lock (prevents double-save on auto submit)
+  const questionRefs = useRef({});
   const isSubmittingRef = useRef(false);
-
+  const lastFocusEventTsRef = useRef(0);
   const formRef = useRef(null);
 
-  const examActive = authenticated && !!selectedExam && !submitted;
+  const examActive = authenticated && selectedExam && !submitted;
+  const isDark = document.documentElement.classList.contains("dark");
 
-  // -------------------------------------------------
-  // Auth + profile + auto-award (runs once per login)
-  // -------------------------------------------------
+  // ──────────────────────────────────────────────
+  // Theme Toggle & Logout
+  // ──────────────────────────────────────────────
+  const toggleTheme = () => {
+    document.documentElement.classList.toggle("dark");
+    localStorage.setItem("eduplanet-theme", isDark ? "light" : "dark");
+  };
+
+  const handleLogout = () => {
+    swal
+      .fire({
+        title: "Logout?",
+        text: "You will be signed out of your session.",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Yes, Logout",
+        cancelButtonText: "Stay",
+      })
+      .then((result) => {
+        if (result.isConfirmed) {
+          signOut(auth);
+          localStorage.clear();
+          navigate("/");
+        }
+      });
+  };
+
+  // ──────────────────────────────────────────────
+  // Firebase Auth + Profile Setup
+  // ──────────────────────────────────────────────
   useEffect(() => {
-    const auth = getAuth();
-
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      try {
-        if (!u) {
-          await signInAnonymously(auth);
-          return;
+    const unsub = auth.onAuthStateChanged(async (u) => {
+      setUser(u);
+      if (u && studentInfo) {
+        await ensureStudentProfile({
+          uid: u.uid,
+          name: studentInfo.name,
+          grade: studentInfo.grade,
+        });
+        if (!didAward) {
+          await awardPointsFromExamHistory(u.uid, studentInfo.name);
+          setDidAward(true);
         }
-
-        setUser(u);
-
-        if (studentInfo?.name && studentInfo?.grade) {
-          await ensureStudentProfile({
-            uid: u.uid,
-            name: studentInfo.name,
-            grade: studentInfo.grade,
-          });
-
-          if (!didAward) {
-            const res = await awardPointsFromExamHistory(u.uid, studentInfo.name);
-            if (res?.error) console.warn("awardPoints error:", res.message);
-            else console.log(res?.message || "awardPoints: done");
-            setDidAward(true);
-          }
-        }
-      } catch (e) {
-        console.error("Auth/init flow failed:", e);
       }
     });
-
     return () => unsub();
   }, [studentInfo, didAward]);
 
-  // ------------------------------------
-  // Redirect if no student info provided
-  // ------------------------------------
+  // Redirect if no student info
   useEffect(() => {
-    if (!studentInfo) {
-      navigate("/");
-      return;
-    }
-    localStorage.setItem("studentName", studentInfo.name ?? "");
-    localStorage.setItem("studentGrade", studentInfo.grade ?? "");
+    if (!studentInfo) navigate("/");
   }, [studentInfo, navigate]);
 
-  // ---------------------------
-  // Countdown timer for an exam
-  // ---------------------------
+  // ──────────────────────────────────────────────
+  // Exam Timer (25 minutes)
+  // ──────────────────────────────────────────────
   useEffect(() => {
     if (!examActive) return;
+
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          clearInterval(timer);
-          // Time over → force submit once (guarded by isSubmittingRef)
-          actuallySubmitExam(false);
+          actuallySubmitExam(false); // Auto-submit on time end
           return 0;
         }
-        if (prev === 300) swal.fire("⚠️ 5 minutes left!", "", "info");
+        if (prev === 300) {
+          swal.fire("5 Minutes Left!", "Finish strong!", "warning");
+        }
         return prev - 1;
       });
     }, 1000);
+
     return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [examActive]);
 
-  // ---------------------------------------------
-  // Exam selection with password and attempt caps
-  // ---------------------------------------------
+  // ──────────────────────────────────────────────
+  // Exam Selection with Password + Attempt Limit
+  // ──────────────────────────────────────────────
   const handleSelectExam = (exam) => {
-    const studentName = localStorage.getItem("studentName") || "Unknown";
-    const attemptsKey = `${studentName}_${exam.title}_attempts`;
-    const lastAttemptKey = `${studentName}_${exam.title}_lastAttempt`;
-
+    const attemptsKey = `${studentInfo.name}_${exam.title}_attempts`;
     const attempts = parseInt(localStorage.getItem(attemptsKey) || "0", 10);
-    const lastAttemptTime = localStorage.getItem(lastAttemptKey);
-    const now = new Date();
 
     if (attempts >= 3) {
-      swal.fire("Maximum Attempts Reached", "", "error");
+      swal.fire("Max Attempts Reached", "You've used all 3 attempts for this exam.", "error");
       return;
     }
 
-    if (lastAttemptTime) {
-      const lastAttemptDate = new Date(lastAttemptTime);
-      const hoursSince = (now - lastAttemptDate) / (1000 * 60 * 60);
-      if (hoursSince < 48) {
-        swal.fire("Too Soon", "Wait 48hrs after attempt before trying again.", "warning");
-        return;
-      }
-    }
-
-    swal.fire({
-      title: `Enter Password for ${exam.title}`,
-      input: "password",
-      showCancelButton: true,
-      confirmButtonText: "Enter",
-      preConfirm: (inputPassword) => {
-        if (inputPassword === exam.password) {
-          setSelectedExam(exam);
-          setAuthenticated(true);
-          setTimeLeft(25 * 60);
-          localStorage.setItem("examStartTime", new Date().toISOString());
-          localStorage.setItem("examTitle", exam.title);
-          // Optional rules reminder
-          setTimeout(() => {
-            swal.fire({
-              icon: "info",
-              title: "Exam Rules",
-              html:
-                "No copy/cut/paste, right-click disabled.<br/>" +
-                "Switching tabs/windows triggers a warning; second time = <b>ZERO</b>.",
-            });
-          }, 50);
-          return true;
-        } else {
-          Swal.showValidationMessage("Incorrect password");
-          return false;
-        }
-      },
-    });
+    swal
+      .fire({
+        title: `Enter Password for ${exam.title}`,
+        input: "password",
+        inputPlaceholder: "Password required",
+        showCancelButton: true,
+        confirmButtonText: "Start Exam",
+        preConfirm: (pwd) => {
+          if (pwd === exam.password) {
+            setSelectedExam(exam);
+            setAuthenticated(true);
+            setTimeLeft(25 * 60);
+            setAnswers({});
+            setSubmitted(false);
+            setFocusStrikes(0);
+            setDisqualified(false);
+            localStorage.setItem("examStartTime", new Date().toISOString());
+          } else {
+            Swal.showValidationMessage("Incorrect password");
+          }
+        },
+      });
   };
 
-  // ----------------
-  // Track answers UI
-  // ----------------
+  // ──────────────────────────────────────────────
+  // Answer Handling
+  // ──────────────────────────────────────────────
   const handleChange = (id, answer) => {
     setAnswers((prev) => ({ ...prev, [id]: answer }));
-    // Clear red highlight once answered after attempted submit
     if (unansweredIds.has(id)) {
-      const next = new Set(unansweredIds);
-      next.delete(id);
-      setUnansweredIds(next);
+      const newSet = new Set(unansweredIds);
+      newSet.delete(id);
+      setUnansweredIds(newSet);
     }
   };
 
-  // ----------------------------------------------------
-  // Anti-cheat: keyboard, clipboard, context menu, focus
-  // ----------------------------------------------------
-  const preventDefault = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const onKeyDownBlocker = useCallback((e) => {
-    const key = e.key?.toLowerCase?.() || "";
-    const ctrlOrMeta = e.ctrlKey || e.metaKey;
-
-    // Block F5 / F12 / PrintScreen
-    if (e.key === "F5" || e.key === "F12" || e.key === "PrintScreen") {
-      preventDefault(e);
-      return;
-    }
-
-    // Block common combos
-    if (ctrlOrMeta) {
-      const blocked = ["c", "x", "v", "p", "s", "u", "r"]; // copy/cut/paste/print/save/view-source/refresh
-      if (blocked.includes(key) || (e.shiftKey && (key === "i" || key === "j"))) {
-        preventDefault(e);
-        return;
-      }
-    }
-  }, []);
+  // ──────────────────────────────────────────────
+  // Anti-Cheat: Block Copy/Paste, Tab Switch, etc.
+  // ──────────────────────────────────────────────
+  const preventCheat = useCallback((e) => e.preventDefault(), []);
 
   const handleFocusViolation = useCallback(() => {
     if (!examActive) return;
-
-    // Debounce quick double firing (blur + visibilitychange)
     const now = Date.now();
     if (now - lastFocusEventTsRef.current < 1500) return;
     lastFocusEventTsRef.current = now;
 
-    setFocusStrikes((prev) => {
-      const next = prev + 1;
+    setFocusStrikes((s) => {
+      const next = s + 1;
       if (next === 1) {
-        swal.fire({
-          icon: "warning",
-          title: "Tab switch detected",
-          text: "This is your warning. Another switch will result in a ZERO for this attempt.",
-        });
+        swal.fire("Warning", "Tab/window switch detected. One more = ZERO.", "warning");
       } else if (next >= 2) {
-        disqualifyAndSubmitZero("tab-switch");
+        setDisqualified(true);
+        actuallySubmitExam(true);
       }
       return next;
     });
   }, [examActive]);
 
-  const disqualifyAndSubmitZero = async (reason = "cheating") => {
-    if (submitted || isSubmittingRef.current) return;
-    setDisqualified(true);
-    swal
-      .fire({
-        icon: "error",
-        title: "Disqualified",
-        html: "Cheating policy triggered.<br/><b>Your exam will be submitted with a ZERO.</b>",
-      })
-      .then(() => {
-        actuallySubmitExam(true, reason);
-      });
-  };
-
   useEffect(() => {
     if (!examActive) return;
 
-    // Clipboard & context menu
-    const blockCtx = (e) => preventDefault(e);
-    const blockCopy = (e) => preventDefault(e);
-    const blockCut = (e) => preventDefault(e);
-    const blockPaste = (e) => preventDefault(e);
-    document.addEventListener("contextmenu", blockCtx);
-    document.addEventListener("copy", blockCopy);
-    document.addEventListener("cut", blockCut);
-    document.addEventListener("paste", blockPaste);
+    const events = [
+      "contextmenu", "copy", "cut", "paste", "selectstart",
+    ];
+    events.forEach((ev) => document.addEventListener(ev, preventCheat));
 
-    // Keyboard
-    document.addEventListener("keydown", onKeyDownBlocker, true);
-
-    // Visibility & focus (tab/window switch)
-    const onVis = () => {
-      if (document.hidden) handleFocusViolation();
-    };
-    const onBlur = () => handleFocusViolation();
-
-    document.addEventListener("visibilitychange", onVis);
-    window.addEventListener("blur", onBlur);
-
-    // Before unload (warn only)
-    const beforeUnload = (e) => {
-      if (examActive) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-    window.addEventListener("beforeunload", beforeUnload);
+    document.addEventListener("visibilitychange", handleFocusViolation);
+    window.addEventListener("blur", handleFocusViolation);
 
     return () => {
-      document.removeEventListener("contextmenu", blockCtx);
-      document.removeEventListener("copy", blockCopy);
-      document.removeEventListener("cut", blockCut);
-      document.removeEventListener("paste", blockPaste);
-      document.removeEventListener("keydown", onKeyDownBlocker, true);
-      document.removeEventListener("visibilitychange", onVis);
-      window.removeEventListener("blur", onBlur);
-      window.removeEventListener("beforeunload", beforeUnload);
+      events.forEach((ev) => document.removeEventListener(ev, preventCheat));
+      document.removeEventListener("visibilitychange", handleFocusViolation);
+      window.removeEventListener("blur", handleFocusViolation);
     };
-  }, [examActive, onKeyDownBlocker, handleFocusViolation]);
+  }, [examActive, preventCheat, handleFocusViolation]);
 
-  // ------------
-  // Submit exam
-  // ------------
-  const handleSubmitExam = async () => {
-    if (submitted || isSubmittingRef.current) return;
-
-    const qs = selectedExam ? questions[selectedExam.title] || [] : [];
+  // ──────────────────────────────────────────────
+  // Submit Exam (Core Logic)
+  // ──────────────────────────────────────────────
+  const handleSubmitExam = () => {
+    const qs = questions[selectedExam.title] || [];
     const missing = qs.filter((q) => !answers[q.id]);
 
     if (missing.length > 0) {
       setTriedSubmit(true);
-      setUnansweredIds(new Set(missing.map((m) => m.id)));
+      setUnansweredIds(new Set(missing.map((q) => q.id)));
 
-      const firstUnansweredId = missing[0]?.id;
       swal
         .fire({
           icon: "warning",
-          title: "You have unanswered questions",
-          html: `You left <b>${missing.length}</b> question(s) blank. Review them before submitting?`,
+          title: "Unanswered Questions",
+          text: `You have ${missing.length} unanswered question(s). Review?`,
           showCancelButton: true,
-          confirmButtonText: "Review unanswered",
-          cancelButtonText: "Submit anyway",
-          reverseButtons: true,
+          confirmButtonText: "Review",
+          cancelButtonText: "Submit Anyway",
         })
-        .then((r) => {
-          if (r.isConfirmed && firstUnansweredId) {
-            const el = questionRefs.current[firstUnansweredId];
-            if (el?.scrollIntoView) {
-              el.scrollIntoView({ behavior: "smooth", block: "start" });
-            }
-          } else if (r.dismiss === Swal.DismissReason.cancel) {
+        .then((res) => {
+          if (res.isConfirmed && missing[0]) {
+            questionRefs.current[missing[0].id]?.scrollIntoView({ behavior: "smooth" });
+          } else if (res.dismiss === Swal.DismissReason.cancel) {
             actuallySubmitExam(false);
           }
         });
-
       return;
     }
-
-    // nothing missing
     actuallySubmitExam(false);
   };
 
-  // Core saver — GUARDED against double-submit
-  const actuallySubmitExam = async (forceZero = false, cheatReason = null) => {
-    if (submitted || isSubmittingRef.current) return;
-    isSubmittingRef.current = true; // lock
+  const actuallySubmitExam = async (forceZero = false) => {
+    if (isSubmittingRef.current || submitted) return;
+    isSubmittingRef.current = true;
     setSubmitted(true);
 
-    const endTime = new Date();
-    const startTimeStr = localStorage.getItem("examStartTime");
-    const startTime = startTimeStr ? new Date(startTimeStr) : new Date();
-    const timeSpentS = Math.round((endTime - startTime) / 1000);
-    const timeSpent = `${Math.floor(timeSpentS / 60)}m ${timeSpentS % 60}s`;
-
-    const studentName = studentInfo?.name || "Unknown";
-    const studentGrade = studentInfo?.grade || "";
-    const examTitle = selectedExam?.title || "Unknown";
-    const uid = user?.uid || null;
-
-    const attemptsKey = `${studentName}_${examTitle}_attempts`;
-    const prevAtt = parseInt(localStorage.getItem(attemptsKey) || "0", 10);
-    localStorage.setItem(attemptsKey, String(prevAtt + 1));
-    localStorage.setItem(`${studentName}_${examTitle}_lastAttempt`, new Date().toISOString());
-
-    const qs = selectedExam ? questions[selectedExam.title] || [] : [];
+    const qs = questions[selectedExam.title] || [];
     let score = 0;
     const answersArray = qs.map((q) => {
-      const studentAnswer = answers[q.id] || "";
-      if (!forceZero && studentAnswer === q.correctAnswer) score++;
-      return {
-        question: q.question,
-        answer: studentAnswer,
-        correctAnswer: q.correctAnswer,
-      };
+      const ans = answers[q.id] || "";
+      if (!forceZero && ans === q.correctAnswer) score++;
+      return { question: q.question, answer: ans, correctAnswer: q.correctAnswer };
     });
 
-    const totalQs = qs.length;
-    const finalScore = forceZero ? 0 : score;
-    const percentage = totalQs ? ((finalScore / totalQs) * 100).toFixed(2) : "0.00";
-    const unanswered = qs.filter((q) => !answers[q.id]).length;
-
-    const nameKey = makeNameKey(studentName);
-    const gradeYear = parseGradeYear(studentGrade);
-
     const result = {
-      studentId: uid,
-      name: studentName,
-      nameKey,
-      grade: studentGrade,
-      gradeYear,
-      exam: examTitle,
-      score: finalScore,
-      percentage,
-      unanswered,
-      timeSpent,
-      completedDate: endTime.toISOString().split("T")[0],
-      completedTimeOnly: `${String(endTime.getHours()).padStart(2, "0")}:${String(
-        endTime.getMinutes()
-      ).padStart(2, "0")}`,
-      completedTime: endTime.toISOString(),
-      attempts: prevAtt + 1,
-      answers: answersArray,
-      disqualified: !!forceZero,
-      cheatReason: forceZero ? (cheatReason || "policy-triggered") : null,
+      studentId: user?.uid,
+      name: studentInfo.name,
+      grade: studentInfo.grade,
+      exam: selectedExam.title,
+      score: forceZero ? 0 : score,
+      total: qs.length,
+      percentage: qs.length ? ((score / qs.length) * 100).toFixed(1) : 0,
+      timeSpent: formatTime(25 * 60 - timeLeft),
+      completedTime: new Date().toISOString(),
+      disqualified: forceZero,
       focusStrikes,
+      answers: answersArray,
     };
 
     try {
       await addDoc(collection(db, "examResults"), result);
-      console.log("✅ Exam saved with answers:", result);
+      addResult?.(result);
+
+      // Update attempt count
+      const key = `${studentInfo.name}_${selectedExam.title}_attempts`;
+      localStorage.setItem(key, String((parseInt(localStorage.getItem(key) || "0") + 1)));
     } catch (err) {
-      console.error("❌ Error saving result:", err);
+      console.error("Save failed:", err);
     }
 
-    if (typeof addResult === "function") addResult(result);
-
-    const title = forceZero ? "Submitted (0)" : "Submitted!";
-    const text = forceZero ? "Attempt disqualified" : `You scored ${finalScore}`;
-    swal.fire(title, text, forceZero ? "error" : "success").then(() => {
-      navigate("/results");
-    });
+    swal
+      .fire({
+        icon: forceZero ? "error" : "success",
+        title: forceZero ? "Disqualified" : "Exam Submitted!",
+        text: forceZero ? "Cheating detected." : `Score: ${score}/${qs.length}`,
+      })
+      .then(() => navigate("/results"));
   };
 
-  // ---------------------------
-  // Grade selection for the UI
-  // ---------------------------
-  const cleanedGrade = (studentInfo?.grade || "").trim().toLowerCase();
-  let gradeKey = null;
-  if (cleanedGrade.includes("grade 12") || cleanedGrade.startsWith("12")) {
-    gradeKey = "Grade 12";
-  } else if (cleanedGrade.includes("grade 11") || cleanedGrade.startsWith("11")) {
-    gradeKey = "Grade 11";
-  } else if (cleanedGrade.includes("grade 10") || cleanedGrade.startsWith("10")) {
-    gradeKey = "Grade 10";
-  }
+  // Grade detection
+  const cleanedGrade = (studentInfo?.grade || "").toLowerCase();
+  const gradeKey =
+    cleanedGrade.includes("12") ? "Grade 12" :
+    cleanedGrade.includes("11") ? "Grade 11" :
+    cleanedGrade.includes("10") ? "Grade 10" : null;
   const gradeData = gradeKey ? termExams[gradeKey] : {};
 
-  const currentStudentId = user?.uid || null;
-
   return (
-    <div className="min-h-screen p-4 bg-gray-50">
-      <h2 className="text-2xl font-bold mb-6">
-        Welcome {studentInfo?.name} ({studentInfo?.grade})
-      </h2>
-
-      {/* HIDE all study/leaderboard/exam-choice UI when the exam is active */}
-      {!(authenticated && selectedExam) && currentStudentId && (
-        <FloatingStudyHub
-          grade={studentInfo?.grade}
-          currentStudentId={currentStudentId}
-          topics={catTopics}
-          abbreviationsData={abbreviationsData}
-          selectedExam={selectedExam}
-          LeaderboardCard={LeaderboardCard}
-          FloatingTopicCard={FloatingTopicCard}
-          FloatingAbbreviationsCard={FloatingAbbreviationsCard}
-        />
-      )}
-
-      {/* Exam list / Results card */}
-      {!(authenticated && selectedExam) && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <ExamResultsCard
-              studentName={studentInfo?.name}
-              title="📊 JUNE Exam Results"
-              collectionName="studentResults"
-            />
-
-            <ExamResultsCard
-              studentName={studentInfo?.name}
-              title="📝 Prelim Exam Results"
-              collectionName="prelimResults"
-              headerGradientFrom="from-amber-200"
-              headerGradientTo="to-amber-400"
-            />
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-indigo-900">
+      {/* Top Navigation Bar */}
+      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-white/70 dark:bg-gray-900/70 border-b border-gray-200 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
+              {studentInfo?.name?.[0]?.toUpperCase()}
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-800 dark:text-white">Hi, {studentInfo?.name}</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{studentInfo?.grade}</p>
+            </div>
           </div>
 
-          <h3 className="text-xl mb-4">Select a Term</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Object.keys(gradeData).map((term) => (
-              <div
-                key={term}
-                onClick={() => setExpandedTerm((x) => (x === term ? null : term))}
-                className="p-4 bg-blue-100 rounded shadow cursor-pointer"
-              >
-                <h4 className="font-semibold">{term}</h4>
-              </div>
-            ))}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleTheme}
+              className="p-3 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition"
+            >
+              {isDark ? <Sun className="text-yellow-400" size={24} /> : <Moon className="text-indigo-600" size={24} />}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-5 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition"
+            >
+              <LogOut size={18} /> Logout
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Dashboard (When No Exam Active) */}
+      {!examActive && (
+        <div className="pt-24 pb-10 px-6 max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h1 className="text-5xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              Student Dashboard
+            </h1>
+            <p className="text-xl text-gray-600 dark:text-gray-400 mt-4">Select your exam or explore study resources</p>
           </div>
 
-          {expandedTerm && (
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {gradeData[expandedTerm].map((ex) => (
-                <div
-                  key={ex.id}
-                  className="border rounded-xl bg-white p-4 shadow-sm hover:shadow-md transition"
+          {/* Study Hub */}
+          <FloatingStudyHub grade={studentInfo?.grade} currentStudentId={user?.uid} />
+
+          {/* Results Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-12">
+            <ExamResultsCard studentName={studentInfo?.name} title="June Exam Results" collectionName="studentResults" />
+            <ExamResultsCard studentName={studentInfo?.name} title="Prelim Exam Results" collectionName="prelimResults" headerGradientFrom="from-amber-400" headerGradientTo="to-orange-500" />
+          </div>
+
+          {/* Term Selection */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-10">
+            <h2 className="text-3xl font-bold text-center mb-10 text-gray-800 dark:text-white">Choose Exam Term</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {Object.keys(gradeData).map((term) => (
+                <button
+                  key={term}
+                  onClick={() => setExpandedTerm(expandedTerm === term ? null : term)}
+                  className="group p-8 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl hover:scale-105 transition-all shadow-xl"
                 >
-                  <h4 className="font-semibold text-slate-800 mb-3">{ex.title}</h4>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleSelectExam(ex)}
-                      className="px-3 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 font-semibold"
-                    >
-                      Start
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setExpandedTerm(null)}
-                      className="px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-semibold"
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
+                  <BookOpen size={48} className="mx-auto mb-4" />
+                  <span className="text-xl font-bold">{term}</span>
+                </button>
               ))}
             </div>
-          )}
-        </>
+
+            {/* Exam List */}
+            {expandedTerm && (
+              <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {gradeData[expandedTerm].map((exam) => (
+                  <div key={exam.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition">
+                    <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">{exam.title}</h3>
+                    <button
+                      onClick={() => handleSelectExam(exam)}
+                      className="w-full py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-lg rounded-2xl hover:scale-105 transition shadow-lg"
+                    >
+                      Start Exam
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
-      {/* Exam taking view */}
-      {authenticated && selectedExam && (
-        <div className="mt-6 select-none" ref={formRef}>
-          <h3 className="text-xl mb-2">{selectedExam.title}</h3>
-
+      {/* Active Exam Mode */}
+      {examActive && (
+        <div className="fixed inset-0 bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white overflow-y-auto">
           {/* Floating Timer */}
-          {!submitted && (
-            <div
-              style={{
-                position: "fixed",
-                top: "40px",
-                right: "20px",
-                zIndex: 9999,
-                background: "rgba(0,0,0,0.8)",
-                color: "#fff",
-                padding: "15px 25px",
-                borderRadius: "12px",
-                fontSize: "2rem",
-                fontWeight: "bold",
-                boxShadow: "0 0 15px rgba(0,0,0,0.5)",
-              }}
-            >
-              ⏱ {formatTime(timeLeft)}
+          <div className="fixed top-8 right-8 z-50 bg-black/60 backdrop-blur-xl rounded-3xl px-10 py-6 shadow-2xl border border-white/20">
+            <div className="flex items-center gap-5">
+              <Clock size={48} />
+              <div>
+                <p className="text-lg opacity-90">Time Remaining</p>
+                <p className="text-5xl font-bold">{formatTime(timeLeft)}</p>
+              </div>
             </div>
-          )}
+            <div className="mt-4 h-4 bg-white/20 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-green-400 to-emerald-500 transition-all duration-1000"
+                style={{ width: `${(timeLeft / (25 * 60)) * 100}%` }}
+              />
+            </div>
+          </div>
 
-          {submitted ? (
-            <p className="text-center">Submitting your answers…</p>
-          ) : (
-            <form className="space-y-6">
+          <div className="max-w-4xl mx-auto pt-32 pb-20 px-6">
+            <h1 className="text-5xl font-extrabold text-center mb-12">{selectedExam.title}</h1>
+
+            <form className="space-y-10">
               {(questions[selectedExam.title] || []).map((q, idx) => {
                 const selected = answers[q.id];
+                const isUnanswered = triedSubmit && !selected;
 
                 return (
                   <section
                     key={q.id}
                     ref={(el) => (questionRefs.current[q.id] = el)}
-                    className={[
-                      "rounded-2xl border bg-white shadow-sm hover:shadow-md transition-shadow",
-                      triedSubmit && unansweredIds.has(q.id)
-                        ? "border-red-500 ring-2 ring-red-200"
-                        : ""
-                    ].join(" ")}
+                    className={`rounded-3xl overflow-hidden shadow-2xl transition-all ${
+                      isUnanswered ? "ring-4 ring-red-500" : ""
+                    }`}
                   >
-                    {/* Question header */}
-                    <header className="flex items-start gap-3 p-5 border-b bg-gradient-to-r from-slate-50 to-transparent rounded-t-2xl">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 font-semibold">
-                        {idx + 1}
+                    <header className="bg-white/10 backdrop-blur-md p-6 border-b border-white/20">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-2xl font-bold">
+                          {idx + 1}
+                        </div>
+                        <h3 className="text-xl font-semibold leading-relaxed">{q.question}</h3>
                       </div>
-                      <h4 className="text-slate-800 font-semibold leading-snug">
-                        {q.question}
-                      </h4>
                     </header>
 
-                    {/* Options */}
-                    <div
-                      role="radiogroup"
-                      aria-label={`Question ${idx + 1}`}
-                      className="grid grid-cols-1 md:grid-cols-2 gap-3 p-5"
-                    >
-                      {q.options.map((opt, i) => {
+                    <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {q.options.map((opt) => {
                         const isChecked = selected === opt;
                         return (
                           <label
-                            key={i}
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                handleChange(q.id, opt);
-                              }
-                            }}
-                            className={[
-                              "group relative cursor-pointer rounded-xl border p-4",
-                              "transition-all hover:border-indigo-400 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300",
+                            key={opt}
+                            className={`block cursor-pointer rounded-2xl border-2 p-6 transition-all ${
                               isChecked
-                                ? "border-indigo-600 bg-indigo-50"
-                                : "border-slate-200 bg-white"
-                            ].join(" ")}
+                                ? "border-white bg-white/20 shadow-xl"
+                                : "border-white/30 hover:border-white/60 hover:bg-white/10"
+                            }`}
                           >
-                            {/* Visually hidden native input for form semantics */}
                             <input
                               type="radio"
-                              className="sr-only"
                               name={`q-${q.id}`}
                               value={opt}
                               checked={isChecked}
                               onChange={() => handleChange(q.id, opt)}
+                              className="sr-only"
                             />
-
-                            <div className="flex items-start gap-3">
-                              <span
-                                aria-hidden
-                                className={[
-                                  "mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full border",
-                                  "transition-colors",
-                                  isChecked
-                                    ? "border-indigo-600 bg-indigo-600 ring-2 ring-indigo-200"
-                                    : "border-slate-300 bg-white"
-                                ].join(" ")}
-                              >
-                                {isChecked && (
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                    className="h-3.5 w-3.5 text-white"
-                                  >
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.07 7.162a1 1 0 0 1-1.437.006L3.29 9.957a1 1 0 1 1 1.42-1.406l3.05 3.084 6.356-6.439a1 1 0 0 1 1.588.094Z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
-                                )}
-                              </span>
-
-                              <span
-                                className={[
-                                  "text-sm md:text-base",
-                                  isChecked ? "text-indigo-900 font-medium" : "text-slate-700"
-                                ].join(" ")}
-                              >
-                                {opt}
-                              </span>
-                            </div>
-
-                            {/* subtle highlight ring on hover */}
-                            <span
-                              className="pointer-events-none absolute inset-0 rounded-xl ring-0 ring-indigo-200 group-hover:ring-2"
-                              aria-hidden
-                            />
+                            <span className="text-lg">{opt}</span>
                           </label>
                         );
                       })}
                     </div>
-
-                    {/* Footer: selected indicator */}
-                    <footer className="flex items-center justify-between border-t px-5 py-3 rounded-b-2xl text-sm text-slate-600">
-                      <span>
-                        {selected ? (
-                          <>
-                            Selected:{" "}
-                            <span className="font-medium text-slate-800">{selected}</span>
-                          </>
-                        ) : (
-                          <span className="italic text-slate-400">No option selected</span>
-                        )}
-                      </span>
-                    </footer>
                   </section>
                 );
               })}
 
-              {/* Sticky submit bar */}
-              <div className="sticky bottom-4 z-10">
-                <div className="rounded-2xl border bg-white/80 backdrop-blur p-3 shadow-lg">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      swal
-                        .fire({
-                          title: "Submit now?",
-                          showCancelButton: true,
-                          confirmButtonText: "Yes",
-                          cancelButtonText: "Cancel",
-                        })
-                        .then((r) => r.isConfirmed && handleSubmitExam())
-                    }
-                    className="w-full rounded-xl px-4 py-3 font-semibold bg-green-600 text-white hover:bg-green-700 active:scale-[0.99] transition"
-                  >
-                    Submit Exam
-                  </button>
-                </div>
+              {/* Submit Button */}
+              <div className="text-center pt-10">
+                <button
+                  type="button"
+                  onClick={handleSubmitExam}
+                  className="px-16 py-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-2xl font-bold rounded-3xl hover:scale-105 transition shadow-2xl"
+                >
+                  Submit Exam
+                </button>
               </div>
             </form>
-          )}
+          </div>
         </div>
       )}
     </div>
