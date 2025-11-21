@@ -349,8 +349,12 @@ export default function ExamPage({ studentInfo, addResult }) {
             <p className="text-xl text-gray-600 dark:text-gray-400 mt-4">Select your exam or explore study resources</p>
           </div>
 
-          {/* Study Hub */}
-          <FloatingStudyHub grade={studentInfo?.grade} currentStudentId={user?.uid} />
+          {/* Study Hub - Fully Working! */}
+<FloatingStudyHub 
+  grade={studentInfo?.grade} 
+  currentStudentId={user?.uid} 
+  selectedExam={selectedExam}  
+/>
 
           {/* Results Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-12">

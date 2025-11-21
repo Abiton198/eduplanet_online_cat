@@ -156,7 +156,7 @@ function App() {
       </header>
 
       {/* Chatbot */}
-      <Chatbot />
+      <Chatbot studentInfo={studentInfo} />
 
       {/* Main Content */}
       <main className="pt-24 pb-10 px-6 max-w-7xl mx-auto">
