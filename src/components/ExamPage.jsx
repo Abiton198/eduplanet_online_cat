@@ -5,7 +5,8 @@ import Swal from "sweetalert2";
 import { addDoc, collection } from "firebase/firestore";
 import { db, auth } from "../utils/firebase";
 import { signOut } from "firebase/auth";
-import ExamResultsCard from "../utils/ExamResultCard";
+// import ExamResultsCard from "../utils/ExamResultCard";
+import ExamResultsDisplay from "./ExamResultsDisplay";
 import { termExams } from "../data/termExams";
 import { questions } from "../utils/Questions";
 import { ensureStudentProfile } from "../utils/pointsSystem/ensureStudentProfile";
@@ -358,9 +359,14 @@ export default function ExamPage({ studentInfo, addResult }) {
 
           {/* Results Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-12">
-            <ExamResultsCard studentName={studentInfo?.name} title="June Exam Results" collectionName="studentResults" />
-            <ExamResultsCard studentName={studentInfo?.name} title="Prelim Exam Results" collectionName="prelimResults" headerGradientFrom="from-amber-400" headerGradientTo="to-orange-500" />
+            {/* <ExamResultsCard studentName={studentInfo?.name} title="June Exam Results" collectionName="studentResults" />
+            <ExamResultsCard studentName={studentInfo?.name} title="Prelim Exam Results" collectionName="prelimResults" headerGradientFrom="from-amber-400" headerGradientTo="to-orange-500" /> */}
+                    {/* // Grade10Page.jsx or Grade11Page.jsx */}
+          <ExamResultsDisplay />
+
+         
           </div>
+
 
           {/* Term Selection */}
           <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-10">

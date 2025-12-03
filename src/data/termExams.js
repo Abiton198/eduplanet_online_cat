@@ -3,8 +3,8 @@
 export const termExams = {
     "Grade 12": {
       "Term 1": [
-        { id: 101, title: "Networks Basics", password: "" },
-        { id: 102, title: "Intro to HTML", password: "grade12pass" },
+        { id: 101, title: "SYSTEMS TECHNOLOGIES - Introduction to Concepts of Computing", password: "" },
+        { id: 102, title: "SYSTEMS TECHNOLOGIES - Device Management & File Organisation", password: "grade12pass" }
       ],
       "Term 2": [
         { id: 1, title: "Networks & Internet Technologies", password: "grade12pass" },
@@ -85,8 +85,14 @@ export const termExams = {
 
     "Grade 10": {
       "Term 1": [
-        { id: 301, title: "Computer Basics", password: "grade10pass" },
-        { id: 302, title: "Intro to Networks", password: "grade10pass" },
+        { id: 101, title: "SYSTEMS TECHNOLOGIES - Introduction to Concepts of Computing", password: "password" },
+        { id: 102, title: "SYSTEMS TECHNOLOGIES - Device Management & File Organisation", password: "password" },
+        { id: 103, title: "SYSTEMS TECHNOLOGIES - Hardware", password: "password" },
+        { id: 104, title: "SYSTEMS TECHNOLOGIES - Software & Security", password: "password" },
+         { id: 105, title: "SOCIAL IMPLICATIONS", password: "password" },
+        { id: 106, title: "SOLUTION DEVELOPMENT - Word Processing", password: "password" },
+
+
       ],
       "Term 2": [
         { id: 1, title: "NETWORK TECHNOLOGIES - Grade 10", password: "grade10pass" },

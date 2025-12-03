@@ -202,7 +202,7 @@ function App() {
 
       {/* Optional Footer */}
       <footer className="mt-20 py-8 text-center text-gray-500 dark:text-gray-400 text-sm border-t dark:border-gray-800">
-        © 2025 EduPlanet CAT • Secure Online Study & Testing Platform
+        © 2025 EduPlanet CAT • Secure Online Study & Exam Platform
       </footer>
     </div>
   );
