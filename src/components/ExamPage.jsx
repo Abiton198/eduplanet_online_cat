@@ -364,7 +364,7 @@ export default function ExamPage({ studentInfo, addResult }) {
                     {/* // Grade10Page.jsx or Grade11Page.jsx */}
           <ExamResultsDisplay />
 
-         
+         {/* !ensure access denied is removed in student results so can view personal results */}
           </div>
 
 
