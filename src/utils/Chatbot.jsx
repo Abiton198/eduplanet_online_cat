@@ -188,15 +188,7 @@ export default function Chatbot({ studentInfo }) {
 
       {/* Chat Button */}
       <div className="fixed bottom-6 right-6 z-50">
-        {!isOpen && (
-          <button
-            onClick={() => setIsOpen(true)}
-            className="group relative w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full shadow-2xl flex items-center justify-center hover:scale-125 transition-all duration-500 animate-pulse"
-          >
-            <MessageCircle size={36} className="text-white group-hover:animate-bounce" />
-            <span className="absolute -inset-1 bg-purple-600/50 rounded-full animate-ping"></span>
-          </button>
-        )}
+   
 
         {/* Chat Window */}
         {isOpen && (
@@ -224,6 +216,16 @@ export default function Chatbot({ studentInfo }) {
             </div>
           </div>
         )}
+
+        {!isOpen && (
+  <button
+    onClick={() => setIsOpen(true)}
+    className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full p-4 shadow-xl hover:scale-105 transition"
+  >
+    <MessageCircle size={24} />
+  </button>
+)}
+
       </div>
     </>
   );

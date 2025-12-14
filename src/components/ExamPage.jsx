@@ -359,12 +359,8 @@ export default function ExamPage({ studentInfo, addResult }) {
 
           {/* Results Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-12">
-            {/* <ExamResultsCard studentName={studentInfo?.name} title="June Exam Results" collectionName="studentResults" />
-            <ExamResultsCard studentName={studentInfo?.name} title="Prelim Exam Results" collectionName="prelimResults" headerGradientFrom="from-amber-400" headerGradientTo="to-orange-500" /> */}
-                    {/* // Grade10Page.jsx or Grade11Page.jsx */}
+            
           <ExamResultsDisplay />
-
-         {/* !ensure access denied is removed in student results so can view personal results */}
           </div>
 
 

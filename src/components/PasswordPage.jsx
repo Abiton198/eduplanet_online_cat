@@ -149,7 +149,7 @@ export default function PasswordPage({ setStudentInfo }) {
           </div>
 
           <footer className="text-center text-white dark:text-gray-400 py-6 text-sm">
-            © 2025 EduPlanet Academy • Secure & Confidential
+            © 2025 EduCAT • Secure & Confidential
           </footer>
         </div>
       </div>
@@ -205,7 +205,7 @@ export default function PasswordPage({ setStudentInfo }) {
 
             {grade && name && (
               <>
-                {['10A', '11', '12A', '12B'].includes(grade) ? (
+                {['10', '11', '12'].includes(grade) ? (
                   <div className="space-y-5">
                     <div className="relative">
                       <input
