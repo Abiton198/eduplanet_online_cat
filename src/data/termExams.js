@@ -3,32 +3,41 @@
 export const termExams = {
     "Grade 12": {
       "Term 1": [
-        { id: 101, title: "SYSTEMS TECHNOLOGIES - Introduction to Concepts of Computing", password: "" },
-        { id: 102, title: "SYSTEMS TECHNOLOGIES - Device Management & File Organisation", password: "grade12pass" }
+        { id: 101, title: "Systems Technologies & ICT Concepts", password: "" },
+        { id: 102, title: "Hardware & Word Processing", password: "" },
+        { id: 103, title: "Hardware (Output & Processing) & Word Processing Design", password: "" },
+        { id: 104, title: "Hardware Performance, Troubleshooting & Databases", password: "" },
+        { id: 105, title: "Software & Database Reports", password: "" },
+        { id: 106, title: "Social Implications & Database Queries", password: "" },
+        { id: 107, title: "Advanced Queries & Pagination", password: "" },
+        { id: 108, title: "Information Management & PAT Preparation", password: "" },
+        { id: 109, title: "Information Management & Spreadsheet Revision", password: "" },
+        { id: 110, title: "Advanced Spreadsheets & PAT Phase 1 Completion", password: "" }
+
       ],
       "Term 2": [
-        { id: 1, title: "Networks & Internet Technologies", password: "grade12pass" },
-        { id: 2, title: "HTML & Web Design", password: "grade12pass" },
-        { id: 3, title: "HTML & Web Design 2", password: "grade12pass" },
-        { id: 4, title: "Spreadsheets & Word Processing", password: "grade12pass" },
-        { id: 5, title: "Spreadsheets", password: "grade12pass" },
-        { id: 6, title: "Word Processing & Databases", password: "grade12pass" },
-        { id: 7, title: "Information Management & PAT 1", password: "grade12pass" },
-        { id: 8, title: "Information Management & PAT 2", password: "grade12pass" },
+        { id: 1, title: "Networks & Internet Technologies", password: "" },
+        { id: 2, title: "HTML & Web Design", password: "" },
+        { id: 3, title: "HTML & Web Design 2", password: "" },
+        { id: 4, title: "Spreadsheets & Word Processing", password: "" },
+        { id: 5, title: "Spreadsheets", password: "" },
+        { id: 6, title: "Word Processing & Databases", password: "" },
+        { id: 7, title: "Information Management & PAT 1", password: "" },
+        { id: 8, title: "Information Management & PAT 2", password: "" },
       ],
       "Term 3": [
-        { id: 103, title: "Operating Systems & File Management", password: "grade12pass" },
-        { id: 104, title: "Internet Technologies & Digital Communications", password: "grade12pass" },
-        { id: 105, title: "Databases & Integration", password: "grade12pass" },
-        { id: 106, title: "Operating Systems & Utilities", password: "grade12pass" },
-        { id: 107, title: "Internet Technologies-communications", password: "grade12pass" },
-        { id: 108, title: "3D Printing, Wireless & Mobile Technologies", password: "grade12pass" },
-        { id: 109, title: "Video Communications, URL Shorteners, IoT & Autonomous Vehicles", password: "grade12pass" },
-        { id: 110, title: "Drone Technology, Wearables, Shaping & Throttling", password: "grade12pass" },
+        { id: 103, title: "Operating Systems & File Management", password: "" },
+        { id: 104, title: "Internet Technologies & Digital Communications", password:"" },
+        { id: 105, title: "Databases & Integration", password: "" },
+        { id: 106, title: "Operating Systems & Utilities", password: "" },
+        { id: 107, title: "Internet Technologies-communications", password: "" },
+        { id: 108, title: "3D Printing, Wireless & Mobile Technologies", password: "" },
+        { id: 109, title: "Video Communications, URL Shorteners, IoT & Autonomous Vehicles", password:"" },
+        { id: 110, title: "Drone Technology, Wearables, Shaping & Throttling", password:"" },
       ],
       "Term 4": [
-        { id: 107, title: "Mock Exam Paper 1", password: "grade12pass" },
-        { id: 108, title: "Mock Exam Paper 2", password: "grade12pass" },
+        { id: 107, title: "Mock Exam Paper 1", password: "" },
+        { id: 108, title: "Mock Exam Paper 2", password: "" },
       ],
     },
   
@@ -36,11 +45,11 @@ export const termExams = {
     // GRADE 11
     "Grade 11": {
       "Term 1": [
-        { id: 201, title: "SYSTEM TECHNOLOGIES - Hardware", password: "grade11pass" },
-        { id: 202, title: "SOCIAL IMPLICATIONS - Accessibility, Security, Health & Careers", password: "grade11pass" },
-        { id: 203, title: "SYSTEM TECHNOLOGIES - Computer Management", password: "grade11pass" },
-        { id: 204, title: "SOLUTION DEVELOPMENT - Word Processing", password: "grade11pass" },
-        { id: 205, title: "Spreadsheet Basics", password: "grade11pass" },
+        { id: 201, title: "SYSTEM TECHNOLOGIES - Hardware", password: "" },
+        { id: 202, title: "SOCIAL IMPLICATIONS - Accessibility, Security, Health & Careers", password: "" },
+        { id: 203, title: "SYSTEM TECHNOLOGIES - Computer Management", password: "" },
+        { id: 204, title: "SOLUTION DEVELOPMENT - Word Processing", password: "" },
+        { id: 205, title: "Spreadsheet Basics", password: "" },
         
 
       ],

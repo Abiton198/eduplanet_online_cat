@@ -342,13 +342,7 @@ export default function ExamPage({ studentInfo, addResult }) {
 
       {/* Dashboard (When No Exam Active) */}
       {!examActive && (
-        <div className="pt-24 pb-10 px-6 max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-5xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Student Dashboard
-            </h1>
-            <p className="text-xl text-gray-600 dark:text-gray-400 mt-4">Select your exam or explore study resources</p>
-          </div>
+        <div className=" px-6 max-w-7xl mx-auto">         
 
           {/* Study Hub - Fully Working! */}
 <FloatingStudyHub 
@@ -358,10 +352,9 @@ export default function ExamPage({ studentInfo, addResult }) {
 />
 
           {/* Results Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-12">
-            
-          <ExamResultsDisplay />
-          </div>
+         <div className="w-full my-12">
+    <ExamResultsDisplay />
+</div>
 
 
           {/* Term Selection */}

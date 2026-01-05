@@ -5,6 +5,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { studentList } from '../data/studentData';
 import { auth, provider, db } from '../utils/firebase';
 import { X, Eye, EyeOff, Sun, Moon } from 'lucide-react';
+import { signInAnonymously } from 'firebase/auth';
 
 export default function PasswordPage({ setStudentInfo }) {
   const [grade, setGrade] = useState('');
@@ -52,19 +53,21 @@ export default function PasswordPage({ setStudentInfo }) {
     setError('');
   };
 
-  const handlePasswordLogin = async () => {
-    if (!grade || !name || !password) {
-      setError('Please fill all fields.');
-      return;
-    }
+
+const handlePasswordLogin = async () => {
+  try {
+    // 1. Sign in anonymously so Firebase Rules recognize the user
+    await signInAnonymously(auth); 
+    
+    // 2. Then proceed with your logic
     if (password === `${name}#`) {
       setStudentInfo({ name, grade, email: null });
-      closeModal();
       navigate('/exam');
-    } else {
-      setError('Incorrect password. Try: yourname#');
     }
-  };
+  } catch (error) {
+    setError("Auth failed");
+  }
+};
 
   const handleGoogleLogin = async () => {
     if (!grade || !name) {

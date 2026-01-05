@@ -259,7 +259,7 @@ export default function ExamResultsCard({
         <div className="bg-white shadow border p-6 mt-2 rounded">
           {/* Theory */}
           <div className="mb-6">
-            <h4 className="font-bold text-blue-700 mb-2">Theory Exam</h4>
+            <h4 className="font-bold text-blue-700 mb-2">Theory Exam 2</h4>
             {data.theory ? (
               <>
                 <p className="text-sm text-gray-500 mb-1">Date: {data.theory.examDate}</p>
