@@ -201,9 +201,14 @@ function App() {
       </main>
 
       {/* Optional Footer */}
-      <footer className="mt-20 py-8 text-center text-gray-500 dark:text-gray-400 text-sm border-t dark:border-gray-800">
-        © 2025 EduPlanet CAT • Secure Online Study & Exam Platform
-      </footer>
+    <footer className="mt-20 py-8 text-center text-gray-500 dark:text-gray-400 text-sm border-t dark:border-gray-800">
+  © {new Date().getFullYear()} Abiton - CAT • Secure Online Study & Exam Platform
+  <span className="block mt-1 text-xs opacity-70">
+    v{__APP_VERSION__}
+  </span>
+</footer>
+
+
     </div>
   );
 }
