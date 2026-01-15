@@ -408,7 +408,7 @@ export default function ExamPage({ studentInfo, addResult }) {
             <div className="mt-4 h-4 bg-white/20 rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-green-400 to-emerald-500 transition-all duration-1000"
-                style={{ width: `${(timeLeft / (25 * 60)) * 100}%` }}
+                style={{ width: `${(timeLeft / (15 * 60)) * 100}%` }}
               />
             </div>
           </div>

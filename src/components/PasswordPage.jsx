@@ -152,7 +152,7 @@ const handlePasswordLogin = async () => {
           </div>
 
           <footer className="text-center text-white dark:text-gray-400 py-6 text-sm">
-            © 2025 EduCAT • Secure & Confidential
+             © {new Date().getFullYear()} EduCAT - Abiton • Secure & Confidential. All rights reserved.{" "}
           </footer>
         </div>
       </div>
