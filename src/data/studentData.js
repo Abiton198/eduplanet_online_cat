@@ -1,6 +1,10 @@
 // data/studentData.js
 
 export const studentList = {
+  "10":[
+     { name: "Lungelo" },
+  ],
+
   "11": [
     { name: "Ayakha" },
     { name: "R-Jay" },
@@ -12,6 +16,9 @@ export const studentList = {
     { name: "Amzolele" },
     { name: "Caleb" },
     { name: "Chloe" },
+    { name: "Hlelo" },
+    { name: "Laeeqa" },
+    { name: "Ambeswa" },
     { name: "Ashleigh" },
     { name: "Abiton_11" }
   ],
