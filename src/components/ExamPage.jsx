@@ -154,7 +154,7 @@ export default function ExamPage({ studentInfo, addResult }) {
           if (pwd === exam.password) {
             setSelectedExam(exam);
             setAuthenticated(true);
-            setTimeLeft(25 * 60);
+            setTimeLeft(15 * 60);
             setAnswers({});
             setSubmitted(false);
             setFocusStrikes(0);

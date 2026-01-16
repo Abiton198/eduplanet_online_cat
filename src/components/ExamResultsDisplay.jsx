@@ -132,7 +132,7 @@ export default function ExamResultsDisplay() {
             <div>
               <h3 className="font-black text-[11px] text-gray-900">{res.exam}</h3>
               <p className="text-[9px] uppercase font-bold text-gray-400">
-                Grade {res.grade || res.gradeYear} • {res.completedDate}
+                Grade {res.grade || res.gradeYear} • {res.completedTime}
               </p>
             </div>
           </div>
@@ -149,6 +149,7 @@ export default function ExamResultsDisplay() {
           <div className="bg-white border-t p-5 animate-in slide-in-from-top-1">
             {/* ---- STATS ---- */}
             <div className="grid grid-cols-4 gap-2 mb-4">
+              <Stat label="Total Questions" value={res.totalQuestions} />
               <Stat label="Time" value={res.timeSpent} />
               <Stat label="Score" value={res.score} />
               <Stat label="Attempt" value={res.attempts || 1} />

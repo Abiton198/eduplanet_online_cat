@@ -1,378 +1,141 @@
-// ResultPage.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  getDocs,
-  limit,
-} from "firebase/firestore";
+import { collection, query, where, onSnapshot, query as firestoreQuery } from "firebase/firestore";
 import { db } from "../utils/firebase";
 import StudentSummaryCard from "../utils/StudentSummaryCard";
 
 export default function ResultPage({ studentInfo }) {
   const [user, setUser] = useState(null);
   const [generalResults, setGeneralResults] = useState([]);
-  const [mainExamResults, setMainExamResults] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [selectedResult, setSelectedResult] = useState(null);
-  const [activeTab, setActiveTab] = useState("general");
-  const [error, setError] = useState("");
-  const [usingLegacyFallback, setUsingLegacyFallback] = useState(false);
 
-  // Name variants (stable across renders)
-  const nameOriginal = useMemo(
-    () => (studentInfo?.name || "").trim(),
-    [studentInfo?.name]
-  );
-  const nameLower = useMemo(() => nameOriginal.toLowerCase(), [nameOriginal]);
-  const nameTidy = useMemo(
-    () => nameOriginal.replace(/\s+/g, " ").trim(),
-    [nameOriginal]
-  );
+  // 1. Get the name from props (e.g., "Abiton_11" or "Hayley")
+  const rawName = studentInfo?.name || "";
+  const tidyName = rawName.trim();
+  const lowerName = rawName.toLowerCase().trim();
 
-  // Keep snapshot unsubscribers
-  const unsubsRef = useRef([]);
-
-  // ---- Auth subscription ----
   useEffect(() => {
     const auth = getAuth();
     const off = onAuthStateChanged(auth, (u) => setUser(u || null));
     return () => off();
   }, []);
 
-  // ---- Live listeners: General test results ----
   useEffect(() => {
-    // clear previous listeners
-    unsubsRef.current.forEach((fn) => fn && fn());
-    unsubsRef.current = [];
-    setError("");
-    setUsingLegacyFallback(false);
-    setGeneralResults([]);
+    if (!rawName && !user?.uid) return;
 
-    if (!nameOriginal) return;
-
+    setLoading(true);
     const resultsMap = new Map();
-    const upsert = (docs) => {
-      docs.forEach((d) => resultsMap.set(d.id, d));
-      const arr = Array.from(resultsMap.values()).sort((a, b) => {
-        const at = Number(a.completedTime ?? 0);
-        const bt = Number(b.completedTime ?? 0);
-        if (bt !== at) return bt - at;
-        const aKey = `${a.completedDate ?? ""} ${a.completedTimeOnly ?? ""}`;
-        const bKey = `${b.completedDate ?? ""} ${b.completedTimeOnly ?? ""}`;
-        return bKey.localeCompare(aKey);
+
+    const updateState = (snap, sourceLabel) => {
+      console.log(`Source: ${sourceLabel} | Found: ${snap.docs.length}`);
+      snap.docs.forEach((doc) => {
+        resultsMap.set(doc.id, { id: doc.id, ...doc.data() });
       });
-      setGeneralResults(arr);
+
+      const sorted = Array.from(resultsMap.values()).sort((a, b) => {
+        return new Date(b.completedTime || 0) - new Date(a.completedTime || 0);
+      });
+      
+      
+      setGeneralResults(sorted);
+      setLoading(false);
+      console.log("Docs:", snap.docs.map(d => d.data()));
     };
 
-    const unsubs = [];
-    let scopedDeliveredAny = false;
+    // We create multiple listeners to catch the data regardless of how it was saved
+    const listeners = [];
 
-    // Helper to wire a listener
-    const listen = (q, label) =>
-      onSnapshot(
-        q,
-        (snap) => {
-          const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-          if (label.includes("SCOPED") && docs.length > 0) {
-            scopedDeliveredAny = true;
-          }
-          if (docs.length > 0) {
-            console.log(`✅ ${label}:`, docs);
-          } else {
-            console.log(`ℹ️ ${label}: no docs`);
-          }
-          upsert(docs);
-        },
-        (err) => {
-          console.warn(`${label} listener error:`, err);
-          setError((prev) =>
-            prev
-              ? prev
-              : "Load general test results failed: " + (err?.message || err)
-          );
-        }
-      );
-
-    // ---- 1) Try SCOPED listeners first (requires studentUid on docs)
+    // QUERY A: By studentUid (The most reliable for Grade 10)
     if (user?.uid) {
-      const qScopedLower = query(
-        collection(db, "examResults"),
-        where("studentUid", "==", user.uid),
-        where("nameLower", "==", nameLower)
+      listeners.push(
+        onSnapshot(query(collection(db, "examResults"), where("studentUid", "==", user.uid)), 
+        (s) => updateState(s, "UID"))
       );
-      unsubs.push(listen(qScopedLower, "SCOPED nameLower"));
-
-      if (nameTidy) {
-        const qScopedExact = query(
-          collection(db, "examResults"),
-          where("studentUid", "==", user.uid),
-          where("name", "==", nameTidy)
-        );
-        unsubs.push(listen(qScopedExact, "SCOPED exact name"));
-      }
-    } else {
-      console.log("⏳ No user yet; waiting to attach scoped listeners.");
     }
 
-    // ---- 2) After initial tick, if scoped returned nothing, add LEGACY fallback
-    // This handles older docs that don't have studentUid but are still readable under your rules.
-    const fallbackTimer = setTimeout(() => {
-      if (!scopedDeliveredAny) {
-        console.log("↩️ Enabling LEGACY fallback listeners (no studentUid filter).");
-        setUsingLegacyFallback(true);
+    // QUERY B: By exact name (The "Abiton_11" or "Hayley" case)
+    listeners.push(
+      onSnapshot(query(collection(db, "examResults"), where("name", "==", tidyName)), 
+      (s) => updateState(s, "Exact Name"))
+    );
 
-        const qLegacyLower = query(
-          collection(db, "examResults"),
-          where("nameLower", "==", nameLower)
-        );
-        unsubs.push(listen(qLegacyLower, "LEGACY nameLower"));
+    // QUERY C: By lower-case name (If your saving logic used .toLowerCase())
+    listeners.push(
+      onSnapshot(query(collection(db, "examResults"), where("nameLower", "==", lowerName)), 
+      (s) => updateState(s, "Lower Name"))
+    );
 
-        if (nameTidy) {
-          const qLegacyExact = query(
-            collection(db, "examResults"),
-            where("name", "==", nameTidy)
-          );
-          unsubs.push(listen(qLegacyExact, "LEGACY exact name"));
-        }
-      }
-    }, 300); // small delay to let scoped listeners fire first
-
-    unsubsRef.current = unsubs;
+    // If after 2 seconds nothing is found, stop the loading spinner
+    const timer = setTimeout(() => setLoading(false), 2000);
 
     return () => {
-      clearTimeout(fallbackTimer);
-      unsubs.forEach((fn) => fn && fn());
+      listeners.forEach((unsub) => unsub());
+      clearTimeout(timer);
     };
-  }, [db, user?.uid, nameOriginal, nameLower, nameTidy]);
+  }, [rawName, user?.uid]);
 
-  // ---- One-off fetch: Main exam results (scoped to studentUid) ----
-  useEffect(() => {
-    if (!user?.uid) return;
-    let cancelled = false;
-
-    const fetchMain = async () => {
-      try {
-        const q = query(
-          collection(db, "studentResults"),
-          where("studentUid", "==", user.uid),
-          limit(1)
-        );
-        const snap = await getDocs(q);
-        if (!cancelled) {
-          if (!snap.empty) {
-            const docSnap = snap.docs[0];
-            setMainExamResults({ id: docSnap.id, ...docSnap.data() });
-          } else {
-            setMainExamResults(null);
-          }
-        }
-      } catch (e) {
-        console.warn("Load main exam results failed:", e);
-        if (!cancelled) setError("Load main exam results failed: " + e.message);
-      }
-    };
-
-    fetchMain();
-    return () => {
-      cancelled = true;
-    };
-  }, [db, user?.uid]);
-
-  // ---- Helpers ----
-  const sum = (rows) => rows.reduce((a, b) => a + Number(b.score || 0), 0);
+  if (loading) return <div className="p-10 text-center">Searching for results...</div>;
 
   return (
-    <div className="max-w-6xl mx-auto mt-10 p-6 bg-white rounded-lg shadow space-y-6">
-      <h2 className="text-2xl font-bold">📊 Results for {studentInfo?.name}</h2>
-
-      {error && (
-        <div className="p-3 rounded bg-red-100 text-red-800 text-sm">{error}</div>
-      )}
-
-      {usingLegacyFallback && (
-        <div className="p-3 rounded bg-yellow-50 text-yellow-800 text-sm">
-          Showing results via legacy fallback (docs without <code>studentUid</code>).
-          Consider backfilling <code>studentUid</code> on <code>examResults</code> for stricter privacy rules.
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div className="flex gap-4 mt-4">
-        <button
-          onClick={() => setActiveTab("general")}
-          className={`px-4 py-2 rounded ${
-            activeTab === "general" ? "bg-blue-600 text-white" : "bg-gray-200"
-          }`}
-        >
-          General Tests
-        </button>
-        <button
-          onClick={() => setActiveTab("main")}
-          className={`px-4 py-2 rounded ${
-            activeTab === "main" ? "bg-green-600 text-white" : "bg-gray-200"
-          }`}
-        >
-          Main Exams
-        </button>
+    <div className="max-w-6xl mx-auto mt-10 p-6 bg-white rounded-lg shadow">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">📊 Performance History</h2>
+        <span className="text-sm bg-gray-100 px-3 py-1 rounded-full text-gray-600">
+          {generalResults.length} Tests Found
+        </span>
       </div>
 
-      {/* GENERAL TESTS TAB */}
-      {activeTab === "general" && (
-        <div>
-          {selectedResult ? (
-            <>
-              <button
-                onClick={() => setSelectedResult(null)}
-                className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-              >
-                ← Back to General Tests
-              </button>
-              <StudentSummaryCard examResult={selectedResult} />
-            </>
-          ) : (
-            <div>
-              <h3 className="text-xl font-semibold mb-4">🧠 Your General Test Attempts</h3>
-
-              {generalResults.length === 0 ? (
-                <p className="text-gray-500">No general test results found.</p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {generalResults.map((result) => {
-                    const percentage = parseInt(result.percentage ?? 0, 10);
-
-                    let bgColor = "bg-red-100";
-                    let hoverColor = "hover:bg-red-200";
-                    let comment = "Needs a lot of improvement. Keep practicing!";
-
-                    if (percentage >= 80) {
-                      bgColor = "bg-green-100";
-                      hoverColor = "hover:bg-green-200";
-                      comment = "Excellent work! Keep up the great performance!";
-                    } else if (percentage >= 60) {
-                      bgColor = "bg-blue-100";
-                      hoverColor = "hover:bg-blue-200";
-                      comment = "Good job! A bit more effort can get you to the top!";
-                    } else if (percentage >= 40) {
-                      bgColor = "bg-yellow-100";
-                      hoverColor = "hover:bg-yellow-200";
-                      comment = "You’re getting there. Keep practicing to improve!";
-                    }
-
-                    return (
-                      <div
-                        key={result.id}
-                        onClick={() => setSelectedResult(result)}
-                        className={`cursor-pointer p-4 rounded-lg border transition ${bgColor} ${hoverColor}`}
-                      >
-                        <h4 className="font-bold">{result.exam}</h4>
-                        <p className="text-sm">
-                          Date: {result.completedDate} | Time: {result.completedTimeOnly}
-                        </p>
-                        <p className="text-sm">
-                          Score: {result.score} |{" "}
-                          <span className="font-semibold">{result.percentage}%</span>
-                        </p>
-                        <p className="text-xs text-gray-500">Attempts: {result.attempts || 1}</p>
-                        <p className="mt-2 text-sm font-medium">{comment}</p>
-                      </div>
-                    );
-                  })}
+      {generalResults.length === 0 ? (
+        <div className="p-10 text-center border-2 border-dashed rounded-lg">
+          <p className="text-gray-500 font-medium">No results found for student: "{rawName}"</p>
+          <p className="text-xs text-gray-400 mt-2">Checking studentUid: {user?.uid || "Not Logged In"}</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {generalResults.map((res) => (
+            <div 
+              key={res.id} 
+              onClick={() => setSelectedResult(res)}
+              className="p-5 border rounded-xl cursor-pointer hover:border-blue-500 hover:shadow-md transition-all group relative overflow-hidden"
+            >
+              <div className="relative z-10">
+                <div className="flex justify-between items-start">
+                  <h3 className="font-bold text-gray-800 group-hover:text-blue-600 transition-colors">
+                    {res.exam}
+                  </h3>
+                  <span className={`text-xs px-2 py-1 rounded ${res.grade === "11" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
+                    Grade {res.grade}
+                  </span>
                 </div>
-              )}
+                
+                <div className="mt-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-2xl font-black text-gray-900">{res.percentage}%</p>
+                    <p className="text-xs text-gray-500 italic">
+                      {res.completedTime ? new Date(res.completedTime).toLocaleDateString() : res.completedDate}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-gray-700">{res.score} / {res.total || 30}</p>
+                    <p className="text-xs text-gray-400">Score</p>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
+          ))}
         </div>
       )}
 
-      {/* MAIN EXAMS TAB */}
-      {activeTab === "main" && (
-        <div>
-          <h3 className="text-xl font-semibold mb-4">📘 Main Exams (Theory + Practical)</h3>
-
-          {/* THEORY */}
-          {mainExamResults?.theory ? (
-            <div className="mb-6">
-              <h4 className="font-semibold">{mainExamResults.theory.examTitle}</h4>
-              <p className="text-sm text-gray-500">Date: {mainExamResults.theory.examDate}</p>
-              <table className="w-full border mt-2">
-                <thead className="bg-gray-100">
-                  <tr>
-                    <th className="border p-2">Question</th>
-                    <th className="border p-2">Type</th>
-                    <th className="border p-2">Score</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mainExamResults.theory.results?.map((r, i) => (
-                    <tr key={i}>
-                      <td className="border p-2">{r.question}</td>
-                      <td className="border p-2">{r.type}</td>
-                      <td className="border p-2">{r.score}</td>
-                    </tr>
-                  ))}
-                  <tr className="font-bold bg-gray-50">
-                    <td className="border p-2">TOTAL</td>
-                    <td className="border p-2">-</td>
-                    <td className="border p-2">{sum(mainExamResults.theory.results || [])}</td>
-                  </tr>
-                  <tr className="font-bold bg-gray-100">
-                    <td className="border p-2">PERCENTAGE</td>
-                    <td className="border p-2">-</td>
-                    <td className="border p-2">
-                      {((sum(mainExamResults.theory.results || []) / 150) * 100).toFixed(2)}%
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-gray-500">Theory exam results not available.</p>
-          )}
-
-          {/* PRACTICAL */}
-          {mainExamResults?.practical ? (
-            <div>
-              <h4 className="font-semibold">{mainExamResults.practical.examTitle}</h4>
-              <p className="text-sm text-gray-500">Date: {mainExamResults.practical.examDate}</p>
-              <table className="w-full border mt-2">
-                <thead className="bg-gray-100">
-                  <tr>
-                    <th className="border p-2">Question</th>
-                    <th className="border p-2">Type</th>
-                    <th className="border p-2">Score</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mainExamResults.practical.results?.map((r, i) => (
-                    <tr key={i}>
-                      <td className="border p-2">{r.question}</td>
-                      <td className="border p-2">{r.type}</td>
-                      <td className="border p-2">{r.score}</td>
-                    </tr>
-                  ))}
-                  <tr className="font-bold bg-gray-50">
-                    <td className="border p-2">TOTAL</td>
-                    <td className="border p-2">-</td>
-                    <td className="border p-2">
-                      {sum(mainExamResults.practical.results || [])}
-                    </td>
-                  </tr>
-                  <tr className="font-bold bg-gray-100">
-                    <td className="border p-2">PERCENTAGE</td>
-                    <td className="border p-2">-</td>
-                    <td className="border p-2">
-                      {((sum(mainExamResults.practical.results || []) / 150) * 100).toFixed(2)}%
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-gray-500">Practical exam results not available.</p>
-          )}
+      {selectedResult && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-8 relative shadow-2xl">
+            <button 
+              onClick={() => setSelectedResult(null)}
+              className="absolute top-6 right-6 hover:rotate-90 transition-transform bg-gray-100 p-2 rounded-full"
+            >✕</button>
+            <StudentSummaryCard examResult={selectedResult} />
+          </div>
         </div>
       )}
     </div>

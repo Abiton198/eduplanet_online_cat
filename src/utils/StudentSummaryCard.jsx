@@ -12,8 +12,9 @@ export default function StudentSummaryCard({ examResult }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-700 text-md mb-6">
         <div><strong>👤 Student:</strong> {examResult.name || "N/A"}</div>
         <div><strong>🎓 Grade:</strong> {examResult.grade || "N/A"}</div>
-        <div><strong>🗓 Date:</strong> {examResult.completedDate || "N/A"}</div>
-        <div><strong>⏰ Finished:</strong> {examResult.completedTimeOnly || "N/A"}</div>
+        <div><strong>🗓 Date:</strong> {examResult.completedTime || "N/A"}</div>
+        <div><strong>⏰ Finished:</strong> {examResult.completedTime || "N/A"}</div>
+        <div><strong>❓ Total Questions:</strong> {examResult.total ?? 0}</div>
         <div><strong>🔢 Score:</strong> {examResult.score ?? 0}</div>
         <div><strong>📈 Percentage:</strong> {examResult.percentage ?? 0}%</div>
         <div><strong>🕒 Time Spent:</strong> {examResult.timeSpent || "N/A"}</div>
