@@ -4,203 +4,662 @@ export const questions = {
 
   //!!!!!!! TERM 1 EXAMS !!!!!!!!!///////////
 
-  "SYSTEMS TECHNOLOGIES - Introduction to Concepts of Computing": [
-  { "id": 1, "question": "What is a computer?", "options": ["A device that only plays games", "An electronic device that processes data according to instructions", "A machine that only prints documents", "A television with internet"], "correctAnswer": "An electronic device that processes data according to instructions" },
-  { "id": 2, "question": "Which of the following is NOT a type of computing device?", "options": ["Laptop", "Smartphone", "Printer", "Tablet"], "correctAnswer": "Printer" },
-  { "id": 3, "question": "A smartphone is an example of a:", "options": ["Desktop computer", "Mobile computing device", "Mainframe computer", "Supercomputer"], "correctAnswer": "Mobile computing device" },
-  { "id": 4, "question": "The main components of a computer system include:", "options": ["Hardware only", "Software only", "Hardware, software and people", "Hardware and printer"], "correctAnswer": "Hardware, software and people" },
-  { "id": 5, "question": "ICT stands for:", "options": ["Internet Computer Technology", "Information and Communication Technology", "Integrated Circuit Technology", "International Computer Training"], "correctAnswer": "Information and Communication Technology" },
-  { "id": 6, "question": "Which is an example of ICT used in everyday life?", "options": ["ATM", "Bicycle", "Pen and paper", "Cooking stove"], "correctAnswer": "ATM" },
-  { "id": 7, "question": "Data refers to:", "options": ["Processed meaningful facts", "Raw facts and figures", "A computer program", "A type of software"], "correctAnswer": "Raw facts and figures" },
-  { "id": 8, "question": "Information is:", "options": ["Unprocessed data", "Data that has been processed and given meaning", "A computer file", "Only numbers"], "correctAnswer": "Data that has been processed and given meaning" },
-  { "id": 9, "question": "A tablet is primarily classified as a:", "options": ["Input device", "Output device", "Mobile computing device", "Storage device"], "correctAnswer": "Mobile computing device" },
-  { "id": 10, "question": "Which device is considered a personal computer?", "options": ["Server in a bank", "Desktop at home", "Mainframe", "Supercomputer"], "correctAnswer": "Desktop at home" },
-  { "id": 11, "question": "An example of data is:", "options": ["Your final exam mark", "The number 87", "The word 'pass'", "A graph"], "correctAnswer": "The number 87" },
-  { "id": 12, "question": "Which of the following best describes a computer system?", "options": ["Hardware only", "Software only", "Hardware + software + user", "Printer + scanner"], "correctAnswer": "Hardware + software + user" },
-  { "id": 13, "question": "GPS in a car is an example of:", "options": ["ICT in everyday life", "A game console", "A printer", "A keyboard"], "correctAnswer": "ICT in everyday life" },
-  { "id": 14, "question": "A smartwatch is a type of:", "options": ["Wearable computing device", "Desktop computer", "Mainframe", "Printer"], "correctAnswer": "Wearable computing device" },
-  { "id": 15, "question": "The transformation of data into information requires:", "options": ["Printing", "Processing and context", "Saving", "Deleting"], "correctAnswer": "Processing and context" },
-  { "id": 16, "question": "Which is NOT a computing device?", "options": ["Laptop", "Microwave oven", "Smartphone", "Tablet"], "correctAnswer": "Microwave oven" },
-  { "id": 17, "question": "Online banking is made possible by:", "options": ["ICT", "Only hardware", "Only software", "Paper forms"], "correctAnswer": "ICT" },
-  { "id": 18, "question": "Raw facts like '25' and 'John' are examples of:", "options": ["Information", "Data", "Programs", "Files"], "correctAnswer": "Data" },
-  { "id": 19, "question": "A laptop is designed for:", "options": ["Portability and personal use", "Only office use", "Only gaming", "Only printing"], "correctAnswer": "Portability and personal use" },
-  { "id": 20, "question": "Which statement is true about data and information?", "options": ["They are the same thing", "Data becomes information when processed", "Information is raw", "Only data is useful"], "correctAnswer": "Data becomes information when processed" },
-  { "id": 21, "question": "EFT at a shop till uses:", "options": ["ICT", "Cash only", "Paper cheques", "Coins"], "correctAnswer": "ICT" },
-  { "id": 22, "question": "A gaming console is a type of:", "options": ["General-purpose computer", "Special-purpose computing device", "Server", "Printer"], "correctAnswer": "Special-purpose computing device" },
-  { "id": 23, "question": "The main purpose of a computer is to:", "options": ["Store data only", "Process data into information", "Print documents", "Play music"], "correctAnswer": "Process data into information" },
-  { "id": 24, "question": "Which is an example of a mobile computing device?", "options": ["Desktop tower", "Smartphone", "Printer", "Router"], "correctAnswer": "Smartphone" },
-  { "id": 25, "question": "Data has no meaning until it is:", "options": ["Saved", "Processed and organised", "Printed", "Deleted"], "correctAnswer": "Processed and organised" },
-  { "id": 26, "question": "Self-checkout at supermarkets uses:", "options": ["ICT", "Only cashiers", "Paper lists", "Manual calculation"], "correctAnswer": "ICT" },
-  { "id": 27, "question": "A desktop computer is mainly used for:", "options": ["Personal and office work", "Only gaming", "Only in schools", "Only printing"], "correctAnswer": "Personal and office work" },
-  { "id": 28, "question": "Which is NOT considered ICT?", "options": ["Email", "WhatsApp", "Television remote", "Landline telephone"], "correctAnswer": "Landline telephone" },
-  { "id": 29, "question": "Information is useful because it helps in:", "options": ["Decision making", "Wasting time", "Deleting files", "Turning off the computer"], "correctAnswer": "Decision making" },
-  { "id": 30, "question": "A computer converts data into information through:", "options": ["Printing", "Processing", "Saving", "Copying"], "correctAnswer": "Processing" }
+ "INTRODUCTION TO COMPUTERS & DEVICES": [
+  {
+    "id": 1,
+    "question": "What is a computer?",
+    "options": [
+      "A device that only plays games",
+      "An electronic device that accepts input, processes data and produces output",
+      "A machine used only for typing",
+      "A device that stores books"
+    ],
+    "correctAnswer": "An electronic device that accepts input, processes data and produces output"
+  },
+  {
+    "id": 2,
+    "question": "Which cycle shows how a computer works?",
+    "options": [
+      "Input → Output → Data",
+      "Input → Process → Output → Storage",
+      "Process → Input → Output",
+      "Data → Storage → Output"
+    ],
+    "correctAnswer": "Input → Process → Output → Storage"
+  },
+  {
+    "id": 3,
+    "question": "Which of the following is an example of input?",
+    "options": [
+      "Printed report",
+      "Calculated average",
+      "Entering marks using a keyboard",
+      "Saved file"
+    ],
+    "correctAnswer": "Entering marks using a keyboard"
+  },
+  {
+    "id": 4,
+    "question": "Which of the following is an example of output?",
+    "options": [
+      "Typing data",
+      "Saving information",
+      "Printing a report",
+      "Entering marks"
+    ],
+    "correctAnswer": "Printing a report"
+  },
+  {
+    "id": 5,
+    "question": "Which device is commonly used in banks for withdrawing money?",
+    "options": [
+      "Desktop computer",
+      "ATM machine",
+      "Tablet",
+      "Smartwatch"
+    ],
+    "correctAnswer": "ATM machine"
+  },
+  {
+    "id": 6,
+    "question": "ICT stands for:",
+    "options": [
+      "International Computer Training",
+      "Information and Communication Technology",
+      "Internet Control Technology",
+      "Integrated Computer Tools"
+    ],
+    "correctAnswer": "Information and Communication Technology"
+  },
+  {
+    "id": 7,
+    "question": "Which of the following is a benefit of ICT?",
+    "options": [
+      "Makes work slower",
+      "Improves communication",
+      "Uses more paper",
+      "Limits access to information"
+    ],
+    "correctAnswer": "Improves communication"
+  },
+  {
+    "id": 8,
+    "question": "Using Google Classroom is an example of ICT in:",
+    "options": [
+      "Banking",
+      "Health",
+      "Education",
+      "Entertainment"
+    ],
+    "correctAnswer": "Education"
+  },
+  {
+    "id": 9,
+    "question": "Which device is stationary and usually used in one place?",
+    "options": [
+      "Laptop",
+      "Tablet",
+      "Desktop computer",
+      "Smartphone"
+    ],
+    "correctAnswer": "Desktop computer"
+  },
+  {
+    "id": 10,
+    "question": "One advantage of a desktop computer is that it:",
+    "options": [
+      "Is easy to carry",
+      "Runs on battery",
+      "Has powerful performance",
+      "Fits in a pocket"
+    ],
+    "correctAnswer": "Has powerful performance"
+  },
+  {
+    "id": 11,
+    "question": "Which of the following is a limitation of a desktop computer?",
+    "options": [
+      "Large screen",
+      "Cheaper to upgrade",
+      "Not portable",
+      "Powerful performance"
+    ],
+    "correctAnswer": "Not portable"
+  },
+  {
+    "id": 12,
+    "question": "Which device is best suited for typing long CAT assignments?",
+    "options": [
+      "Smartwatch",
+      "Tablet",
+      "Laptop",
+      "Fitness tracker"
+    ],
+    "correctAnswer": "Laptop"
+  },
+  {
+    "id": 13,
+    "question": "Which of the following is a limitation of a laptop?",
+    "options": [
+      "Battery-powered",
+      "Portable",
+      "Smaller screen",
+      "Easy to carry"
+    ],
+    "correctAnswer": "Smaller screen"
+  },
+  {
+    "id": 14,
+    "question": "Tablets are best described as:",
+    "options": [
+      "Devices larger than laptops",
+      "Touchscreen devices larger than smartphones",
+      "Devices used only for typing",
+      "Stationary computers"
+    ],
+    "correctAnswer": "Touchscreen devices larger than smartphones"
+  },
+  {
+    "id": 15,
+    "question": "Why are tablets not ideal for typing long documents?",
+    "options": [
+      "They have no screen",
+      "They are too heavy",
+      "They have limited processing power",
+      "They lack physical keyboards"
+    ],
+    "correctAnswer": "They lack physical keyboards"
+  },
+  {
+    "id": 16,
+    "question": "A smartphone is mainly used for:",
+    "options": [
+      "Complex programming",
+      "Mobile communication and apps",
+      "Printing documents",
+      "Server management"
+    ],
+    "correctAnswer": "Mobile communication and apps"
+  },
+  {
+    "id": 17,
+    "question": "Which of the following is a limitation of smartphones?",
+    "options": [
+      "Internet access",
+      "Portability",
+      "Small screen",
+      "Many apps"
+    ],
+    "correctAnswer": "Small screen"
+  },
+  {
+    "id": 18,
+    "question": "Smartwatches and fitness trackers are examples of:",
+    "options": [
+      "Desktop devices",
+      "Mobile phones",
+      "Wearable devices",
+      "Input devices"
+    ],
+    "correctAnswer": "Wearable devices"
+  },
+  {
+    "id": 19,
+    "question": "One use of wearable devices is:",
+    "options": [
+      "Printing documents",
+      "Health monitoring",
+      "Typing assignments",
+      "Playing DVDs"
+    ],
+    "correctAnswer": "Health monitoring"
+  },
+  {
+    "id": 20,
+    "question": "Which of the following is hardware?",
+    "options": [
+      "Microsoft Word",
+      "Windows",
+      "Keyboard",
+      "Excel"
+    ],
+    "correctAnswer": "Keyboard"
+  },
+  {
+    "id": 21,
+    "question": "Which of the following is software?",
+    "options": [
+      "Mouse",
+      "Monitor",
+      "Printer",
+      "Microsoft Excel"
+    ],
+    "correctAnswer": "Microsoft Excel"
+  },
+  {
+    "id": 22,
+    "question": "Marks and names entered into a computer are examples of:",
+    "options": [
+      "Information",
+      "Procedures",
+      "Data",
+      "Hardware"
+    ],
+    "correctAnswer": "Data"
+  },
+  {
+    "id": 23,
+    "question": "Who are considered users in a computer system?",
+    "options": [
+      "Only learners",
+      "Only teachers",
+      "People who use the system",
+      "Only administrators"
+    ],
+    "correctAnswer": "People who use the system"
+  },
+  {
+    "id": 24,
+    "question": "Login instructions are examples of:",
+    "options": [
+      "Hardware",
+      "Software",
+      "Procedures",
+      "Data"
+    ],
+    "correctAnswer": "Procedures"
+  },
+  {
+    "id": 25,
+    "question": "Checking your bank balance on an app is an example of ICT in:",
+    "options": [
+      "Education",
+      "Health",
+      "Banking",
+      "Entertainment"
+    ],
+    "correctAnswer": "Banking"
+  },
+  {
+    "id": 26,
+    "question": "Doctors accessing patient records on computers is ICT in:",
+    "options": [
+      "Education",
+      "Health",
+      "Entertainment",
+      "Communication"
+    ],
+    "correctAnswer": "Health"
+  },
+  {
+    "id": 27,
+    "question": "Emails and video calls are examples of ICT in:",
+    "options": [
+      "Banking",
+      "Education",
+      "Communication",
+      "Health"
+    ],
+    "correctAnswer": "Communication"
+  },
+  {
+    "id": 28,
+    "question": "Watching videos on YouTube is an example of ICT in:",
+    "options": [
+      "Education only",
+      "Entertainment",
+      "Health",
+      "Banking"
+    ],
+    "correctAnswer": "Entertainment"
+  },
+  {
+    "id": 29,
+    "question": "Data is best described as:",
+    "options": [
+      "Processed information",
+      "Raw, unprocessed facts",
+      "Meaningful output",
+      "Final results"
+    ],
+    "correctAnswer": "Raw, unprocessed facts"
+  },
+  {
+    "id": 30,
+    "question": "Which of the following is information?",
+    "options": [
+      "45, 60, 72",
+      "Grade 10A",
+      "Average mark = 59%",
+      "Entered marks"
+    ],
+    "correctAnswer": "Average mark = 59%"
+  }
 ],
+// week 2
 
-"SYSTEMS TECHNOLOGIES - Device Management & File Organisation": [
-  { "id": 1, "question": "What is the first thing you do when starting a computer?", "options": ["Open Word", "Switch on the monitor and system unit", "Insert a USB", "Print"], "correctAnswer": "Switch on the monitor and system unit" },
-  { "id": 2, "question": "Logging on requires:", "options": ["Username and password", "Only a password", "Only a username", "No credentials"], "correctAnswer": "Username and password" },
-  { "id": 3, "question": "Access control is used to:", "options": ["Speed up the computer", "Protect data and privacy", "Print documents", "Play music"], "correctAnswer": "Protect data and privacy" },
-  { "id": 4, "question": "The desktop is also known as the:", "options": ["GUI (Graphical User Interface)", "CPU", "Taskbar only", "Recycle bin"], "correctAnswer": "GUI (Graphical User Interface)" },
-  { "id": 5, "question": "Icons on the desktop are:", "options": ["Shortcuts to programs or files", "Only pictures", "Viruses", "Games"], "correctAnswer": "Shortcuts to programs or files" },
-  { "id": 6, "question": "The correct posture for typing includes:", "options": ["Feet flat, back straight, wrists level", "Slouching", "Looking down only", "Typing with one hand"], "correctAnswer": "Feet flat, back straight, wrists level" },
-  { "id": 7, "question": "Home row keys on a keyboard are:", "options": ["ASDF and JKL;", "QWERTY", "1234", "Ctrl Alt Del"], "correctAnswer": "ASDF and JKL;" },
-  { "id": 8, "question": "To save a file for the first time you use:", "options": ["Save", "Save As", "Print", "Close"], "correctAnswer": "Save As" },
-  { "id": 9, "question": "A full file path includes:", "options": ["Drive, folders, filename and extension", "Only the filename", "Only the drive", "Only the extension"], "correctAnswer": "Drive, folders, filename and extension" },
-  { "id": 10, "question": "File extension .docx indicates a:", "options": ["Word document", "Picture", "Video", "Spreadsheet"], "correctAnswer": "Word document" },
-  { "id": 11, "question": "This PC in Windows is also called:", "options": ["File Explorer", "Recycle Bin", "Taskbar", "Desktop"], "correctAnswer": "File Explorer" },
-  { "id": 12, "question": "To create a shortcut on the desktop you:", "options": ["Right-click → New → Shortcut", "Double-click the file", "Delete the file", "Print it"], "correctAnswer": "Right-click → New → Shortcut" },
-  { "id": 13, "question": "To rename a file you:", "options": ["Right-click → Rename", "Left-click twice slowly", "Delete and recreate", "Print it"], "correctAnswer": "Right-click → Rename" },
-  { "id": 14, "question": "The Recycle Bin is used to:", "options": ["Store deleted files temporarily", "Store new files", "Print files", "Play music"], "correctAnswer": "Store deleted files temporarily" },
-  { "id": 15, "question": "To permanently delete a file you:", "options": ["Shift + Delete", "Just Delete", "Ctrl + Delete", "Alt + Delete"], "correctAnswer": "Shift + Delete" },
-  { "id": 16, "question": "File organisation helps to:", "options": ["Find files quickly", "Slow down the computer", "Use more space", "Create viruses"], "correctAnswer": "Find files quickly" },
-  { "id": 17, "question": "A folder is used to:", "options": ["Group related files", "Delete files", "Print documents", "Play videos"], "correctAnswer": "Group related files" },
-  { "id": 18, "question": "To copy a file you use:", "options": ["Ctrl + C then Ctrl + V", "Ctrl + X", "Ctrl + P", "Ctrl + Z"], "correctAnswer": "Ctrl + C then Ctrl + V" },
-  { "id": 19, "question": "To move a file you use:", "options": ["Ctrl + X then Ctrl + V", "Ctrl + C", "Ctrl + P", "Delete"], "correctAnswer": "Ctrl + X then Ctrl + V" },
-  { "id": 20, "question": "Good file naming should be:", "options": ["Descriptive and consistent", "Very long and random", "Only numbers", "All capitals"], "correctAnswer": "Descriptive and consistent" },
-  { "id": 21, "question": "To search for a file you use:", "options": ["Search box in File Explorer", "Recycle Bin", "Desktop only", "Printer"], "correctAnswer": "Search box in File Explorer" },
-  { "id": 22, "question": "The default drive for Windows installation is usually:", "options": ["C:", "D:", "E:", "F:"], "correctAnswer": "C:" },
-  { "id": 23, "question": "You can sort files by:", "options": ["Name, size, date modified, type", "Colour only", "Shape", "Sound"], "correctAnswer": "Name, size, date modified, type" },
-  { "id": 24, "question": "To restore a file from Recycle Bin you:", "options": ["Right-click → Restore", "Empty Recycle Bin", "Delete again", "Print"], "correctAnswer": "Right-click → Restore" },
-  { "id": 25, "question": "File properties show:", "options": ["Size, type, date created/modified", "Only the name", "Only the colour", "Only the printer"], "correctAnswer": "Size, type, date created/modified" },
-  { "id": 26, "question": "A hierarchical file structure uses:", "options": ["Drives → folders → subfolders → files", "Only files", "Only folders", "Random order"], "correctAnswer": "Drives → folders → subfolders → files" },
-  { "id": 27, "question": "To select multiple files you hold down:", "options": ["Ctrl or Shift", "Alt", "Enter", "Spacebar"], "correctAnswer": "Ctrl or Shift" },
-  { "id": 28, "question": "The keyboard shortcut to create a new folder is:", "options": ["Ctrl + Shift + N", "Ctrl + N", "Alt + N", "Shift + N"], "correctAnswer": "Ctrl + Shift + N" },
-  { "id": 29, "question": "You should save your work regularly to avoid:", "options": ["Losing data", "Printing too much", "Slow typing", "Viruses"], "correctAnswer": "Losing data" },
-  { "id": 30, "question": "The taskbar shows:", "options": ["Open programs and system tray", "Only the start button", "Only the desktop", "Only files"], "correctAnswer": "Open programs and system tray" }
-],
 
-"SYSTEMS TECHNOLOGIES - Hardware": [
-  { "id": 1, "question": "Hardware refers to:", "options": ["The physical parts of a computer", "Programs", "Files", "Internet"], "correctAnswer": "The physical parts of a computer" },
-  { "id": 2, "question": "Which is an input device?", "options": ["Monitor", "Keyboard", "Printer", "Speakers"], "correctAnswer": "Keyboard" },
-  { "id": 3, "question": "A mouse is an example of a:", "options": ["Pointing device", "Output device", "Storage device", "Processing device"], "correctAnswer": "Pointing device" },
-  { "id": 4, "question": "The monitor is an:", "options": ["Output device", "Input device", "Storage device", "Processing device"], "correctAnswer": "Output device" },
-  { "id": 5, "question": "A printer is classified as:", "options": ["Output device", "Input device", "Storage device", "Network device"], "correctAnswer": "Output device" },
-  { "id": 6, "question": "Storage devices are used to:", "options": ["Save data permanently", "Display images", "Enter data", "Print"], "correctAnswer": "Save data permanently" },
-  { "id": 7, "question": "A USB flash drive is a type of:", "options": ["Secondary storage", "Primary memory", "Input device", "Output device"], "correctAnswer": "Secondary storage" },
-  { "id": 8, "question": "A peripheral device is:", "options": ["An external device connected to the computer", "The CPU", "The motherboard", "RAM"], "correctAnswer": "An external device connected to the computer" },
-  { "id": 9, "question": "Devices can be connected via:", "options": ["Cabled (USB) or wireless (Bluetooth)", "Only cables", "Only Wi-Fi", "Only power cable"], "correctAnswer": "Cabled (USB) or wireless (Bluetooth)" },
-  { "id": 10, "question": "A webcam is an:", "options": ["Input device", "Output device", "Storage device", "Printer"], "correctAnswer": "Input device" },
-  { "id": 11, "question": "Speakers are used for:", "options": ["Audio output", "Audio input", "Printing", "Scanning"], "correctAnswer": "Audio output" },
-  { "id": 12, "question": "A scanner converts paper documents into:", "options": ["Digital files", "Printed copies", "Sound", "Video"], "correctAnswer": "Digital files" },
-  { "id": 13, "question": "The main processing unit is the:", "options": ["CPU", "Monitor", "Keyboard", "Mouse"], "correctAnswer": "CPU" },
-  { "id": 14, "question": "RAM is a type of:", "options": ["Temporary storage", "Permanent storage", "Input device", "Output device"], "correctAnswer": "Temporary storage" },
-  { "id": 15, "question": "A hard drive (HDD/SSD) is used for:", "options": ["Long-term storage", "Temporary processing", "Displaying images", "Typing"], "correctAnswer": "Long-term storage" },
-  { "id": 16, "question": "Bluetooth is a type of:", "options": ["Wireless connection", "Cabled connection", "Storage", "Printer"], "correctAnswer": "Wireless connection" },
-  { "id": 17, "question": "A touchscreen is both:", "options": ["Input and output device", "Only input", "Only output", "Storage"], "correctAnswer": "Input and output device" },
-  { "id": 18, "question": "A microphone is an:", "options": ["Audio input device", "Audio output device", "Video device", "Printer"], "correctAnswer": "Audio input device" },
-  { "id": 19, "question": "The system unit contains:", "options": ["Motherboard, CPU, RAM, storage", "Monitor and keyboard", "Printer", "Speakers"], "correctAnswer": "Motherboard, CPU, RAM, storage" },
-  { "id": 20, "question": "An external hard drive connects via:", "options": ["USB", "Keyboard port", "Monitor cable", "Power cable only"], "correctAnswer": "USB" },
-  { "id": 21, "question": "A projector is an:", "options": ["Output device", "Input device", "Storage device", "Processing device"], "correctAnswer": "Output device" },
-  { "id": 22, "question": "A barcode scanner is an:", "options": ["Input device", "Output device", "Storage", "Printer"], "correctAnswer": "Input device" },
-  { "id": 23, "question": "Wireless mice usually connect using:", "options": ["Bluetooth or RF receiver", "USB cable only", "Ethernet", "HDMI"], "correctAnswer": "Bluetooth or RF receiver" },
-  { "id": 24, "question": "The main function of input devices is to:", "options": ["Send data into the computer", "Display results", "Print", "Store files"], "correctAnswer": "Send data into the computer" },
-  { "id": 25, "question": "Output devices:", "options": ["Show or produce results", "Enter data", "Store data", "Process data"], "correctAnswer": "Show or produce results" },
-  { "id": 26, "question": "A digital camera is an:", "options": ["Input device", "Output device", "Storage device", "Printer"], "correctAnswer": "Input device" },
-  { "id": 27, "question": "An SD card is used for:", "options": ["Storage", "Displaying", "Typing", "Printing"], "correctAnswer": "Storage" },
-  { "id": 28, "question": "A headset with microphone is both:", "options": ["Input and output", "Only input", "Only output", "Storage"], "correctAnswer": "Input and output" },
-  { "id": 29, "question": "Cabled connections are generally:", "options": ["More reliable and faster", "Slower and less reliable", "Only for power", "Wireless"], "correctAnswer": "More reliable and faster" },
-  { "id": 30, "question": "The CPU is located:", "options": ["Inside the system unit", "On the monitor", "In the keyboard", "In the mouse"], "correctAnswer": "Inside the system unit" }
+"DEVICE MANAGEMENT & INTRODUCTION TO WORD PROCESSING": [
+  {
+    "id": 1,
+    "question": "What is the first step when switching on a computer?",
+    "options": ["Press the power button", "Log in with a password", "Switch on the power source", "Open an application"],
+    "correctAnswer": "Switch on the power source"
+  },
+  {
+    "id": 2,
+    "question": "Why is it important to start a computer correctly?",
+    "options": ["To make it faster", "To prevent hardware damage and ensure software loads properly", "To access the internet", "To save electricity"],
+    "correctAnswer": "To prevent hardware damage and ensure software loads properly"
+  },
+  {
+    "id": 3,
+    "question": "What does logging in to a computer mean?",
+    "options": ["Turning the computer off", "Accessing a system using personal details", "Opening a program", "Connecting to the internet"],
+    "correctAnswer": "Accessing a system using personal details"
+  },
+  {
+    "id": 4,
+    "question": "Which of the following is required to log in?",
+    "options": ["Printer", "Username and password", "Mouse", "Taskbar"],
+    "correctAnswer": "Username and password"
+  },
+  {
+    "id": 5,
+    "question": "Why is logging in important?",
+    "options": ["To change the wallpaper", "To protect personal files and prevent unauthorized access", "To speed up the computer", "To open Word"],
+    "correctAnswer": "To protect personal files and prevent unauthorized access"
+  },
+  {
+    "id": 6,
+    "question": "What is the main purpose of a password?",
+    "options": ["To identify the computer", "To protect user information", "To load software", "To shut down the system"],
+    "correctAnswer": "To protect user information"
+  },
+  {
+    "id": 7,
+    "question": "Which of the following is a rule for a strong password?",
+    "options": ["Sharing it with friends", "Using your name", "At least 8 characters with letters, numbers and symbols", "Using only numbers"],
+    "correctAnswer": "At least 8 characters with letters, numbers and symbols"
+  },
+  {
+    "id": 8,
+    "question": "What does GUI stand for?",
+    "options": ["General User Internet", "Graphical User Interface", "Global User Instruction", "Graphical Utility Input"],
+    "correctAnswer": "Graphical User Interface"
+  },
+  {
+    "id": 9,
+    "question": "What is the main purpose of a GUI?",
+    "options": ["To use text commands only", "To interact with the computer using visual elements", "To protect files", "To save power"],
+    "correctAnswer": "To interact with the computer using visual elements"
+  },
+  {
+    "id": 10,
+    "question": "Which of the following is NOT a GUI element?",
+    "options": ["Icons", "Menus", "Mouse pointer", "Password"],
+    "correctAnswer": "Password"
+  },
+  {
+    "id": 11,
+    "question": "What is the desktop?",
+    "options": ["A type of computer", "The main screen after logging in", "A storage device", "An input device"],
+    "correctAnswer": "The main screen after logging in"
+  },
+  {
+    "id": 12,
+    "question": "Which item is commonly found on the desktop?",
+    "options": ["CPU", "Icons", "Keyboard", "Printer"],
+    "correctAnswer": "Icons"
+  },
+  {
+    "id": 13,
+    "question": "What is an icon?",
+    "options": ["A text command", "A small picture representing a program, file or folder", "A password", "A keyboard key"],
+    "correctAnswer": "A small picture representing a program, file or folder"
+  },
+  {
+    "id": 14,
+    "question": "Where is the taskbar usually located?",
+    "options": ["Top of the screen", "Bottom of the screen", "Inside a folder", "On the keyboard"],
+    "correctAnswer": "Bottom of the screen"
+  },
+  {
+    "id": 15,
+    "question": "Which is a function of the taskbar?",
+    "options": ["Typing documents", "Showing open programs", "Storing files", "Printing documents"],
+    "correctAnswer": "Showing open programs"
+  },
+  {
+    "id": 16,
+    "question": "What is a shortcut?",
+    "options": ["The original file", "A link to a file or program", "A deleted file", "A backup file"],
+    "correctAnswer": "A link to a file or program"
+  },
+  {
+    "id": 17,
+    "question": "How can you identify a shortcut icon?",
+    "options": ["It is larger", "It has a small arrow", "It opens slowly", "It is password protected"],
+    "correctAnswer": "It has a small arrow"
+  },
+  {
+    "id": 18,
+    "question": "What happens if you delete a shortcut?",
+    "options": ["The original file is deleted", "The computer shuts down", "The original file remains", "The program is damaged"],
+    "correctAnswer": "The original file remains"
+  },
+  {
+    "id": 19,
+    "question": "What is the keyboard mainly used for?",
+    "options": ["Displaying output", "Entering data and instructions", "Printing documents", "Storing data"],
+    "correctAnswer": "Entering data and instructions"
+  },
+  {
+    "id": 20,
+    "question": "Which keys are used to type letters and numbers?",
+    "options": ["Function keys", "Special keys", "Alphanumeric keys", "Navigation keys"],
+    "correctAnswer": "Alphanumeric keys"
+  },
+  {
+    "id": 21,
+    "question": "Where are the function keys located on the keyboard?",
+    "options": ["On the left side", "At the bottom", "At the top", "In the middle"],
+    "correctAnswer": "At the top"
+  },
+  {
+    "id": 22,
+    "question": "What is the function of the Enter key?",
+    "options": ["Deletes text", "Starts a new line or confirms a command", "Types capital letters", "Copies text"],
+    "correctAnswer": "Starts a new line or confirms a command"
+  },
+  {
+    "id": 23,
+    "question": "Which key is used to type capital letters?",
+    "options": ["Ctrl", "Enter", "Shift", "Alt"],
+    "correctAnswer": "Shift"
+  },
+  {
+    "id": 24,
+    "question": "What does Ctrl + C do?",
+    "options": ["Paste", "Save", "Copy", "Cut"],
+    "correctAnswer": "Copy"
+  },
+  {
+    "id": 25,
+    "question": "What does Ctrl + V do?",
+    "options": ["Copy", "Paste", "Save", "Delete"],
+    "correctAnswer": "Paste"
+  },
+  {
+    "id": 26,
+    "question": "What is word processing?",
+    "options": ["Browsing the internet", "Creating and editing text documents", "Storing files", "Sending emails"],
+    "correctAnswer": "Creating and editing text documents"
+  },
+  {
+    "id": 27,
+    "question": "Which of the following is word processing software?",
+    "options": ["Microsoft Excel", "Microsoft Word", "Google Chrome", "Paint"],
+    "correctAnswer": "Microsoft Word"
+  },
+  {
+    "id": 28,
+    "question": "Which task can be done using word processing software?",
+    "options": ["Playing games", "Typing assignments", "Watching videos", "Editing photos"],
+    "correctAnswer": "Typing assignments"
+  },
+  {
+    "id": 29,
+    "question": "Which of the following is NOT a use of word processing?",
+    "options": ["Writing letters", "Creating reports", "Preparing tests", "Calculating averages"],
+    "correctAnswer": "Calculating averages"
+  },
+  {
+    "id": 30,
+    "question": "Typing a CAT assignment in Microsoft Word is an example of:",
+    "options": ["Data processing", "Word processing", "Communication", "Storage"],
+    "correctAnswer": "Word processing"
+  }
 ],
+// week 3
 
-"SYSTEMS TECHNOLOGIES - Software & Security":[
-  { "id": 1, "question": "Software refers to:", "options": ["Programs and instructions", "Physical parts", "Cables", "Printer"], "correctAnswer": "Programs and instructions" },
-  { "id": 2, "question": "There are two main types of software:", "options": ["System and application", "Input and output", "Hardware and software", "Free and paid"], "correctAnswer": "System and application" },
-  { "id": 3, "question": "Windows 10/11 is an example of:", "options": ["System software", "Application software", "Game", "Virus"], "correctAnswer": "System software" },
-  { "id": 4, "question": "Microsoft Word is an example of:", "options": ["Application software", "System software", "Driver", "Utility"], "correctAnswer": "Application software" },
-  { "id": 5, "question": "The operating system manages:", "options": ["Hardware and runs programs", "Only printing", "Only games", "Only internet"], "correctAnswer": "Hardware and runs programs" },
-  { "id": 6, "question": "Application software is also called:", "options": ["Apps", "Drivers", "Hardware", "Cables"], "correctAnswer": "Apps" },
-  { "id": 7, "question": "A strong password should contain:", "options": ["Letters, numbers and symbols", "Only your name", "1234", "Your birthday"], "correctAnswer": "Letters, numbers and symbols" },
-  { "id": 8, "question": "System software includes:", "options": ["Operating system and utilities", "Word and Excel", "Games", "Videos"], "correctAnswer": "Operating system and utilities" },
-  { "id": 9, "question": "Antivirus is a type of:", "options": ["Utility program", "Game", "Word processor", "Spreadsheet"], "correctAnswer": "Utility program" },
-  { "id": 10, "question": "Drivers are needed for:", "options": ["Hardware to work with the OS", "Playing music", "Typing", "Printing only"], "correctAnswer": "Hardware to work with the OS" },
-  { "id": 11, "question": "Application software is designed to:", "options": ["Help users perform specific tasks", "Control the computer", "Start the computer", "Connect to internet"], "correctAnswer": "Help users perform specific tasks" },
-  { "id": 12, "question": "Examples of application software include:", "options": ["Word, Excel, Chrome", "Windows, Linux", "BIOS", "Drivers"], "correctAnswer": "Word, Excel, Chrome" },
-  { "id": 13, "question": "You should never share your:", "options": ["Password", "Name", "School", "Favourite colour"], "correctAnswer": "Password" },
-  { "id": 14, "question": "System software runs in the:", "options": ["Background", "Foreground only", "Taskbar only", "Desktop only"], "correctAnswer": "Background" },
-  { "id": 15, "question": "Disk cleanup is a:", "options": ["Utility program", "Game", "Browser", "Word processor"], "correctAnswer": "Utility program" },
-  { "id": 16, "question": "The main role of the operating system is to:", "options": ["Act as an interface between user and hardware", "Only play videos", "Only print", "Only save files"], "correctAnswer": "Act as an interface between user and hardware" },
-  { "id": 17, "question": "Free antivirus software is an example of:", "options": ["Security utility", "Game", "Driver", "Operating system"], "correctAnswer": "Security utility" },
-  { "id": 18, "question": "You should update your software to:", "options": ["Fix security holes", "Make it slower", "Delete files", "Change colour"], "correctAnswer": "Fix security holes" },
-  { "id": 19, "question": "A web browser is:", "options": ["Application software", "System software", "Driver", "Utility"], "correctAnswer": "Application software" },
-  { "id": 20, "question": "Auto-configuration in system software means:", "options": ["It sets up devices automatically", "You must configure everything manually", "It deletes files", "It turns off the computer"], "correctAnswer": "It sets up devices automatically" },
-  { "id": 21, "question": "Basic security includes:", "options": ["Strong passwords and updates", "Sharing passwords", "No antivirus", "Opening unknown emails"], "correctAnswer": "Strong passwords and updates" },
-  { "id": 22, "question": "Licensing refers to:", "options": ["Legal permission to use software", "Free software only", "Hardware", "Internet"], "correctAnswer": "Legal permission to use software" },
-  { "id": 23, "question": "Pirated software is:", "options": ["Illegal", "Free", "Better", "Faster"], "correctAnswer": "Illegal" },
-  { "id": 24, "question": "The BIOS is part of:", "options": ["System software", "Application software", "Game", "Document"], "correctAnswer": "System software" },
-  { "id": 25, "question": "You should log off or lock your computer when:", "options": ["Leaving it unattended", "Only at night", "Only at school", "Never"], "correctAnswer": "Leaving it unattended" },
-  { "id": 26, "question": "A calculator app on a phone is:", "options": ["Application software", "System software", "Hardware", "Driver"], "correctAnswer": "Application software" },
-  { "id": 27, "question": "Defragmentation is a:", "options": ["Utility to optimise hard drive", "Game", "Virus", "Printer driver"], "correctAnswer": "Utility to optimise hard drive" },
-  { "id": 28, "question": "You should not click on links from:", "options": ["Unknown sources", "Your teacher", "Your parents", "Friends"], "correctAnswer": "Unknown sources" },
-  { "id": 29, "question": "System software is essential because:", "options": ["The computer cannot run without it", "It is free", "It plays games", "It prints"], "correctAnswer": "The computer cannot run without it" },
-  { "id": 30, "question": "Regular backups are part of:", "options": ["Basic security practice", "Gaming", "Printing", "Typing"], "correctAnswer": "Basic security practice" }
-],
+"DEVICE MANAGEMENT (THEORY) & WORD PROCESSING BASICS": [
+{"id":1,"question":"Why is correct posture important when typing?","options":["Makes the computer faster","Prevents fatigue and improves accuracy","Uses less electricity","Protects files"],"correctAnswer":"Prevents fatigue and improves accuracy"},
+{"id":2,"question":"Which posture guideline is correct when typing?","options":["Feet hanging","Back bent","Feet flat on the floor","Wrists resting heavily"],"correctAnswer":"Feet flat on the floor"},
+{"id":3,"question":"Where should your eyes be positioned when typing?","options":["On the keyboard","Level with the top of the monitor","Looking down","Closed"],"correctAnswer":"Level with the top of the monitor"},
+{"id":4,"question":"Which keys are known as the home row keys for the left hand?","options":["QWER","ASDF","ZXCV","1234"],"correctAnswer":"ASDF"},
+{"id":5,"question":"Which keys are home row keys for the right hand?","options":["JKL;","NM<>","UIOP","4567"],"correctAnswer":"JKL;"},
+{"id":6,"question":"What do thumbs rest on during correct typing?","options":["Shift key","Enter key","Spacebar","Ctrl key"],"correctAnswer":"Spacebar"},
+{"id":7,"question":"What is a benefit of correct finger placement?","options":["Bigger screen","More storage","Increased typing speed","Better sound"],"correctAnswer":"Increased typing speed"},
+{"id":8,"question":"What happens to fingers after pressing a key when touch typing?","options":["They stay there","They move randomly","They return to the home row","They stop typing"],"correctAnswer":"They return to the home row"},
+{"id":9,"question":"Which program is commonly used to open text documents?","options":["Paint","Microsoft Word","Calculator","Media Player"],"correctAnswer":"Microsoft Word"},
+{"id":10,"question":"Which menu is used to open a file in Word?","options":["Edit","View","File","Insert"],"correctAnswer":"File"},
+{"id":11,"question":"Which option allows you to choose a saved document?","options":["New","Save","Open","Close"],"correctAnswer":"Open"},
+{"id":12,"question":"Which option is used the first time you save a file?","options":["Save","Save As","Print","Close"],"correctAnswer":"Save As"},
+{"id":13,"question":"Why should you save your work frequently?","options":["To change font","To prevent data loss","To improve posture","To open files"],"correctAnswer":"To prevent data loss"},
+{"id":14,"question":"What must you choose when saving a file?","options":["Printer","Folder and filename","Keyboard","Mouse"],"correctAnswer":"Folder and filename"},
+{"id":15,"question":"How can you close a document?","options":["Turn off computer","Press X or File → Close","Remove keyboard","Log out"],"correctAnswer":"Press X or File → Close"},
+{"id":16,"question":"What should you do before closing a document?","options":["Print it","Delete it","Save changes","Rename it"],"correctAnswer":"Save changes"},
+{"id":17,"question":"Which menu is used to print a document?","options":["Insert","Layout","File","View"],"correctAnswer":"File"},
+{"id":18,"question":"What must you select before printing?","options":["Wallpaper","Printer and settings","Username","Folder"],"correctAnswer":"Printer and settings"},
+{"id":19,"question":"What is a drive?","options":["An input device","A storage area on a computer","A program","A shortcut"],"correctAnswer":"A storage area on a computer"},
+{"id":20,"question":"Which is an example of a drive?","options":["Recycle Bin","C: drive","Folder","Icon"],"correctAnswer":"C: drive"},
+{"id":21,"question":"What is a folder used for?","options":["Typing text","Organising files","Printing documents","Browsing internet"],"correctAnswer":"Organising files"},
+{"id":22,"question":"What can folders contain?","options":["Only files","Only programs","Files and subfolders","Only shortcuts"],"correctAnswer":"Files and subfolders"},
+{"id":23,"question":"What is a file?","options":["A storage device","An individual document or program","A computer","A menu"],"correctAnswer":"An individual document or program"},
+{"id":24,"question":"Which part of CAT_Week3.docx is the extension?","options":["CAT","Week3","docx","CAT_Week3"],"correctAnswer":"docx"},
+{"id":25,"question":"What does a file path show?","options":["File size","File location","File colour","File owner"],"correctAnswer":"File location"},
+{"id":26,"question":"Which is an example of a file path?","options":["Week3.docx","Documents","C:\\Users\\School\\Documents\\CAT\\Week3.docx","CAT Folder"],"correctAnswer":"C:\\Users\\School\\Documents\\CAT\\Week3.docx"},
+{"id":27,"question":"What is a filename?","options":["Type of file","Name given to a file","Storage device","Program"],"correctAnswer":"Name given to a file"},
+{"id":28,"question":"What does the extension indicate?","options":["File location","File size","File type","File owner"],"correctAnswer":"File type"},
+{"id":29,"question":"What is a new document?","options":["Deleted file","Blank file to start typing","Printed document","Saved file"],"correctAnswer":"Blank file to start typing"},
+{"id":30,"question":"When should you use Save As?","options":["To update the same file","To create a new version or save in a different location","To close Word","To print"],"correctAnswer":"To create a new version or save in a different location"}
+]
+,
+// WEEK 4
 
-"SOCIAL IMPLICATIONS":[
-  { "id": 1, "question": "Ergonomics is the study of:", "options": ["Safe and efficient work environment", "Computer speed", "Printing", "Gaming"], "correctAnswer": "Safe and efficient work environment" },
-  { "id": 2, "question": "Good posture while typing includes:", "options": ["Back straight, feet flat, screen at eye level", "Slouching", "Looking down only", "Standing"], "correctAnswer": "Back straight, feet flat, screen at eye level" },
-  { "id": 3, "question": "Taking regular breaks prevents:", "options": ["Eye strain and RSI", "Faster typing", "More printing", "Better games"], "correctAnswer": "Eye strain and RSI" },
-  { "id": 4, "question": "Green computing means:", "options": ["Using computers in an environmentally friendly way", "Using green-coloured computers", "Only using laptops", "Turning off lights"], "correctAnswer": "Using computers in an environmentally friendly way" },
-  { "id": 5, "question": "To save energy you should:", "options": ["Turn off computers when not in use", "Leave them on 24/7", "Only use screensavers", "Print more"], "correctAnswer": "Turn off computers when not in use" },
-  { "id": 6, "question": "Authentication is used to:", "options": ["Verify a user's identity", "Speed up the computer", "Print documents", "Play music"], "correctAnswer": "Verify a user's identity" },
-  { "id": 7, "question": "RSI stands for:", "options": ["Repetitive Strain Injury", "Really Slow Internet", "Random System Infection", "Regular Software Install"], "correctAnswer": "Repetitive Strain Injury" },
-  { "id": 8, "question": "The 20-20-20 rule means:", "options": ["Every 20 min, look 20 feet away for 20 seconds", "Type 20 words per minute", "Print 20 pages", "Save every 20 minutes"], "correctAnswer": "Every 20 min, look 20 feet away for 20 seconds" },
-  { "id": 9, "question": "Economic reasons for using computers include:", "options": ["Increased productivity and efficiency", "They are cheaper to buy", "They never break", "They use no electricity"], "correctAnswer": "Increased productivity and efficiency" },
-  { "id": 10, "question": "Wrist rests help prevent:", "options": ["Carpal tunnel syndrome", "Faster typing", "Better printing", "More storage"], "correctAnswer": "Carpal tunnel syndrome" },
-  { "id": 11, "question": "E-waste should be:", "options": ["Recycled properly", "Thrown in normal bins", "Burned", "Left outside"], "correctAnswer": "Recycled properly" },
-  { "id": 12, "question": "Using energy-saving modes is part of:", "options": ["Green computing", "Faster gaming", "Better printing", "More storage"], "correctAnswer": "Green computing" },
-  { "id": 13, "question": "A footrest may be needed if:", "options": ["Your feet don't touch the floor", "You type too slowly", "Your screen is too bright", "You print a lot"], "correctAnswer": "Your feet don't touch the floor" },
-  { "id": 14, "question": "Health issues from poor posture include:", "options": ["Back and neck pain", "Faster typing", "Better eyesight", "More energy"], "correctAnswer": "Back and neck pain" },
-  { "id": 15, "question": "Computers help businesses by:", "options": ["Saving time and reducing errors", "Making work slower", "Using more paper", "Increasing costs"], "correctAnswer": "Saving time and reducing errors" },
-  { "id": 16, "question": "Screen glare can cause:", "options": ["Eye strain", "Better vision", "Faster typing", "More printing"], "correctAnswer": "Eye strain" },
-  { "id": 17, "question": "Authentication methods include:", "options": ["Password, PIN, fingerprint", "Only your name", "Only your age", "Only your school"], "correctAnswer": "Password, PIN, fingerprint" },
-  { "id": 18, "question": "Printing only when necessary helps:", "options": ["Save paper and environment", "Use more ink", "Slow down work", "Break printers"], "correctAnswer": "Save paper and environment" },
-  { "id": 19, "question": "Adjusting screen brightness helps reduce:", "options": ["Eye strain", "Typing speed", "Storage space", "Internet speed"], "correctAnswer": "Eye strain" },
-  { "id": 20, "question": "Using both hands for typing prevents:", "options": ["Uneven strain on wrists", "Faster typing", "Better posture", "More printing"], "correctAnswer": "Uneven strain on wrists" },
-  { "id": 21, "question": "Old computers should be:", "options": ["Donated or recycled", "Thrown away", "Kept forever", "Buried"], "correctAnswer": "Donated or recycled" },
-  { "id": 22, "question": "Economic benefits include:", "options": ["Automation reduces labour costs", "More workers needed", "Slower production", "Higher expenses"], "correctAnswer": "Automation reduces labour costs" },
-  { "id": 23, "question": "The chair height should allow:", "options": ["Knees at 90 degrees, feet flat", "Standing only", "Knees above hips", "No backrest"], "correctAnswer": "Knees at 90 degrees, feet flat" },
-  { "id": 24, "question": "Using a document holder reduces:", "options": ["Neck strain", "Typing speed", "Storage use", "Printing"], "correctAnswer": "Neck strain" },
-  { "id": 25, "question": "Duplex printing means:", "options": ["Printing on both sides", "Printing in colour", "Printing photos", "Printing faster"], "correctAnswer": "Printing on both sides" },
-  { "id": 26, "question": "Stretching exercises help prevent:", "options": ["Muscle stiffness", "Better posture", "Faster typing", "More storage"], "correctAnswer": "Muscle stiffness" },
-  { "id": 27, "question": "Computers improve accuracy by:", "options": ["Reducing human error", "Increasing mistakes", "Using more paper", "Slower work"], "correctAnswer": "Reducing human error" },
-  { "id": 28, "question": "Anti-glare screens help reduce:", "options": ["Eye fatigue", "Typing errors", "Printing costs", "Internet speed"], "correctAnswer": "Eye fatigue" },
-  { "id": 29, "question": "Authentication protects:", "options": ["Unauthorised access", "Faster login", "More printing", "Better games"], "correctAnswer": "Unauthorised access" },
-  { "id": 30, "question": "One economic reason for using computers is:", "options": ["Faster data processing and storage", "Slower work", "More paper use", "Higher costs"], "correctAnswer": "Faster data processing and storage" }
-],
+"FILE ORGANIZATION & WORD PROCESSING INTERFACE": [
+{"id":1,"question":"What is a file naming convention?","options":["A storage device","A standard way to name files","A file type","A folder"],"correctAnswer":"A standard way to name files"},
+{"id":2,"question":"Why are file naming conventions important?","options":["They use less memory","They make files easy to identify","They protect computers","They change file size"],"correctAnswer":"They make files easy to identify"},
+{"id":3,"question":"Which is an example of a meaningful file name?","options":["doc1.docx","file.docx","CAT_Assignment_Week4.docx","new.docx"],"correctAnswer":"CAT_Assignment_Week4.docx"},
+{"id":4,"question":"Which character should be avoided in file names?","options":["_","-","|","Letters"],"correctAnswer":"|"},
+{"id":5,"question":"What should be used instead of spaces in file names?","options":["Special symbols","Numbers only","Underscores or hyphens","Capital letters"],"correctAnswer":"Underscores or hyphens"},
+{"id":6,"question":"Why should file names be short but descriptive?","options":["To use less ink","To load faster","To be easy to understand","To change file type"],"correctAnswer":"To be easy to understand"},
+{"id":7,"question":"What does file size indicate?","options":["File colour","Storage space used","File name","File type"],"correctAnswer":"Storage space used"},
+{"id":8,"question":"Which file extension represents a Word document?","options":[".pdf",".jpg",".docx",".mp3"],"correctAnswer":".docx"},
+{"id":9,"question":"Which file type is commonly used for images?","options":[".docx",".mp3",".jpg",".pdf"],"correctAnswer":".jpg"},
+{"id":10,"question":"Which file type is used for audio?","options":[".jpg",".docx",".mp3",".pdf"],"correctAnswer":".mp3"},
+{"id":11,"question":"What may happen when a file is very large?","options":["It deletes itself","It opens and saves slower","It changes format","It prints automatically"],"correctAnswer":"It opens and saves slower"},
+{"id":12,"question":"What is \"This PC\" used for?","options":["Typing documents","Managing files and drives","Playing music","Internet browsing"],"correctAnswer":"Managing files and drives"},
+{"id":13,"question":"What can you see in This PC?","options":["Only documents","Drives, folders and devices","Only pictures","Only programs"],"correctAnswer":"Drives, folders and devices"},
+{"id":14,"question":"What is a folder hierarchy?","options":["Random storage","Folders inside folders","A single file","A shortcut"],"correctAnswer":"Folders inside folders"},
+{"id":15,"question":"Which is a correct folder structure?","options":["Week4.docx → CAT → Documents","Documents → CAT → Term1 → Week4.docx","CAT → Week4.docx → Documents","Term1 → Documents"],"correctAnswer":"Documents → CAT → Term1 → Week4.docx"},
+{"id":16,"question":"Why is folder hierarchy important?","options":["Uses less storage","Keeps files organised","Changes file size","Improves typing speed"],"correctAnswer":"Keeps files organised"},
+{"id":17,"question":"What does copying a file do?","options":["Deletes the original","Creates a duplicate","Moves the file","Renames the file"],"correctAnswer":"Creates a duplicate"},
+{"id":18,"question":"What does moving a file do?","options":["Creates a copy","Deletes the file","Transfers it to a new location","Compresses the file"],"correctAnswer":"Transfers it to a new location"},
+{"id":19,"question":"Why would you copy a file to a USB?","options":["To delete it","For backup","To rename it","To print"],"correctAnswer":"For backup"},
+{"id":20,"question":"What does renaming a file change?","options":["File content","File size","File name","File type"],"correctAnswer":"File name"},
+{"id":21,"question":"Which is a correct example of renaming?","options":["Delete file","Move file","New Document.docx → CAT_Week4.docx","Copy file"],"correctAnswer":"New Document.docx → CAT_Week4.docx"},
+{"id":22,"question":"Where does a deleted file go first?","options":["Permanent delete","Desktop","Recycle Bin","Documents"],"correctAnswer":"Recycle Bin"},
+{"id":23,"question":"What does restore do?","options":["Deletes file","Changes name","Returns file from Recycle Bin","Compresses file"],"correctAnswer":"Returns file from Recycle Bin"},
+{"id":24,"question":"What is search used for?","options":["Renaming files","Finding files","Deleting files","Copying files"],"correctAnswer":"Finding files"},
+{"id":25,"question":"What does view change in File Explorer?","options":["File content","File size","How files are displayed","File type"],"correctAnswer":"How files are displayed"},
+{"id":26,"question":"What does sort help you do?","options":["Rename files","Organise files","Delete files","Open files"],"correctAnswer":"Organise files"},
+{"id":27,"question":"Which sorting option shows newest files first?","options":["Name","Size","Date","Type"],"correctAnswer":"Date"},
+{"id":28,"question":"What is the ribbon in Word?","options":["A typing tool","A horizontal bar of tools","A file type","A shortcut"],"correctAnswer":"A horizontal bar of tools"},
+{"id":29,"question":"Which tab is commonly used to format text?","options":["Insert","Layout","Home","View"],"correctAnswer":"Home"},
+{"id":30,"question":"Which is an example of an object in a Word document?","options":["Paragraph","Sentence","Image","Space"],"correctAnswer":"Image"}
+]
+,
+// WEEK 5
+"HARDWARE & TEXT EDITING": [
+{"id":1,"question":"What is computer hardware?","options":["Programs on a computer","Physical components you can touch","Internet services","User instructions"],"correctAnswer":"Physical components you can touch"},
+{"id":2,"question":"How does hardware work in a computer system?","options":["Independently","With software","Without electricity","Without users"],"correctAnswer":"With software"},
+{"id":3,"question":"Which of the following is hardware?","options":["Microsoft Word","Keyboard","Internet","File"],"correctAnswer":"Keyboard"},
+{"id":4,"question":"What is an input device used for?","options":["Displaying results","Producing sound","Entering data","Storing files"],"correctAnswer":"Entering data"},
+{"id":5,"question":"Which device is used to type text?","options":["Mouse","Scanner","Keyboard","Monitor"],"correctAnswer":"Keyboard"},
+{"id":6,"question":"Which input device is used to select and drag items?","options":["Printer","Mouse","Projector","Speaker"],"correctAnswer":"Mouse"},
+{"id":7,"question":"What does a scanner do?","options":["Prints documents","Records sound","Converts paper to digital","Displays images"],"correctAnswer":"Converts paper to digital"},
+{"id":8,"question":"Which device is used to record sound?","options":["Speaker","Microphone","Monitor","Printer"],"correctAnswer":"Microphone"},
+{"id":9,"question":"What is an output device?","options":["Enters data","Stores data","Displays or produces results","Controls software"],"correctAnswer":"Displays or produces results"},
+{"id":10,"question":"Which device displays text and graphics?","options":["Printer","Monitor","Keyboard","Scanner"],"correctAnswer":"Monitor"},
+{"id":11,"question":"Which output device produces a hard copy?","options":["Speaker","Monitor","Printer","Microphone"],"correctAnswer":"Printer"},
+{"id":12,"question":"Which output device plays sound?","options":["Scanner","Speaker","Mouse","Keyboard"],"correctAnswer":"Speaker"},
+{"id":13,"question":"Which device displays presentations on a large screen?","options":["Monitor","Printer","Projector","Tablet"],"correctAnswer":"Projector"},
+{"id":14,"question":"What is selecting text used for?","options":["Deleting files","Copying or formatting text","Printing documents","Closing programs"],"correctAnswer":"Copying or formatting text"},
+{"id":15,"question":"How can text be selected using a mouse?","options":["Double click only","Click and drag","Right click","Scroll"],"correctAnswer":"Click and drag"},
+{"id":16,"question":"Which keyboard shortcut selects all text?","options":["Ctrl + S","Ctrl + C","Ctrl + A","Ctrl + V"],"correctAnswer":"Ctrl + A"},
+{"id":17,"question":"How is text entered into a document?","options":["By clicking icons","By typing on the keyboard","By printing","By saving"],"correctAnswer":"By typing on the keyboard"},
+{"id":18,"question":"What does the Backspace key do?","options":["Deletes text to the right","Deletes text to the left","Adds a space","Moves cursor"],"correctAnswer":"Deletes text to the left"},
+{"id":19,"question":"What does the Delete key do?","options":["Deletes text to the left","Deletes text to the right","Prints text","Selects text"],"correctAnswer":"Deletes text to the right"},
+{"id":20,"question":"Which tool is used to insert symbols not on the keyboard?","options":["File menu","Insert → Symbols","View menu","Help menu"],"correctAnswer":"Insert → Symbols"},
+{"id":21,"question":"Which of the following is a special character?","options":["A","9","©","B"],"correctAnswer":"©"},
+{"id":22,"question":"Which symbol represents currency in South Africa?","options":["$","€","R","£"],"correctAnswer":"R"},
+{"id":23,"question":"What punctuation mark ends a sentence?","options":["Comma","Question mark","Full stop","Exclamation mark"],"correctAnswer":"Full stop"},
+{"id":24,"question":"Which punctuation mark separates items in a list?","options":["Full stop","Comma","Quotation marks","Question mark"],"correctAnswer":"Comma"},
+{"id":25,"question":"Which punctuation mark is used at the end of a question?","options":["Exclamation mark","Full stop","Comma","Question mark"],"correctAnswer":"Question mark"},
+{"id":26,"question":"Which punctuation mark shows excitement or emphasis?","options":["Comma","Question mark","Exclamation mark","Quotation marks"],"correctAnswer":"Exclamation mark"},
+{"id":27,"question":"Which punctuation marks indicate speech or quotations?","options":["Brackets","Full stops","Quotation marks","Commas"],"correctAnswer":"Quotation marks"},
+{"id":28,"question":"Which sentence uses quotation marks correctly?","options":["The teacher said submit.","The teacher said submit!","The teacher said, “Submit your work.”","The teacher said Submit"],"correctAnswer":"The teacher said, “Submit your work.”"},
+{"id":29,"question":"Why is correct punctuation important?","options":["Uses less memory","Makes text clearer","Changes file size","Improves hardware"],"correctAnswer":"Makes text clearer"},
+{"id":30,"question":"Which activity involves both hardware and text editing?","options":["Watching a movie","Typing and correcting an assignment","Playing a game","Browsing internet"],"correctAnswer":"Typing and correcting an assignment"}
+]
+,
+"HARDWARE – STORAGE & EDITING TOOLS": [
+{"id":1,"question":"What is primary storage?","options":["Permanent storage","Storage used while the computer is running","External storage","Cloud storage"],"correctAnswer":"Storage used while the computer is running"},
+{"id":2,"question":"Which component uses primary storage directly?","options":["Printer","Monitor","CPU","Keyboard"],"correctAnswer":"CPU"},
+{"id":3,"question":"Which type of memory is temporary and fast?","options":["HDD","SSD","RAM","USB"],"correctAnswer":"RAM"},
+{"id":4,"question":"What happens to data stored in RAM when the computer is turned off?","options":["It is saved","It is deleted","It is printed","It is copied"],"correctAnswer":"It is deleted"},
+{"id":5,"question":"What is cache memory?","options":["Large permanent storage","Very fast small storage in the CPU","External storage","Cloud storage"],"correctAnswer":"Very fast small storage in the CPU"},
+{"id":6,"question":"What is secondary storage used for?","options":["Running programs","Temporary storage","Permanent data storage","Processing data"],"correctAnswer":"Permanent data storage"},
+{"id":7,"question":"Which of the following is secondary storage?","options":["RAM","Cache","Hard Disk Drive","CPU"],"correctAnswer":"Hard Disk Drive"},
+{"id":8,"question":"Which storage device has no moving parts?","options":["HDD","SSD","CD","DVD"],"correctAnswer":"SSD"},
+{"id":9,"question":"Which device is commonly used to back up school work?","options":["RAM","Cache","USB flash drive","CPU"],"correctAnswer":"USB flash drive"},
+{"id":10,"question":"Which storage device uses optical technology?","options":["SSD","HDD","USB","CD"],"correctAnswer":"CD"},
+{"id":11,"question":"What is a peripheral device?","options":["Internal memory","External device connected to a computer","Software program","Operating system"],"correctAnswer":"External device connected to a computer"},
+{"id":12,"question":"Which of the following is a peripheral device?","options":["CPU","RAM","Printer","Cache"],"correctAnswer":"Printer"},
+{"id":13,"question":"Which peripheral device converts paper documents to digital form?","options":["Printer","Scanner","Speaker","Monitor"],"correctAnswer":"Scanner"},
+{"id":14,"question":"Which peripheral device provides additional storage?","options":["Mouse","Keyboard","External hard drive","Monitor"],"correctAnswer":"External hard drive"},
+{"id":15,"question":"What is a wired connection example?","options":["Bluetooth mouse","Wi-Fi printer","USB printer","Wireless keyboard"],"correctAnswer":"USB printer"},
+{"id":16,"question":"What is an advantage of wired connections?","options":["Portable","Fewer cables","Faster and reliable","Uses batteries"],"correctAnswer":"Faster and reliable"},
+{"id":17,"question":"Which is an example of a wireless device?","options":["USB mouse","Wired keyboard","Bluetooth mouse","Parallel printer"],"correctAnswer":"Bluetooth mouse"},
+{"id":18,"question":"What is an advantage of wireless connections?","options":["Faster than wired","More cables","Portable and flexible","Needs no power"],"correctAnswer":"Portable and flexible"},
+{"id":19,"question":"What are formatting marks used for?","options":["Typing text","Showing hidden formatting","Printing documents","Saving files"],"correctAnswer":"Showing hidden formatting"},
+{"id":20,"question":"Which formatting mark shows a paragraph break?","options":["Space","Tab","Paragraph symbol","Comma"],"correctAnswer":"Paragraph symbol"},
+{"id":21,"question":"Why are formatting marks useful?","options":["Improve speed","Check document layout","Increase storage","Change font"],"correctAnswer":"Check document layout"},
+{"id":22,"question":"What does Cut (Ctrl + X) do?","options":["Copies text","Deletes text permanently","Moves text to clipboard","Formats text"],"correctAnswer":"Moves text to clipboard"},
+{"id":23,"question":"What does Copy (Ctrl + C) do?","options":["Removes text","Duplicates text","Deletes text","Prints text"],"correctAnswer":"Duplicates text"},
+{"id":24,"question":"What does Paste (Ctrl + V) do?","options":["Deletes text","Moves text","Inserts clipboard content","Formats text"],"correctAnswer":"Inserts clipboard content"},
+{"id":25,"question":"Which tool is best for moving a paragraph to another page?","options":["Copy and Paste","Cut and Paste","Find","Replace"],"correctAnswer":"Cut and Paste"},
+{"id":26,"question":"What does the Find tool do?","options":["Deletes text","Searches for text","Formats text","Prints text"],"correctAnswer":"Searches for text"},
+{"id":27,"question":"What does the Replace tool do?","options":["Finds text only","Deletes text","Substitutes text","Changes font"],"correctAnswer":"Substitutes text"},
+{"id":28,"question":"Which tool replaces all occurrences of a word?","options":["Paste","Cut","Replace","Format Painter"],"correctAnswer":"Replace"},
+{"id":29,"question":"Why is Find and Replace useful?","options":["Improves typing speed","Saves time editing","Changes hardware","Prints faster"],"correctAnswer":"Saves time editing"},
+{"id":30,"question":"Which activity uses editing tools effectively?","options":["Watching a video","Replacing words in a document","Shutting down a computer","Connecting hardware"],"correctAnswer":"Replacing words in a document"}
+]
+,
 
-"SOLUTION DEVELOPMENT - Word Processing":[
-  { "id": 1, "question": "In Word, to create a new document you press:", "options": ["Ctrl + N", "Ctrl + O", "Ctrl + S", "Ctrl + P"], "correctAnswer": "Ctrl + N" },
-  { "id": 2, "question": "Save As is used when:", "options": ["Saving for the first time or to a new location/name", "You have already saved", "Printing", "Closing"], "correctAnswer": "Saving for the first time or to a new location/name" },
-  { "id": 3, "question": "The ribbon contains:", "options": ["Tabs, groups and commands", "Only pictures", "Only text", "Only the taskbar"], "correctAnswer": "Tabs, groups and commands" },
-  { "id": 4, "question": "To show formatting marks you press:", "options": ["Ctrl + Shift + 8", "Ctrl + P", "Ctrl + S", "Ctrl + Z"], "correctAnswer": "Ctrl + Shift + 8" },
-  { "id": 5, "question": "One space after a full stop is the correct:", "options": ["Modern typing rule", "Old rule with two spaces", "No spaces", "Three spaces"], "correctAnswer": "Modern typing rule" },
-  { "id": 6, "question": "To select a word you:", "options": ["Double-click it", "Triple-click", "Right-click", "Single-click"], "correctAnswer": "Double-click it" },
-  { "id": 7, "question": "Cut is performed using:", "options": ["Ctrl + X", "Ctrl + C", "Ctrl + V", "Ctrl + Z"], "correctAnswer": "Ctrl + X" },
-  { "id": 8, "question": "Paste is performed using:", "options": ["Ctrl + V", "Ctrl + C", "Ctrl + X", "Ctrl + P"], "correctAnswer": "Ctrl + V" },
-  { "id": 9, "question": "Find and Replace is found on the:", "options": ["Home tab", "Insert tab", "View tab", "Page Layout tab"], "correctAnswer": "Home tab" },
-  { "id": 10, "question": "To change font size you use the:", "options": ["Font group on Home tab", "Insert tab", "Review tab", "View tab"], "correctAnswer": "Font group on Home tab" },
-  { "id": 11, "question": "Bold, Italic and Underline are found in:", "options": ["Font group", "Paragraph group", "Styles group", "Editing group"], "correctAnswer": "Font group" },
-  { "id": 12, "question": "To centre text you use:", "options": ["Ctrl + E", "Ctrl + L", "Ctrl + R", "Ctrl + J"], "correctAnswer": "Ctrl + E" },
-  { "id": 13, "question": "Bullets and numbering are in the:", "options": ["Paragraph group", "Font group", "Styles group", "Clipboard group"], "correctAnswer": "Paragraph group" },
-  { "id": 14, "question": "To check spelling you go to:", "options": ["Review tab", "Home tab", "Insert tab", "View tab"], "correctAnswer": "Review tab" },
-  { "id": 15, "question": "AutoCorrect fixes:", "options": ["Common typing mistakes automatically", "All errors", "Only grammar", "Only formatting"], "correctAnswer": "Common typing mistakes automatically" },
-  { "id": 16, "question": "Page margins are changed in:", "options": ["Page Layout tab", "Home tab", "Insert tab", "Review tab"], "correctAnswer": "Page Layout tab" },
-  { "id": 17, "question": "To insert a page break you press:", "options": ["Ctrl + Enter", "Enter", "Shift + Enter", "Alt + Enter"], "correctAnswer": "Ctrl + Enter" },
-  { "id": 18, "question": "Header and footer are inserted from:", "options": ["Insert tab", "Home tab", "View tab", "Review tab"], "correctAnswer": "Insert tab" },
-  { "id": 19, "question": "To insert a picture you go to:", "options": ["Insert tab → Pictures", "Home tab", "Review tab", "View tab"], "correctAnswer": "Insert tab → Pictures" },
-  { "id": 20, "question": "Shapes are found in:", "options": ["Insert tab → Illustrations", "Home tab", "Page Layout", "Review tab"], "correctAnswer": "Insert tab → Illustrations" },
-  { "id": 21, "question": "WordArt is used for:", "options": ["Decorative text", "Normal typing", "Printing", "Saving"], "correctAnswer": "Decorative text" },
-  { "id": 22, "question": "SmartArt is used for:", "options": ["Diagrams and organisational charts", "Photos", "Tables", "Headers"], "correctAnswer": "Diagrams and organisational charts" },
-  { "id": 23, "question": "To insert a text box you go to:", "options": ["Insert tab → Text Box", "Home tab", "Page Layout", "View tab"], "correctAnswer": "Insert tab → Text Box" },
-  { "id": 24, "question": "Print Layout view shows:", "options": ["How the document will look when printed", "Only text", "Only codes", "Web view"], "correctAnswer": "How the document will look when printed" },
-  { "id": 25, "question": "To zoom in/out you use:", "options": ["View tab or status bar slider", "Home tab", "Insert tab", "Print tab"], "correctAnswer": "View tab or status bar slider" },
-  { "id": 26, "question": "Quick Styles are found in:", "options": ["Home tab → Styles group", "Insert tab", "Design tab", "Review tab"], "correctAnswer": "Home tab → Styles group" },
-  { "id": 27, "question": "Page orientation can be:", "options": ["Portrait or Landscape", "Only Portrait", "Only Landscape", "Square"], "correctAnswer": "Portrait or Landscape" },
-  { "id": 28, "question": "To insert a page number you go to:", "options": ["Insert tab → Page Number", "Home tab", "View tab", "Review tab"], "correctAnswer": "Insert tab → Page Number" },
-  { "id": 29, "question": "A screenshot can be inserted using:", "options": ["Insert tab → Screenshot", "Print Screen key only", "Copy paste only", "Home tab"], "correctAnswer": "Insert tab → Screenshot" },
-  { "id": 30, "question": "To add a page border you go to:", "options": ["Design tab → Page Borders", "Home tab", "Insert tab", "Page Layout tab"], "correctAnswer": "Design tab → Page Borders" }
-],
+// Still to add week 7 - 10 for Term 1
 
   // TERM 2 EXAMS
   

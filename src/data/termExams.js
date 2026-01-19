@@ -94,12 +94,12 @@ export const termExams = {
 
     "Grade 10": {
       "Term 1": [
-        { id: 101, title: "SYSTEMS TECHNOLOGIES - Introduction to Concepts of Computing", password: "password" },
-        { id: 102, title: "SYSTEMS TECHNOLOGIES - Device Management & File Organisation", password: "password" },
-        { id: 103, title: "SYSTEMS TECHNOLOGIES - Hardware", password: "password" },
-        { id: 104, title: "SYSTEMS TECHNOLOGIES - Software & Security", password: "password" },
-         { id: 105, title: "SOCIAL IMPLICATIONS", password: "password" },
-        { id: 106, title: "SOLUTION DEVELOPMENT - Word Processing", password: "password" },
+        { id: 101, title: "INTRODUCTION TO COMPUTERS & DEVICES", password: "" },
+        { id: 102, title: "DEVICE MANAGEMENT & INTRODUCTION TO WORD PROCESSING", password: "" },
+        { id: 103, title: "DEVICE MANAGEMENT (THEORY) & WORD PROCESSING BASICS", password: "" },
+        { id: 104, title: "FILE ORGANIZATION & WORD PROCESSING INTERFACE", password: "" },
+         { id: 105, title: "HARDWARE & TEXT EDITING", password: "" },
+        { id: 106, title: "HARDWARE – STORAGE & EDITING TOOLS", password: "" },
 
 
       ],
