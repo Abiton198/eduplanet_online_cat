@@ -2,7 +2,20 @@
 
 export const studentList = {
   "10":[
-     { name: "Lungelo" },
+     { name: "Tinotenda" },
+     { name: "Mustafa" },
+     { name: "John" },
+     { name: "Haridi" },
+     { name: "Alwaba" },
+     { name: "Alicia" },
+     { name: "Tafeni" },
+     { name: "Hlumelo_Z"},
+     { name: "Nduzi" },
+     { name: "Matthew" },
+     { name: "Venan" },
+     { name: "Yamvelani" },
+     { name: "Abiton_10" },
+
   ],
 
   "11": [
@@ -20,12 +33,13 @@ export const studentList = {
     { name: "Laeeqa" },
     { name: "Ambeswa" },
     { name: "Ashleigh" },
+    { name: "Naomi" },
     { name: "Abiton_11" }
   ],
   "12": [
     { name: "Lwando" },
-    { name: "Naomi" },
     { name: "Lutho" },
+    { name: "Ibanathi" },
     { name: "Andisiwe" },
     { name: "Asakhile" },
     { name: "Emihle P" },
