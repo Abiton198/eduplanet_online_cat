@@ -12,8 +12,8 @@ export const studentList = {
      { name: "Hlumelo_Z"},
      { name: "Nduzi" },
      { name: "Matthew" },
-     { name: "Venan" },
-     { name: "Yamvelani" },
+     { name: "Iminani" },
+     { name: "Yomkelani" },
      { name: "Abiton_10" },
 
   ],
