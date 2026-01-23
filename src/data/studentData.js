@@ -34,6 +34,12 @@ export const studentList = {
     { name: "Ambeswa" },
     { name: "Ashleigh" },
     { name: "Naomi" },
+     { name: "Lesedi" },
+      { name: "Katlego" },
+       { name: "Mihlali" },
+        { name: "Siyamanga" },
+         { name: "Sinawo" },
+       { name: "Charles" },
     { name: "Abiton_11" }
   ],
   "12": [
