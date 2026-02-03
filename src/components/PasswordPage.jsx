@@ -130,7 +130,7 @@ const handlePasswordLogin = async () => {
           <div className="flex-1 flex items-center justify-center px-6 text-center">
             <div className="max-w-4xl">
               <h1 className="text-5xl md:text-7xl font-extrabold text-white dark:text-gray-100 mb-6 drop-shadow-2xl">
-                EduPlanet CAT Exams
+                CAT Revision Tests
               </h1>
               <p className="text-xl md:text-2xl text-gray-100 dark:text-gray-300 mb-12 font-light">
                 Secure • Proctored • Trusted 

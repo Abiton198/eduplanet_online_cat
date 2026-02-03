@@ -14,7 +14,7 @@ import TeacherDashboard from './components/TeacherDashboard';
 import { AnalysisComponent } from './components';
 import StudentGoogleLogin from './components/StudentGoogleLogin';
 import GroupWeakStudents from './utils/GroupWeakStudents';
-import logo from './img/edu_logo.jpg';
+import logo from '../public/logo_home.png';
 
 function App() {
   const [studentInfo, setStudentInfo] = useState(null);
@@ -62,9 +62,9 @@ function App() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-800 dark:text-white tracking-tight">
-                EduPlanet CAT
+                Computer Application Technologies
               </h1>
-              <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Online Exam Portal</p>
+              <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Online Revision Portal</p>
             </div>
           </Link>
 
@@ -116,7 +116,7 @@ function App() {
                 <div className="flex items-center gap-3">
                   <img src={logo} alt="Logo" className="h-12 w-12 rounded-xl shadow-md" />
                   <div>
-                    <h2 className="font-bold text-xl text-gray-800 dark:text-white">EduPlanet CAT</h2>
+                    <h2 className="font-bold text-xl text-gray-800 dark:text-white">Computer Application Technologies</h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Navigation Menu</p>
                   </div>
                 </div>

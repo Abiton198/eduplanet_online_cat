@@ -59,7 +59,9 @@ export const studentList = {
     { name: "Zola" },
     { name: "Ukhona" },
     { name: "Hayley" },
-    { name: "Abiton_12" }
+    { name: "Abiton_12" },
+      { name: "Thulani" },
+
   ],
   // "12A": [
   //   { name: "Okuhle" },
