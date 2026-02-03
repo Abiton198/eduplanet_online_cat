@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { X, MessageCircle, Sparkles } from 'lucide-react';
-import logo from '../img/edu_logo.jpg';
+import logo from '../../public/logo_home.png'
 
 export default function Chatbot({ studentInfo }) {
   const location = useLocation();
