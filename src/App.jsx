@@ -14,8 +14,7 @@ import TeacherDashboard from './components/TeacherDashboard';
 import { AnalysisComponent } from './components';
 import StudentGoogleLogin from './components/StudentGoogleLogin';
 import GroupWeakStudents from './utils/GroupWeakStudents';
-import logo from '../public/logo_home.png';
-
+import logo from './img/logo_home.png';
 function App() {
   const [studentInfo, setStudentInfo] = useState(null);
   const [adminInfo, setAdminInfo] = useState(null);
