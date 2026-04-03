@@ -1,258 +1,303 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { studentList } from '../data/studentData';
 import { auth, provider, db } from '../utils/firebase';
-import { X, Eye, EyeOff, Sun, Moon } from 'lucide-react';
-import { signInAnonymously } from 'firebase/auth';
+import { X, Eye, EyeOff, Sun, Moon, GraduationCap, School } from 'lucide-react';
+import { Sparkles, FileText, BarChart3 } from 'lucide-react';
 
-export default function PasswordPage({ setStudentInfo }) {
-  const [grade, setGrade] = useState('');
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+export default function AuthPage({ setStudentInfo }) {
+  // UI States
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // Form States
+  const [email, setEmail] = useState(''); // Used as "Username" or actual email
+  const [password, setPassword] = useState('');
+  const [grade, setGrade] = useState('');
+  const [school, setSchool] = useState('');
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+
   const navigate = useNavigate();
 
-  // Load saved theme or detect system preference
+  // --- Theme Logic ---
   useEffect(() => {
     const saved = localStorage.getItem('eduplanet-theme');
-    if (saved) {
-      setIsDarkMode(saved === 'dark');
-    } else {
-      setIsDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches);
-    }
+    const isDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    setIsDarkMode(isDark);
+    document.documentElement.classList.toggle('dark', isDark);
   }, []);
 
-  // Apply theme to body
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('eduplanet-theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('eduplanet-theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
-
-  const openModal = () => {
-    setIsModalOpen(true);
-    setError('');
+  const toggleTheme = () => {
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
+    localStorage.setItem('eduplanet-theme', newMode ? 'dark' : 'light');
+    document.documentElement.classList.toggle('dark', newMode);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setGrade('');
-    setName('');
-    setPassword('');
-    setError('');
-  };
+  // --- Auth Handlers ---
 
+ const handleGoogleLogin = async () => {
+  if (isRegistering && (!grade || !school)) {
+    setError("Please enter your Grade and School before signing up with Google.");
+    return;
+  }
 
-const handlePasswordLogin = async () => {
   try {
-    // 1. Sign in anonymously so Firebase Rules recognize the user
-    await signInAnonymously(auth); 
-    
-    // 2. Then proceed with your logic
-    if (password === `${name}#`) {
-      setStudentInfo({ name, grade, email: null });
-      navigate('/exam');
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    const userRef = doc(db, 'users', user.uid);
+    const snapshot = await getDoc(userRef);
+
+    if (isRegistering) {
+      // Always update or set info during the registration flow
+      await setDoc(userRef, {
+        name: user.displayName,
+        email: user.email,
+        grade: grade,
+        school: school.trim(),
+        updatedAt: new Date()
+      }, { merge: true }); // Use merge: true to avoid overwriting other data
     }
-  } catch (error) {
-    setError("Auth failed");
+    
+    const finalData = snapshot.exists() ? snapshot.data() : { name: user.displayName, grade, school };
+    setStudentInfo(finalData);
+    navigate('/dashboard');
+  } catch (err) {
+    setError('Google Sign-in failed.');
   }
 };
 
-  const handleGoogleLogin = async () => {
-    if (!grade || !name) {
-      setError('Please select grade and name.');
-      return;
+  const handlePasswordAuth = async (e) => {
+  e.preventDefault();
+  setError('');
+  
+  try {
+    if (isRegistering) {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Save the user profile including the custom school name
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        name,
+        grade,
+        school: school.trim(), // Storing the typed string
+        email,
+        role: 'student',
+        createdAt: new Date()
+      });
+      
+      setStudentInfo({ name, grade, school, email });
+    } else {
+       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const snapshot = await getDoc(doc(db, 'users', userCredential.user.uid));
+        setStudentInfo(snapshot.data());
     }
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const email = result.user.email;
-      const studentId = `${grade}_${name}`;
-      const studentRef = doc(db, 'students', studentId);
-      const snapshot = await getDoc(studentRef);
-
-      if (snapshot.exists() && snapshot.data().email !== email) {
-        setError('This name is linked to another Google account.');
-      } else {
-        if (!snapshot.exists()) {
-          await setDoc(studentRef, { name, grade, email });
-        }
-        setStudentInfo({ name, grade, email });
-        closeModal();
-        navigate('/exam');
-      }
-    } catch (err) {
-      setError('Google sign-in failed. Try again.');
-    }
-  };
+    navigate('/dashboard');
+  } catch (err) {
+    setError(err.message.includes('auth/user-not-found') ? 'User not found.' : 'Invalid credentials.');
+  }
+};
 
   return (
-    <>
-      {/* Tailwind Dark Mode + Background */}
-      <div className={`min-h-screen bg-cover bg-center bg-fixed transition-all duration-500 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}
-        style={!isDarkMode ? {
-          backgroundImage: `url('https://images.unsplash.com/photo-1509062522246-3755977927d7?ixlib=rb-4.0.3&auto=format&fit=crop&q=80')`,
-        } : {}}
+  <div className={`min-h-screen w-full transition-colors duration-500 flex flex-col ${
+  isDarkMode 
+    ? 'bg-gray-950 text-slate-100' 
+    : 'bg-white text-gray-900'
+}`}>
+  {/* Unified Background Layer */}
+  <div className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-700 ${
+    isDarkMode ? 'opacity-10' : 'opacity-20'
+  }`} 
+    style={{ 
+      backgroundImage: `url('https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80')`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      // In dark mode, we add a grayscale filter to keep it professional
+      filter: isDarkMode ? 'grayscale(100%)' : 'none' 
+    }} 
+  />
+
+      <header className="relative z-10 p-6 flex justify-between items-center">
+        <button onClick={toggleTheme} className="p-3 rounded-full bg-white dark:bg-gray-800 shadow-lg transition-transform hover:scale-110">
+          {isDarkMode ? <Sun className="text-yellow-400" /> : <Moon className="text-indigo-600" />}
+        </button>
+        <button onClick={() => setIsModalOpen(true)} className="bg-indigo-600 text-white px-8 py-3 rounded-full font-bold hover:bg-indigo-700 transition shadow-xl">
+          Get Started
+        </button>
+      </header>
+
+{/* Landing Page Content */}
+     <main className="relative z-10 flex flex-col items-center justify-center pt-20 pb-20 text-center px-4">
+  {/* Hero Header */}
+  <div className="max-w-4xl mb-16">
+    <h1 className="text-6xl md:text-7xl font-black mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 dark:from-indigo-400 dark:to-purple-400">
+      EduCAT Portal
+    </h1>
+    <p className="text-xl md:text-2xl opacity-90 font-medium text-gray-700 dark:text-gray-300">
+      Your personalized learning journey starts here.
+    </p>
+    <div className="mt-4 flex flex-wrap justify-center gap-2">
+      <span className="px-4 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-sm font-bold border border-indigo-200 dark:border-indigo-800">
+        CAPS Aligned
+      </span>
+      <span className="px-4 py-1 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-sm font-bold border border-purple-200 dark:border-purple-800">
+        IT & CAT
+      </span>
+    </div>
+  </div>
+
+  {/* Feature Grid */}
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl w-full">
+    {[
+      {
+        title: "AI Tutoring",
+        desc: "24/7 AI-powered assistance for complex IT & CAT concepts.",
+        icon: <Sparkles className="text-amber-500" />,
+        color: "hover:border-amber-500"
+      },
+      {
+        title: "Mock Exams",
+        desc: "AI-generated study mocks tailored to your exam preparation.",
+        icon: <FileText className="text-blue-500" />,
+        color: "hover:border-blue-500"
+      },
+      {
+        title: "Weekly ATP Tests",
+        desc: "Stay on track with timed revision tests following the ATP.",
+        icon: <BarChart3 className="text-emerald-500" />,
+        color: "hover:border-emerald-500"
+      },
+      {
+        title: "Secure Portal",
+        desc: "Official proctored environment for CAPS assessment.",
+        icon: <School className="text-indigo-500" />,
+        color: "hover:border-indigo-500"
+      }
+    ].map((feature, idx) => (
+      <div 
+        key={idx} 
+        className={`p-6 rounded-3xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-md border border-gray-200 dark:border-gray-700 transition-all duration-300 transform hover:-translate-y-2 hover:shadow-xl ${feature.color}`}
       >
-        <div className="min-h-screen bg-black bg-opacity-40 dark:bg-black dark:bg-opacity-70 flex flex-col">
-
-          {/* Top Bar: Theme Toggle + Start Button */}
-          <header className="p-6 flex justify-between items-center z-10">
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="p-3 rounded-full bg-white dark:bg-gray-800 text-gray-800 dark:text-yellow-400 shadow-lg hover:scale-110 transition-all duration-300"
-              aria-label="Toggle dark mode"
-            >
-              {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
-            </button>
-
-            {/* Start Exam Button */}
-            <button
-              onClick={openModal}
-              className="bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 font-bold px-8 py-4 rounded-full shadow-2xl hover:shadow-indigo-500/50 transform hover:scale-110 transition-all duration-300 text-lg flex items-center gap-3"
-            >
-              Start Exam
-            </button>
-          </header>
-
-          {/* Hero */}
-          <div className="flex-1 flex items-center justify-center px-6 text-center">
-            <div className="max-w-4xl">
-              <h1 className="text-5xl md:text-7xl font-extrabold text-white dark:text-gray-100 mb-6 drop-shadow-2xl">
-                CAT Revision Tests
-              </h1>
-              <p className="text-xl md:text-2xl text-gray-100 dark:text-gray-300 mb-12 font-light">
-                Secure • Proctored • Trusted 
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {[
-                  { icon: "Lock", text: "Secure Login" },
-                  { icon: "Eye", text: "Full Proctoring" },
-                  { icon: "Trophy", text: "Instant Results" }
-                ].map((item, i) => (
-                  <div key={i} className="bg-white dark:bg-gray-800 bg-opacity-20 backdrop-blur-lg rounded-3xl p-8 border border-white dark:border-gray-700 border-opacity-30">
-                    <div className="text-5xl mb-4">{item.icon}</div>
-                    <p className="text-white dark:text-gray-200 font-bold text-xl">{item.text}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        <div className="mb-4 p-3 bg-white dark:bg-gray-900 rounded-2xl w-fit shadow-sm">
+          {feature.icon}
         </div>
+        <h3 className="text-lg font-bold mb-2 dark:text-white">{feature.title}</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+          {feature.desc}
+        </p>
       </div>
+    ))}
+  </div>
+</main>
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl max-w-lg w-full p-10 relative overflow-hidden">
-            <button
-              onClick={closeModal}
-              className="absolute top-5 right-5 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition"
-            >
-              <X size={32} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl p-8 shadow-2xl relative">
+            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+              <X size={24} />
             </button>
 
-            <div className="text-center mb-8">
-              <h2 className="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-2">
-                Welcome Back!
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">Sign in to begin your exam</p>
-            </div>
+            <h2 className="text-3xl font-bold text-center mb-2">{isRegistering ? 'Create Account' : 'Welcome Back'}</h2>
+            <p className="text-center text-gray-500 mb-6 text-sm">
+              {isRegistering ? 'Join our community' : 'Sign in to access your dashboard'}
+            </p>
 
-            <select
+            <form onSubmit={handlePasswordAuth} className="space-y-4">
+              {isRegistering && (
+                <>
+                  <input 
+                    type="text" placeholder="Full Name" required
+                    className="w-full p-3 rounded-xl border dark:bg-gray-800 dark:border-gray-700"
+                    onChange={(e) => setName(e.target.value)}
+                  />
+            <div className="flex gap-2">
+            <select 
+              className="w-1/3 p-3 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none"
               value={grade}
-              onChange={(e) => {
-                setGrade(e.target.value);
-                setName('');
-                setError('');
-              }}
-              className="w-full p-4 mb-4 bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-indigo-500 dark:focus:border-indigo-400 focus:outline-none text-lg text-gray-900 dark:text-gray-100"
+              onChange={(e) => setGrade(e.target.value)} 
+              required
             >
-              <option value="">Select Your Grade</option>
-              {Object.keys(studentList).map((g) => (
-                <option key={g} value={g}>Grade {g}</option>
-              ))}
+              <option value="">Grade</option>
+              {[10, 11, 12].map(g => <option key={g} value={g}>{g}</option>)}
             </select>
 
-            {grade && (
-              <select
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  setError('');
-                }}
-                className="w-full p-4 mb-6 bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-indigo-500 dark:focus:border-indigo-400 focus:outline-none text-lg text-gray-900 dark:text-gray-100"
-              >
-                <option value="">Select Your Name</option>
-                {studentList[grade]?.map((s) => (
-                  <option key={s.name} value={s.name}>{s.name}</option>
-                ))}
-              </select>
-            )}
+            <div className="relative w-2/3">
+              <School className="absolute left-3 top-3.5 text-gray-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Your School Name"
+                className="w-full p-3 pl-10 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none"
+                value={school}
+                onChange={(e) => setSchool(e.target.value)} 
+                required
+              />
+            </div>
+          </div>
+                </>
+              )}
 
-            {grade && name && (
-              <>
-                {['10', '11', '12'].includes(grade) ? (
-                  <div className="space-y-5">
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Password (e.g. John#)"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full p-4 pr-14 bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-indigo-500 dark:focus:border-indigo-400 focus:outline-none text-lg font-mono text-gray-900 dark:text-gray-100"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-4 text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
-                      >
-                        {showPassword ? <EyeOff size={24} /> : <Eye size={24} />}
-                      </button>
-                    </div>
+              <input 
+                type="email" placeholder="Email Address" required
+                className="w-full p-3 rounded-xl border dark:bg-gray-800 dark:border-gray-700"
+                onChange={(e) => setEmail(e.target.value)}
+              />
 
-                    <button
-                      onClick={handlePasswordLogin}
-                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-4 rounded-xl transform hover:scale-105 transition shadow-lg"
-                    >
-                      Sign In with Password
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleGoogleLogin}
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 rounded-xl transform hover:scale-105 transition shadow-lg flex items-center justify-center gap-3"
-                  >
-                    Sign In with Google
-                  </button>
-                )}
-              </>
-            )}
-
-            {error && (
-              <div className="mt-6 p-4 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-400 rounded-xl text-center font-medium">
-                {error}
+              <div className="relative">
+                <input 
+                  type={showPassword ? "text" : "password"} placeholder="Password" required
+                  className="w-full p-3 rounded-xl border dark:bg-gray-800 dark:border-gray-700"
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button 
+                  type="button" onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-gray-400"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
-            )}
 
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-8">
-              Your exam session is fully secure and proctored
+              <button type="submit" className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition">
+                {isRegistering ? 'Sign Up' : 'Sign In'}
+              </button>
+            </form>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t dark:border-gray-700"></span></div>
+              <div className="relative flex justify-center text-xs uppercase"><span className="bg-white dark:bg-gray-900 px-2 text-gray-500">Or continue with</span></div>
+            </div>
+
+                      <button 
+              onClick={handleGoogleLogin}
+              className="w-full py-3 border border-gray-300 dark:border-gray-700 rounded-xl flex items-center justify-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 bg-white dark:bg-transparent"
+            >
+              <img 
+                src="https://www.gstatic.com/images/branding/product/1x/gsa_64dp.png" 
+                className="w-5 h-5" 
+                alt="Google" 
+              />
+              <span className="font-bold text-gray-700 dark:text-gray-200">
+                Continue with Google
+              </span>
+            </button>
+
+            <p className="text-center mt-6 text-sm text-gray-600 dark:text-gray-400">
+              {isRegistering ? "Already have an account?" : "Don't have an account?"}{' '}
+              <button 
+                onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
+                className="text-indigo-600 font-bold underline hover:text-indigo-500"
+              >
+                {isRegistering ? 'Sign in here' : 'Register here'}
+              </button>
             </p>
+
+            {error && <p className="mt-4 text-red-500 text-center text-sm font-medium">{error}</p>}
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
