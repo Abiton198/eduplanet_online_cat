@@ -1,7 +1,10 @@
+
+
 // App.jsx
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Menu, X, Home, FileText, BarChart3, Users, LogIn, School } from 'lucide-react';
+// Added MessageSquare and Sparkles for the tutor icon
+import { Menu, X, Home, FileText, BarChart3, Users, School, MessageSquare, Sparkles } from 'lucide-react';
 import PasswordPage from './components/PasswordPage';
 import ExamPage from './components/ExamPage';
 import ResultPage from './components/ResultPage';
@@ -9,29 +12,40 @@ import ExamRules from './utils/ExamRules';
 import ProtectedRoute from './utils/ProtectedRoute';
 import ReviewPage from './components/ReviewPage';
 import AllResults from './components/AllResults';
-import Chatbot from './utils/Chatbot';
 import TeacherDashboard from './components/TeacherDashboard';
 import { AnalysisComponent } from './components';
 import StudentGoogleLogin from './components/StudentGoogleLogin';
 import GroupWeakStudents from './utils/GroupWeakStudents';
 import logo from './img/logo_home.png';
+import CATTutor from './utils/CATTutor';
+
 function App() {
   const [studentInfo, setStudentInfo] = useState(null);
   const [adminInfo, setAdminInfo] = useState(null);
   const [results, setResults] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  
+  // New state for the Tutor Overlay
+  const [showTutor, setShowTutor] = useState(false);
+  
   const location = useLocation();
 
   const addResult = (result) => {
     setResults(prev => [...prev, result]);
   };
 
-  // Close mobile menu on route change
   useEffect(() => {
     setMenuOpen(false);
   }, [location]);
 
-  const isDark = document.documentElement.classList.contains('dark');
+  // Prevent background scrolling when tutor is open
+  useEffect(() => {
+    if (showTutor) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+  }, [showTutor]);
 
   const navLinks = [
     { to: "/exam-rules", label: "Exam Rules", icon: FileText },
@@ -59,11 +73,11 @@ function App() {
               />
               <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 opacity-30 blur-xl group-hover:opacity-60 transition"></div>
             </div>
-            <div>
+            <div className="hidden md:block">
               <h1 className="text-2xl font-bold text-gray-800 dark:text-white tracking-tight">
-                Computer Application Technologies
+                CAT Portal
               </h1>
-              <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Online Revision Portal</p>
+              <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Online Revision</p>
             </div>
           </Link>
 
@@ -76,7 +90,7 @@ function App() {
                 className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all duration-300 ${
                   currentPath === to
                     ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-800/50 hover:text-indigo-600 dark:hover:text-indigo-400'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-800/50 hover:text-indigo-600'
                 }`}
               >
                 <Icon size={18} />
@@ -85,129 +99,73 @@ function App() {
             ))}
           </nav>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="lg:hidden p-3 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-md shadow-md hover:scale-110 transition-all duration-300"
-          >
-            {menuOpen ? <X size={28} /> : <Menu size={28} className="text-gray-700 dark:text-gray-300" />}
-          </button>
-        </div>
+          <div className="flex items-center gap-3">
+            {/* ✨ CATTutor Toggle Button */}
+            <button
+              onClick={() => setShowTutor(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all duration-300 shadow-sm font-semibold"
+            >
+              <Sparkles size={20} />
+              <span className="hidden sm:inline">AI Tutor</span>
+            </button>
 
-        {/* Mobile Slide-In Menu */}
-        <div className={`fixed inset-0 z-40 transition-all duration-500 lg:hidden ${
-          menuOpen ? 'pointer-events-auto' : 'pointer-events-none'
-        }`}>
-          {/* Backdrop */}
-          <div 
-            className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-500 ${
-              menuOpen ? 'opacity-100' : 'opacity-0'
-            }`}
-            onClick={() => setMenuOpen(false)}
-          />
-
-          {/* Menu Panel */}
-          <div className={`absolute top-0 right-0 h-full w-80 max-w-full bg-white dark:bg-gray-900 shadow-2xl transform transition-transform duration-500 ease-out ${
-            menuOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}>
-            <div className="p-6 border-b dark:border-gray-800">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <img src={logo} alt="Logo" className="h-12 w-12 rounded-xl shadow-md" />
-                  <div>
-                    <h2 className="font-bold text-xl text-gray-800 dark:text-white">Computer Application Technologies</h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Navigation Menu</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setMenuOpen(false)}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                >
-                  <X size={24} className="text-gray-600 dark:text-gray-400" />
-                </button>
-              </div>
-            </div>
-
-            <nav className="p-6 space-y-3">
-              {navLinks.map(({ to, label, icon: Icon }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  className={`flex items-center gap-4 px-6 py-4 rounded-2xl text-lg font-medium transition-all durationomber-300 ${
-                    currentPath === to
-                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                  }`}
-                >
-                  <Icon size={24} />
-                  {label}
-                </Link>
-              ))}
-            </nav>
-
-            <div className="absolute bottom-8 left-6 right-6">
-              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-center py-4 rounded-2xl font-semibold shadow-lg">
-                Welcome, {studentInfo?.name || 'Student'}!
-              </div>
-            </div>
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="lg:hidden p-3 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-md shadow-md hover:scale-110 transition-all"
+            >
+              {menuOpen ? <X size={28} /> : <Menu size={28} className="text-gray-700 dark:text-gray-300" />}
+            </button>
           </div>
         </div>
       </header>
 
-      {/* Chatbot */}
-      <Chatbot studentInfo={studentInfo} />
+      {/* 🚀 FULL SCREEN TUTOR OVERLAY */}
+      {showTutor && (
+        <div className="fixed inset-0 z-[100] bg-white dark:bg-gray-900 flex flex-col animate-in fade-in zoom-in duration-300">
+          {/* Header for Overlay */}
+          <div className="p-4 border-b dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+            <div className="flex items-center gap-3">
+              <Sparkles className="text-indigo-500" />
+              <h2 className="text-xl font-bold dark:text-white">CAT AI Tutor</h2>
+            </div>
+            <button 
+              onClick={() => setShowTutor(false)}
+              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+            >
+              <X size={32} className="text-gray-600 dark:text-gray-300" />
+            </button>
+          </div>
+          
+          {/* Scrollable Content Area */}
+          <div className="flex-1 overflow-y-auto p-4 md:p-8">
+             <div className="max-w-4xl mx-auto h-full">
+                <CATTutor />
+             </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="pt-24 pb-10 px-6 max-w-7xl mx-auto">
         <Routes>
           <Route path="/" element={<PasswordPage setStudentInfo={setStudentInfo} />} />
           <Route path="/review" element={<ReviewPage />} />
-          
-          <Route
-            path="/exam"
-            element={
-              <ProtectedRoute studentInfo={studentInfo} adminInfo={adminInfo}>
-                <ExamPage studentInfo={studentInfo} addResult={addResult} />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/results"
-            element={
-              <ProtectedRoute studentInfo={studentInfo} adminInfo={adminInfo}>
-                <ResultPage results={results} studentInfo={studentInfo} />
-              </ProtectedRoute>
-            }
-          />
-
+          <Route path="/exam" element={<ProtectedRoute studentInfo={studentInfo} adminInfo={adminInfo}><ExamPage studentInfo={studentInfo} addResult={addResult} /></ProtectedRoute>} />
+          <Route path="/results" element={<ProtectedRoute studentInfo={studentInfo} adminInfo={adminInfo}><ResultPage results={results} studentInfo={studentInfo} /></ProtectedRoute>} />
           <Route path="/exam-rules" element={<ExamRules />} />
           <Route path="/all-results" element={<AllResults />} />
           <Route path="/analysis-component" element={<AnalysisComponent />} />
           <Route path="/group-weak-students" element={<GroupWeakStudents />} />
-
-          <Route
-            path="/teacher-dashboard"
-            element={
-              <ProtectedRoute studentInfo={studentInfo} adminInfo={adminInfo}>
-                <TeacherDashboard />
-              </ProtectedRoute>
-            }
-          />
-
+          <Route path="/teacher-dashboard" element={<ProtectedRoute studentInfo={studentInfo} adminInfo={adminInfo}><TeacherDashboard /></ProtectedRoute>} />
           <Route path="/login" element={<StudentGoogleLogin setStudentInfo={setStudentInfo} />} />
         </Routes>
       </main>
 
-      {/* Optional Footer */}
-    <footer className="mt-20 py-8 text-center text-gray-500 dark:text-gray-400 text-sm border-t dark:border-gray-800">
-  © {new Date().getFullYear()} Abiton - CAT • Secure Online Study & Exam Platform
-  <span className="block mt-1 text-xs opacity-70">
-    v{__APP_VERSION__}
-  </span>
-</footer>
-
-
+      <footer className="mt-20 py-8 text-center text-gray-500 dark:text-gray-400 text-sm border-t dark:border-gray-800">
+        © {new Date().getFullYear()} Abiton - CAT • Secure Online Study & Exam Platform
+        <span className="block mt-1 text-xs opacity-70">v{__APP_VERSION__}</span>
+      </footer>
     </div>
   );
 }
