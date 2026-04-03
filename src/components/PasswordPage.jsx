@@ -65,7 +65,7 @@ export default function AuthPage({ setStudentInfo }) {
     
     const finalData = snapshot.exists() ? snapshot.data() : { name: user.displayName, grade, school };
     setStudentInfo(finalData);
-    navigate('/dashboard');
+    navigate('/exam');
   } catch (err) {
     setError('Google Sign-in failed.');
   }
@@ -95,7 +95,7 @@ export default function AuthPage({ setStudentInfo }) {
         const snapshot = await getDoc(doc(db, 'users', userCredential.user.uid));
         setStudentInfo(snapshot.data());
     }
-    navigate('/dashboard');
+    navigate('/exam');
   } catch (err) {
     setError(err.message.includes('auth/user-not-found') ? 'User not found.' : 'Invalid credentials.');
   }

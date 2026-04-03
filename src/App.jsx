@@ -20,6 +20,7 @@ function App() {
   const [results, setResults] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showTutor, setShowTutor] = useState(false);
+  const [isDark, setIsDark] = useState(false);
   
   const location = useLocation();
 
@@ -40,7 +41,7 @@ function App() {
 
   // Dynamic Navigation based on Auth status
   const navLinks = [
-    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, protected: true },
+    // { to: "/", label: "Dashboard", icon: LayoutDashboard, protected: true },
     { to: "/exam", label: "Take Exam", icon: Home, protected: true },
     { to: "/results", label: "My Results", icon: BarChart3, protected: true },
     { to: "/exam-rules", label: "Rules", icon: FileText, protected: false },
@@ -126,51 +127,74 @@ function App() {
       )}
 
       {/* Main Content Area */}
-      <main className="pt-28 pb-12 px-6 max-w-7xl mx-auto">
-        <Routes>
-          {/* Landing / Auth Page */}
-          <Route path="/" element={
-            studentInfo ? <Navigate to="/dashboard" /> : <PasswordPage setStudentInfo={setStudentInfo} />
-          } />
+    <main className="pt-28 pb-12 px-6 max-w-7xl mx-auto">
+  <Routes>
+    {/* Landing / Auth Page: If logged in, send straight to /exam */}
+    <Route path="/" element={
+      studentInfo ? <Navigate to="/exam" /> : <PasswordPage setStudentInfo={setStudentInfo} />
+    } />
 
-          {/* User Dashboard */}
-          <Route path="/dashboard" element={
-            <ProtectedRoute studentInfo={studentInfo}>
-              <div className="space-y-6">
-                <h2 className="text-3xl font-bold">Welcome, {studentInfo?.name}!</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="p-6 bg-white dark:bg-gray-800 rounded-3xl shadow-sm border dark:border-gray-700">
-                    <p className="text-gray-500 text-sm">School</p>
-                    <p className="text-xl font-bold">{studentInfo?.school || 'Not Set'}</p>
-                  </div>
-                  <div className="p-6 bg-white dark:bg-gray-800 rounded-3xl shadow-sm border dark:border-gray-700">
-                    <p className="text-gray-500 text-sm">Grade</p>
-                    <p className="text-xl font-bold">{studentInfo?.grade}</p>
-                  </div>
-                  <div className="p-6 bg-indigo-600 text-white rounded-3xl shadow-lg flex items-center justify-between">
-                    <div>
-                      <p className="text-indigo-100 text-sm">Status</p>
-                      <p className="text-xl font-bold">Active Student</p>
-                    </div>
-                    <Sparkles />
-                  </div>
-                </div>
-              </div>
-            </ProtectedRoute>
-          } />
-
-          {/* Exam & Results */}
-          <Route path="/exam" element={<ProtectedRoute studentInfo={studentInfo}><ExamPage studentInfo={studentInfo} addResult={(res) => setResults([...results, res])} /></ProtectedRoute>} />
-          <Route path="/results" element={<ProtectedRoute studentInfo={studentInfo}><ResultPage results={results} studentInfo={studentInfo} /></ProtectedRoute>} />
+    <Route path="/exam" element={
+      <ProtectedRoute studentInfo={studentInfo}>
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           
-          {/* Public & Teacher Routes */}
-          <Route path="/review" element={<ReviewPage />} />
-          <Route path="/exam-rules" element={<ExamRules />} />
-          <Route path="/all-results" element={<AllResults />} />
-          <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
-          <Route path="/group-weak-students" element={<GroupWeakStudents />} />
-        </Routes>
-      </main>
+          {/* Personalized Dashboard Header */}
+          <section className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-3xl md:text-4xl font-black dark:text-white">
+                Welcome back, {studentInfo?.name}!
+              </h2>
+              <span className="hidden md:block px-4 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-bold uppercase tracking-widest border border-green-200 dark:border-green-800">
+                System Online
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-6 bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all hover:shadow-md">
+                <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase mb-1">Registered School</p>
+                <p className="text-xl font-bold dark:text-gray-100">{studentInfo?.school || 'Private Student'}</p>
+              </div>
+              
+              <div className="p-6 bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all hover:shadow-md">
+                <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase mb-1">Current Grade</p>
+                <p className="text-xl font-bold dark:text-gray-100">Grade {studentInfo?.grade}</p>
+              </div>
+
+              <div className="p-6 bg-gradient-to-br from-indigo-600 to-purple-700 text-white rounded-3xl shadow-lg shadow-indigo-500/20 flex items-center justify-between group">
+                <div>
+                  <p className="text-indigo-100 text-xs font-bold uppercase mb-1">Portal Status</p>
+                  <p className="text-xl font-bold">Active Session</p>
+                </div>
+                <Sparkles className="group-hover:rotate-12 transition-transform" />
+              </div>
+            </div>
+          </section>
+
+          <hr className="border-gray-200 dark:border-gray-800" />
+
+          {/* The Actual Exam Component */}
+          <section className="bg-white dark:bg-gray-900 rounded-3xl min-h-[400px]">
+            <ExamPage 
+              studentInfo={studentInfo} 
+              setStudentInfo={setStudentInfo}
+              addResult={(res) => setResults(prev => [...prev, res])} 
+              isDark={isDark} 
+            />
+          </section>
+          
+        </div>
+      </ProtectedRoute>
+    } />
+
+    {/* Other Routes */}
+    <Route path="/results" element={<ProtectedRoute studentInfo={studentInfo}><ResultPage results={results} studentInfo={studentInfo} /></ProtectedRoute>} />
+    <Route path="/review" element={<ReviewPage />} />
+    <Route path="/exam-rules" element={<ExamRules />} />
+    <Route path="/all-results" element={<AllResults />} />
+    <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
+    <Route path="/group-weak-students" element={<GroupWeakStudents />} />
+  </Routes>
+</main>
 
       <footer className="py-8 text-center text-gray-400 text-sm border-t dark:border-gray-800">
         © {new Date().getFullYear()} Abiton CAT Portal • Secure Personalized Learning

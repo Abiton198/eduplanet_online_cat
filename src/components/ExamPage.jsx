@@ -14,6 +14,7 @@ import { awardPointsFromExamHistory } from "../utils/pointsSystem/awardPointsFro
 import FloatingStudyHub from "../utils/FloatingStudyHub";
 import { Sun, Moon, LogOut, Clock, BookOpen } from "lucide-react";
 
+
 // SweetAlert2 with consistent styling
 const swal = Swal.mixin({
   confirmButtonColor: "#10b981", // emerald-500
@@ -27,7 +28,7 @@ function formatTime(seconds) {
   return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
 
-export default function ExamPage({ studentInfo, addResult }) {
+export default function ExamPage({ studentInfo, addResult, setStudentInfo ,isDark}) {
   const navigate = useNavigate();
 
   // Exam State
@@ -54,7 +55,7 @@ export default function ExamPage({ studentInfo, addResult }) {
   const formRef = useRef(null);
 
   const examActive = authenticated && selectedExam && !submitted;
-  const isDark = document.documentElement.classList.contains("dark");
+  // const isDark = document.documentElement.classList.contains("dark");
 
   // ──────────────────────────────────────────────
   // Theme Toggle & Logout
@@ -65,23 +66,29 @@ export default function ExamPage({ studentInfo, addResult }) {
   };
 
   const handleLogout = () => {
-    swal
-      .fire({
-        title: "Logout?",
-        text: "You will be signed out of your session.",
-        icon: "question",
-        showCancelButton: true,
-        confirmButtonText: "Yes, Logout",
-        cancelButtonText: "Stay",
-      })
-      .then((result) => {
-        if (result.isConfirmed) {
-          signOut(auth);
-          localStorage.clear();
-          navigate("/");
-        }
-      });
-  };
+  // Detect dark mode from the document root
+  const isDark = document.documentElement.classList.contains('dark');
+
+  swal.fire({
+    title: "Logout?",
+    text: "You will be signed out of your session.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Yes, Logout",
+    cancelButtonText: "Stay",
+    confirmButtonColor: "#ef4444", // Red
+    cancelButtonColor: "#22c55e",  // Green
+    background: isDark ? '#111827' : '#fff', // Use the local 'isDark' variable
+    color: isDark ? '#fff' : '#000',
+  }).then((result) => {
+    if (result.isConfirmed) {
+      signOut(auth);
+      setStudentInfo(null);
+      localStorage.clear();
+      navigate("/");
+    }
+  });
+};
 
   // ──────────────────────────────────────────────
   // Firebase Auth + Profile Setup
@@ -330,12 +337,16 @@ export default function ExamPage({ studentInfo, addResult }) {
             >
               {isDark ? <Sun className="text-yellow-400" size={24} /> : <Moon className="text-indigo-600" size={24} />}
             </button>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-5 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition"
-            >
-              <LogOut size={18} /> Logout
-            </button>
+          
+              {studentInfo && (
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-100 hover:bg-red-600 text-red-600 hover:text-white transition-all duration-300 font-bold border border-red-200"
+              >
+                <LogOut size={18} />
+                <span className="hidden sm:inline">Logout</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
