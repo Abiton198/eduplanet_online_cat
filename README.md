@@ -13,6 +13,9 @@ This React application is designed for students to attempt exams with certain re
 - **Suspicious Behavior Detection**: The app prevents right-clicking, text selection, and certain keyboard shortcuts to avoid cheating.
 - **Attempt Tracking**: The app tracks the number of attempts and the time of each attempt.
 - **Result Calculation**: Once the exam is submitted, the app calculates the score and stores the result.
+- **AI Tutor**: This feature allow registered students to interact with a trained chatbot for CAT & IT CAPS curriculum, ask questions and get answers from trusted curriculum sources.
+-**AI Exam Mocker**: Student chose past exams and attempt in real time with memo guidelines uploaded to help student assess their attempts after auto marking
+
 
 ## Technologies Used
 

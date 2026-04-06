@@ -12,7 +12,9 @@ import { questions } from "../utils/Questions";
 import { ensureStudentProfile } from "../utils/pointsSystem/ensureStudentProfile";
 import { awardPointsFromExamHistory } from "../utils/pointsSystem/awardPointsFromExamHistory";
 import FloatingStudyHub from "../utils/FloatingStudyHub";
-import { Sun, Moon, LogOut, Clock, BookOpen } from "lucide-react";
+import { Sun, Moon, LogOut, Clock, BookOpen, MessageSquare, Sparkles, X } from "lucide-react";
+import CATTutor from '../utils/CATTutor';
+import AIExamMocker from '../utils/AIExamMocker';
 
 
 // SweetAlert2 with consistent styling
@@ -53,6 +55,7 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo ,isDar
   const isSubmittingRef = useRef(false);
   const lastFocusEventTsRef = useRef(0);
   const formRef = useRef(null);
+    const [showTutor, setShowTutor] = useState(false);
 
   const examActive = authenticated && selectedExam && !submitted;
   // const isDark = document.documentElement.classList.contains("dark");
@@ -142,37 +145,63 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo ,isDar
   // Exam Selection with Password + Attempt Limit
   // ──────────────────────────────────────────────
   const handleSelectExam = (exam) => {
-    const attemptsKey = `${studentInfo.name}_${exam.title}_attempts`;
-    const attempts = parseInt(localStorage.getItem(attemptsKey) || "0", 10);
+  // 1. Check for max attempts
+  const attemptsKey = `${studentInfo.name}_${exam.title}_attempts`;
+  const attempts = parseInt(localStorage.getItem(attemptsKey) || "0", 10);
 
-    if (attempts >= 3) {
-      swal.fire("Max Attempts Reached", "You've used all 3 attempts for this exam.", "error");
-      return;
+  if (attempts >= 3) {
+    swal.fire({
+      title: "Max Attempts Reached",
+      text: "You've used all 3 available attempts for this revision test.",
+      icon: "error",
+      confirmButtonColor: "#ef4444", // Red to match the error
+      background: isDark ? '#111827' : '#fff',
+      color: isDark ? '#fff' : '#000',
+    });
+    return;
+  }
+
+  // 2. Direct Start (No Password Required)
+  swal.fire({
+    title: `Start ${exam.title}?`,
+    text: `Ready to begin? This is a 15-minute timed session.`,
+    icon: "info",
+    showCancelButton: true,
+    confirmButtonText: "Begin Now",
+    cancelButtonText: "Not Yet",
+    
+    // 1. MUST BE TRUE for confirmButtonColor to work
+    buttonsStyling: true, 
+    
+    // 2. Explicit Hex Colors
+    confirmButtonColor: "#22c55e", // Bright Green
+    cancelButtonColor: "#ef4444",  // Bright Red
+    
+    // 3. Force Visibility with Custom Classes
+    customClass: {
+      confirmButton: 'swal-force-show !bg-green-500 !text-white !opacity-100 !visible px-8 py-3 rounded-xl font-bold shadow-lg',
+      cancelButton: 'swal-force-show !bg-red-500 !text-white !opacity-100 !visible px-8 py-3 rounded-xl font-bold shadow-lg',
+      actions: 'flex gap-4 items-center justify-center mt-6'
+    },
+    
+    background: isDark ? '#111827' : '#ffffff',
+    color: isDark ? '#ffffff' : '#111827',
+  }).then((result) => {
+    if (result.isConfirmed) {
+      // Set all necessary states to launch the exam
+      setSelectedExam(exam);
+      setAuthenticated(true); // Still set to true so UI knows exam is active
+      setTimeLeft(15 * 60);
+      setAnswers({});
+      setSubmitted(false);
+      setFocusStrikes(0);
+      setDisqualified(false);
+      
+      // Store start time for proctoring/persistence
+      localStorage.setItem("examStartTime", new Date().toISOString());
     }
-
-    swal
-      .fire({
-        title: `Enter Password for ${exam.title}`,
-        input: "password",
-        inputPlaceholder: "Password required",
-        showCancelButton: true,
-        confirmButtonText: "Start Exam",
-        preConfirm: (pwd) => {
-          if (pwd === exam.password) {
-            setSelectedExam(exam);
-            setAuthenticated(true);
-            setTimeLeft(15 * 60);
-            setAnswers({});
-            setSubmitted(false);
-            setFocusStrikes(0);
-            setDisqualified(false);
-            localStorage.setItem("examStartTime", new Date().toISOString());
-          } else {
-            Swal.showValidationMessage("Incorrect password");
-          }
-        },
-      });
-  };
+  });
+};
 
   // ──────────────────────────────────────────────
   // Answer Handling
@@ -327,6 +356,16 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo ,isDar
             <div>
               <h1 className="text-xl font-bold text-gray-800 dark:text-white">Hi, {studentInfo?.name}</h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">{studentInfo?.grade}</p>
+
+                <div className="flex items-center gap-3 align-right mt-1">
+                          <button
+                            onClick={() => setShowTutor(true)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all duration-300 shadow-sm font-semibold"
+                          >
+                            <Sparkles size={20} />
+                            <span className="hidden sm:inline text-sm">AI Tutor</span>
+                          </button>
+                </div>
             </div>
           </div>
 
@@ -350,6 +389,65 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo ,isDar
           </div>
         </div>
       </header>
+
+
+
+ {/* AI TUTOR OVERLAY */}
+    {showTutor && (
+  <div className="fixed inset-0 z-[100] bg-white dark:bg-gray-900 flex flex-col animate-in fade-in zoom-in duration-200">
+    {/* Header Section */}
+    <div className="p-4 border-b dark:border-gray-800 flex justify-between items-center bg-white/50 dark:bg-gray-900/50 backdrop-blur-md">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg">
+          <Sparkles className="text-indigo-600 dark:text-indigo-400" size={24} />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold dark:text-white leading-none">AI Learning Hub</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wider font-bold">Tutor & Exam Mocker</p>
+        </div>
+      </div>
+      <button 
+        onClick={() => setShowTutor(false)} 
+        className="p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-500 hover:text-red-600 transition-colors"
+      >
+        <X size={32} />
+      </button>
+    </div>
+
+    {/* Responsive Side-by-Side Grid */}
+    <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-gray-50 dark:bg-gray-950">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+        
+        {/* Left Column: AI Tutor */}
+        <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+          <div className="p-4 border-b dark:border-gray-800 bg-indigo-50/30 dark:bg-indigo-900/10 flex items-center gap-2">
+            <MessageSquare size={18} className="text-indigo-500" />
+            <span className="font-bold text-sm uppercase">Interactive AI Tutor</span>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            <CATTutor />
+          </div>
+        </div>
+
+        {/* Right Column: Exam Mocker */}
+        <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+          <div className="p-4 border-b dark:border-gray-800 bg-purple-50/30 dark:bg-purple-900/10 flex items-center gap-2">
+            <Sparkles size={18} className="text-purple-500" />
+            <span className="font-bold text-sm uppercase">AI Exam Study Mocker</span>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            <AIExamMocker />
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+)}
+
+
+
+
 
       {/* Dashboard (When No Exam Active) */}
       {!examActive && (

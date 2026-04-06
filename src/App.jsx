@@ -1,7 +1,7 @@
 // App.jsx
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { Menu, X, Home, FileText, BarChart3, Users, School, Sparkles, LayoutDashboard } from 'lucide-react';
+import React, { useState, useEffect} from 'react';
+import { Routes, Route, Link, useLocation, Navigate, useNavigate  } from 'react-router-dom';
+import { Menu, X, Home, FileText, BarChart3, Users, School, Sparkles, LayoutDashboard} from 'lucide-react';
 import PasswordPage from './components/PasswordPage'; // This is your refactored Auth/Refactor page
 import ExamPage from './components/ExamPage';
 import ResultPage from './components/ResultPage';
@@ -13,16 +13,21 @@ import TeacherDashboard from './components/TeacherDashboard';
 import { AnalysisComponent } from './components';
 import GroupWeakStudents from './utils/GroupWeakStudents';
 import logo from './img/logo_home.png';
-import CATTutor from './utils/CATTutor';
+import Swal from "sweetalert2";
+
+
 
 function App() {
   const [studentInfo, setStudentInfo] = useState(null);
   const [results, setResults] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showTutor, setShowTutor] = useState(false);
+
   const [isDark, setIsDark] = useState(false);
   
   const location = useLocation();
+  const [showTutor, setShowTutor] = useState(false);
+const navigate = useNavigate();
+
 
   // Load student session from local storage on mount if needed
   useEffect(() => {
@@ -49,6 +54,44 @@ function App() {
   ];
 
   const currentPath = location.pathname;
+
+  const handleTutorAccess = () => {
+  if (studentInfo) {
+    setShowTutor(true);
+    return;
+  }
+
+ Swal.fire({
+  title: "<strong>Access Protected</strong>",
+  icon: "lock",
+  text: "Please sign in or register to access the AI Tutor.",
+  showCancelButton: true,
+  confirmButtonText: "Sign In / Register",
+  cancelButtonText: "Maybe Later",
+
+  // 1. Ensure this is TRUE (Default is true, but let's be explicit)
+  buttonsStyling: true, 
+
+  // 2. SweetAlert's internal color settings
+  confirmButtonColor: "#4f46e5", 
+  cancelButtonColor: "#ef4444",
+
+  // 3. THE FIX: Force colors using Tailwind !important classes
+  customClass: {
+    confirmButton: '!bg-[#4f46e5] !text-white !opacity-100 !visible px-6 py-2 rounded-xl font-bold shadow-md',
+    cancelButton: '!bg-[#ef4444] !text-white !opacity-100 !visible px-6 py-2 rounded-xl font-bold shadow-md',
+    actions: 'flex gap-3 justify-center mt-4' // Spacing between buttons
+  },
+
+  background: isDark ? '#111827' : '#fff',
+  color: isDark ? '#fff' : '#000',
+}).then((result) => {
+ if (result.isConfirmed) {
+      // We pass 'openModal: true' in the navigation state
+      navigate("/", { state: { openModal: true } }); 
+    }
+});
+};
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
@@ -90,13 +133,20 @@ function App() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowTutor(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all duration-300 shadow-sm font-semibold"
-            >
-              <Sparkles size={20} />
-              <span className="hidden sm:inline text-sm">AI Tutor</span>
-            </button>
+ 
+
+            {/* AI Tutor Button */}
+                           <button
+                            onClick={handleTutorAccess}
+                            title={!studentInfo ? "Sign in to access AI Tutor" : ""}
+                            className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all duration-300 shadow-sm font-semibold border border-transparent hover:border-indigo-400"
+                          >
+                            <Sparkles 
+                              size={20} 
+                              className={`${!studentInfo ? 'opacity-70' : 'animate-pulse'}`} 
+                            />
+                            <span className="hidden sm:inline text-sm">AI Tutor</span>
+                          </button>
 
             {studentInfo && (
               <div className="hidden md:flex flex-col items-end mr-2">
@@ -108,24 +158,7 @@ function App() {
         </div>
       </header>
 
-      {/* AI TUTOR OVERLAY */}
-      {showTutor && (
-        <div className="fixed inset-0 z-[100] bg-white dark:bg-gray-900 flex flex-col animate-in fade-in zoom-in duration-200">
-          <div className="p-4 border-b dark:border-gray-800 flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <Sparkles className="text-indigo-500" />
-              <h2 className="text-xl font-bold dark:text-white">CAT AI Tutor</h2>
-            </div>
-            <button onClick={() => setShowTutor(false)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-              <X size={28} className="text-gray-500" />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 md:p-8">
-             <div className="max-w-4xl mx-auto h-full"><CATTutor /></div>
-          </div>
-        </div>
-      )}
-
+     
       {/* Main Content Area */}
     <main className="pt-28 pb-12 px-6 max-w-7xl mx-auto">
   <Routes>
@@ -141,9 +174,9 @@ function App() {
           {/* Personalized Dashboard Header */}
           <section className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-3xl md:text-4xl font-black dark:text-white">
+              {/* <h2 className="text-3xl md:text-4xl font-black dark:text-white">
                 Welcome back, {studentInfo?.name}!
-              </h2>
+              </h2> */}
               <span className="hidden md:block px-4 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-bold uppercase tracking-widest border border-green-200 dark:border-green-800">
                 System Online
               </span>

@@ -5,6 +5,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, provider, db } from '../utils/firebase';
 import { X, Eye, EyeOff, Sun, Moon, GraduationCap, School } from 'lucide-react';
 import { Sparkles, FileText, BarChart3 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 export default function AuthPage({ setStudentInfo }) {
   // UI States
@@ -20,6 +21,7 @@ export default function AuthPage({ setStudentInfo }) {
   const [school, setSchool] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const location = useLocation();
 
   const navigate = useNavigate();
 
@@ -39,6 +41,14 @@ export default function AuthPage({ setStudentInfo }) {
   };
 
   // --- Auth Handlers ---
+  useEffect(() => {
+    if (location.state?.openModal) {
+      setIsModalOpen(true);
+      
+      // Optional: Clear the state so it doesn't pop up again on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
  const handleGoogleLogin = async () => {
   if (isRegistering && (!grade || !school)) {

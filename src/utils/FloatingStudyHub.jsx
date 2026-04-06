@@ -139,7 +139,7 @@ export default function FloatingStudyHub({
             <div className="flex items-center gap-3">
               <LayoutGrid size={28} />
               <div>
-                <h3 className="font-bold text-xl">CAT Study Hub 2026</h3>
+                <h3 className="font-bold text-xl"> Smart Study Hub </h3>
                 <p className="text-xs opacity-90">{gradeDisplay} • CAPS Aligned</p>
               </div>
             </div>
