@@ -15,6 +15,7 @@ import FloatingStudyHub from "../utils/FloatingStudyHub";
 import { Sun, Moon, LogOut, Clock, BookOpen, MessageSquare, Sparkles, X } from "lucide-react";
 import CATTutor from '../utils/CATTutor';
 import AIExamMocker from '../utils/AIExamMocker';
+import { tr } from "framer-motion/client";
 
 
 // SweetAlert2 with consistent styling
@@ -65,14 +66,34 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo ,isDar
   // ──────────────────────────────────────────────
   const toggleTheme = () => {
     document.documentElement.classList.toggle("dark");
-    localStorage.setItem("eduplanet-theme", isDark ? "light" : "dark");
+    localStorage.setItem("educat-theme", isDark ? "light" : "dark");
   };
 
+   const handleTutorAccess = () => {
+    const isDark = document.documentElement.classList.contains('dark');
+    Swal.fire({
+      title: "Access AI Tutor?",
+      text: "Get personalized help and exam mockers! This will not affect your current exam session.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Show Me!",
+      cancelButtonText: "No, Maybe Later",
+      confirmButtonColor: "#ef4444", // Red
+      cancelButtonColor: "#22c55e",  // Green
+      background: isDark ? '#111827' : '#fff', // Use the local 'isDark' variable
+      color: isDark ? '#fff' : '#000',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setShowTutor(true);
+      }
+    });
+  };
+  
   const handleLogout = () => {
+    const isDark = document.documentElement.classList.contains('dark');
   // Detect dark mode from the document root
-  const isDark = document.documentElement.classList.contains('dark');
 
-  swal.fire({
+  Swal.fire({
     title: "Logout?",
     text: "You will be signed out of your session.",
     icon: "warning",
@@ -92,6 +113,7 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo ,isDar
     }
   });
 };
+
 
   // ──────────────────────────────────────────────
   // Firebase Auth + Profile Setup
@@ -154,6 +176,9 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo ,isDar
       title: "Max Attempts Reached",
       text: "You've used all 3 available attempts for this revision test.",
       icon: "error",
+      buttonsStyling: true,
+      showCancelButton: true,
+      confirmButtonText: "OK",
       confirmButtonColor: "#ef4444", // Red to match the error
       background: isDark ? '#111827' : '#fff',
       color: isDark ? '#fff' : '#000',
@@ -162,7 +187,7 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo ,isDar
   }
 
   // 2. Direct Start (No Password Required)
-  swal.fire({
+  Swal.fire({
     title: `Start ${exam.title}?`,
     text: `Ready to begin? This is a 15-minute timed session.`,
     icon: "info",
@@ -214,6 +239,8 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo ,isDar
       setUnansweredIds(newSet);
     }
   };
+  
+ 
 
   // ──────────────────────────────────────────────
   // Anti-Cheat: Block Copy/Paste, Tab Switch, etc.
@@ -347,48 +374,57 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo ,isDar
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-indigo-900">
       {/* Top Navigation Bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-white/70 dark:bg-gray-900/70 border-b border-gray-200 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
-              {studentInfo?.name?.[0]?.toUpperCase()}
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-800 dark:text-white">Hi, {studentInfo?.name}</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{studentInfo?.grade}</p>
-
-                <div className="flex items-center gap-3 align-right mt-1">
-                          <button
-                            onClick={() => setShowTutor(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all duration-300 shadow-sm font-semibold"
-                          >
-                            <Sparkles size={20} />
-                            <span className="hidden sm:inline text-sm">AI Tutor</span>
-                          </button>
+            <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-white/70 dark:bg-gray-900/70 border-b border-gray-200 dark:border-gray-800">
+            <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+              
+              {/* LEFT SECTION: Profile Info (Width: 1/3) */}
+              <div className="flex items-center gap-4 w-1/3">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg shrink-0">
+                  {studentInfo?.name?.[0]?.toUpperCase()}
                 </div>
-            </div>
-          </div>
+                <div className="hidden md:block">
+                  <h1 className="text-sm font-bold text-gray-800 dark:text-white leading-tight">
+                    Hi, {studentInfo?.name}
+                  </h1>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Grade {studentInfo?.grade}
+                  </p>
+                </div>
+              </div>
 
-          <div className="flex items-center gap-4">
-            <button
-              onClick={toggleTheme}
-              className="p-3 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition"
-            >
-              {isDark ? <Sun className="text-yellow-400" size={24} /> : <Moon className="text-indigo-600" size={24} />}
-            </button>
-          
-              {studentInfo && (
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-100 hover:bg-red-600 text-red-600 hover:text-white transition-all duration-300 font-bold border border-red-200"
-              >
-                <LogOut size={18} />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
+              {/* CENTER SECTION: AI Tutor Button (Width: 1/3) */}
+              <div className="flex justify-center w-1/3">
+                <button
+                  onClick={handleTutorAccess}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all duration-300 shadow-sm font-bold border border-indigo-200 dark:border-indigo-800/50"
+                >
+                  <Sparkles size={20} className="animate-pulse" />
+                  <span className="text-sm tracking-wide">AI Tutor</span>
+                </button>
+              </div>
+
+              {/* RIGHT SECTION: Controls (Width: 1/3) */}
+              <div className="flex items-center justify-end gap-3 w-1/3">
+                <button
+                  onClick={toggleTheme}
+                  className="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform duration-200"
+                >
+                  {isDark ? <Sun className="text-yellow-400" size={20} /> : <Moon className="text-indigo-600" size={20} />}
+                </button>
+
+                {studentInfo && (
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 hover:bg-red-600 text-red-600 hover:text-white transition-all duration-300 font-bold border border-red-100 dark:border-red-900/30"
+                  >
+                    <LogOut size={18} />
+                    <span className="hidden lg:inline text-sm">Logout</span>
+                  </button>
+                )}
+              </div>
+
+            </div>
+          </header>
 
 
 

@@ -7,7 +7,7 @@ This React application is designed for students to attempt exams with certain re
 
 ## Features
 
-- **Single-use Passwords**: Passwords for each exam are valid for one-time use only, ensuring that students can't reuse passwords.
+- **Passwords**: No passwords required to access the exams and AI Tutor in student dashboards
 - **Limited Attempts**: Students can attempt each exam up to 3 times, with attempts spaced 48 hours apart.
 - **Real-time Timer**: The exam has a countdown timer, and students are alerted when they have 5 minutes left.
 - **Suspicious Behavior Detection**: The app prevents right-clicking, text selection, and certain keyboard shortcuts to avoid cheating.
