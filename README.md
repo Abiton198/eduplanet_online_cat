@@ -1,7 +1,7 @@
 
 
 ```markdown
-# Exam Attempt System
+# AI Agentic Smart Study Partner  
 
 This React application is designed for students to attempt exams with certain restrictions. It allows users to attempt each exam a limited number of times, provides time-based restrictions, and prevents any suspicious behaviors, such as switching tabs or using developer tools during the exam.
 
@@ -15,6 +15,7 @@ This React application is designed for students to attempt exams with certain re
 - **Result Calculation**: Once the exam is submitted, the app calculates the score and stores the result.
 - **AI Tutor**: This feature allow registered students to interact with a trained chatbot for CAT & IT CAPS curriculum, ask questions and get answers from trusted curriculum sources.
 -**AI Exam Mocker**: Student chose past exams and attempt in real time with memo guidelines uploaded to help student assess their attempts after auto marking
+-**AI Exam Memo**: The exams are marked and results collects by an agentic ai exam marker with trained memo.
 
 
 ## Technologies Used

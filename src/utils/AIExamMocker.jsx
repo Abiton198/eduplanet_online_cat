@@ -6,6 +6,17 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 const API = "https://abitonp.pythonanywhere.com";
 
+// ─── Persistent student ID (same logic as CATTutor) ───────────────────────────
+const getStudentId = () => {
+  let sid = localStorage.getItem("educat_sid");
+  if (!sid) {
+    sid = "stu_" + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem("educat_sid", sid);
+  }
+  return sid;
+};
+const STUDENT_ID = getStudentId();
+
 // ─── Status colours ───────────────────────────────────────────────────────────
 const STATUS_COLOR = {
   correct:   { bg: "#d1fae5", border: "#6ee7b7", icon: "✅" },
@@ -58,7 +69,6 @@ const S = {
 
   progress:  { fontSize: 13, color: "#9ca3af", marginTop: 10 },
 
-  // Fullscreen top bar
   topBar:    { background: "#1a1a2e", color: "#fff", padding: "10px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, gap: 12 },
   topBarTitle: { fontWeight: 800, fontSize: 15, letterSpacing: "-.3px", flex: 1 },
 
@@ -66,15 +76,24 @@ const S = {
   drawerHd:  { fontWeight: 800, fontSize: 16, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" },
   qDot:      { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", margin: 4, border: "1.5px solid #e5e7eb" },
 
-  resultCard:{ borderRadius: 12, padding: "14px 18px", marginBottom: 12, border: "1.5px solid", fontSize: 14, lineHeight: 1.7 },
-  feedBox:   { background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 12, padding: "14px 18px", marginBottom: 20, fontSize: 14, lineHeight: 1.7 },
-  pill:      { display: "inline-block", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 700, marginRight: 6 },
+  resultCard: { borderRadius: 12, padding: "14px 18px", marginBottom: 12, border: "1.5px solid", fontSize: 14, lineHeight: 1.7 },
+  feedBox:    { background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 12, padding: "14px 18px", marginBottom: 20, fontSize: 14, lineHeight: 1.7 },
+  pill:       { display: "inline-block", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 700, marginRight: 6 },
+
+  // Score banner
+  scoreBanner: { background: "linear-gradient(135deg,#6366f1,#8b5cf6)", borderRadius: 16, padding: "28px 32px", marginBottom: 20, color: "#fff", textAlign: "center" },
+  scoreNum:    { fontSize: 52, fontWeight: 800, letterSpacing: "-2px", lineHeight: 1 },
+  scorePct:    { fontSize: 20, fontWeight: 700, opacity: .85, marginTop: 6 },
+  scoreSub:    { fontSize: 13, opacity: .7, marginTop: 4 },
+
+  // Post-submit agent panel
+  agentPanel:  { background: "#eef2ff", border: "1.5px solid #c7d2fe", borderRadius: 12, padding: "16px 20px", marginBottom: 20, fontSize: 14 },
+  agentInput:  { width: "100%", padding: "10px 14px", border: "1.5px solid #c7d2fe", borderRadius: 10, fontSize: 14, fontFamily: "inherit", marginTop: 10, boxSizing: "border-box" },
 
   select:    { width: "100%", padding: "11px 14px", borderRadius: 10, border: "1.5px solid #d1d5db", fontSize: 14, background: "#fff", marginBottom: 14, fontFamily: "inherit" },
   startBtn:  { width: "100%", padding: "13px", background: "#6366f1", color: "#fff", border: "none", borderRadius: 12, fontSize: 16, fontWeight: 800, cursor: "pointer", letterSpacing: "-.3px" },
   memoTag:   { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, borderRadius: 8, padding: "4px 10px" },
 
-  // Exit confirm modal
   overlay:   { position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 },
   modal:     { background: "#fff", borderRadius: 18, padding: 32, maxWidth: 420, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,.2)", textAlign: "center" },
   modalIcon: { fontSize: 42, marginBottom: 12 },
@@ -84,9 +103,10 @@ const S = {
 };
 
 const FontLoader = () => (
-  <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap');
-  *{box-sizing:border-box;}
-  button:disabled{opacity:.5;cursor:not-allowed;}
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap');
+    * { box-sizing: border-box; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
   `}</style>
 );
 
@@ -94,39 +114,42 @@ const FontLoader = () => (
 export default function AIExamMocker({ student }) {
   const containerRef = useRef(null);
 
-  // ── Exam list & setup ───────────────────────────────────────────────────────
-  const [exams, setExams]               = useState([]);
+  // ── Exam list & setup ──────────────────────────────────────────────────────
+  const [exams, setExams]             = useState([]);
   const [selectedExam, setSelectedExam] = useState("");
-  const [sessionId, setSessionId]       = useState(null);
-  const [totalQ, setTotalQ]             = useState(0);
-  const [memoMerged, setMemoMerged]     = useState(false);
+  const [sessionId, setSessionId]     = useState(null);
+  const [totalQ, setTotalQ]           = useState(0);
+  const [memoMerged, setMemoMerged]   = useState(false);
 
-  // ── Exam state ──────────────────────────────────────────────────────────────
-  const [question, setQuestion]   = useState(null);
-  const [index, setIndex]         = useState(0);
-  const [answers, setAnswers]     = useState({});
-  const [skipped, setSkipped]     = useState(new Set());
+  // ── Exam state ─────────────────────────────────────────────────────────────
+  const [question, setQuestion] = useState(null);
+  const [index, setIndex]       = useState(0);
+  const [answers, setAnswers]   = useState({});
+  const [skipped, setSkipped]   = useState(new Set());
 
-  // ── UI state ────────────────────────────────────────────────────────────────
-  const [started, setStarted]       = useState(false);
-  const [submitted, setSubmitted]   = useState(false);
-  const [results, setResults]       = useState(null);
-  const [loading, setLoading]       = useState(false);
-  const [saving, setSaving]         = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  // ── UI state ───────────────────────────────────────────────────────────────
+  const [started, setStarted]         = useState(false);
+  const [submitted, setSubmitted]     = useState(false);
+  const [results, setResults]         = useState(null);
+  const [loading, setLoading]         = useState(false);
+  const [saving, setSaving]           = useState(false);
+  const [drawerOpen, setDrawerOpen]   = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showExitModal, setShowExitModal] = useState(false); // exit confirm
+  const [showExitModal, setShowExitModal] = useState(false);
   const [tfCorrection, setTfCorrection]   = useState("");
-  const [currentAnswer, setCurrentAnswer] = useState("");
 
-  // ── Load exams ──────────────────────────────────────────────────────────────
+  // ── Post-submit agent chat (ask about results) ─────────────────────────────
+  const [agentQuestion, setAgentQuestion] = useState("");
+  const [agentReply, setAgentReply]       = useState("");
+  const [agentLoading, setAgentLoading]   = useState(false);
+
+  // ── Load exams on mount ────────────────────────────────────────────────────
   useEffect(() => { loadExams(); }, []);
 
-  // ── Sync answer state when question / index changes ─────────────────────────
+  // ── Sync TF correction when navigating ────────────────────────────────────
   useEffect(() => {
     if (!question) return;
     const saved = answers[index] || "";
-    setCurrentAnswer(saved);
     if (question.type === "true_false" && saved.startsWith("False — ")) {
       setTfCorrection(saved.replace("False — ", ""));
     } else {
@@ -134,7 +157,7 @@ export default function AIExamMocker({ student }) {
     }
   }, [question, index]);
 
-  // ── Browser fullscreen API ──────────────────────────────────────────────────
+  // ── Fullscreen API ─────────────────────────────────────────────────────────
   const enterFullscreen = useCallback(() => {
     const el = containerRef.current || document.documentElement;
     if (el.requestFullscreen) el.requestFullscreen();
@@ -149,33 +172,35 @@ export default function AIExamMocker({ student }) {
   }, []);
 
   useEffect(() => {
-    const handler = () => {
-      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    const h = () => {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement)
         setIsFullscreen(false);
-      }
     };
-    document.addEventListener("fullscreenchange", handler);
-    document.addEventListener("webkitfullscreenchange", handler);
+    document.addEventListener("fullscreenchange", h);
+    document.addEventListener("webkitfullscreenchange", h);
     return () => {
-      document.removeEventListener("fullscreenchange", handler);
-      document.removeEventListener("webkitfullscreenchange", handler);
+      document.removeEventListener("fullscreenchange", h);
+      document.removeEventListener("webkitfullscreenchange", h);
     };
   }, []);
 
-  // ── Keyboard shortcuts ──────────────────────────────────────────────────────
+  // ── Keyboard shortcuts ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!started || submitted) return;
-    const handler = (e) => {
+    const h = (e) => {
       if (e.key === "ArrowRight" || e.key === "PageDown") next();
       if (e.key === "ArrowLeft"  || e.key === "PageUp")   prev();
       if (e.key === "Escape" && isFullscreen) exitFullscreen();
-      if (e.key === "f" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); isFullscreen ? exitFullscreen() : enterFullscreen(); }
+      if (e.key === "f" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        isFullscreen ? exitFullscreen() : enterFullscreen();
+      }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
   }, [started, submitted, index, totalQ, isFullscreen]);
 
-  // ── API calls ───────────────────────────────────────────────────────────────
+  // ── API: load exam list ────────────────────────────────────────────────────
   const loadExams = async () => {
     try {
       const res  = await fetch(`${API}/exams`);
@@ -185,14 +210,18 @@ export default function AIExamMocker({ student }) {
     } catch (e) { console.error("loadExams:", e); }
   };
 
+  // ── API: start exam — NOW sends student_id ─────────────────────────────────
   const startExam = async () => {
     if (!selectedExam) return;
     setLoading(true);
     try {
       const res  = await fetch(`${API}/start-exam`, {
-        method: "POST",
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ exam: selectedExam }),
+        body:    JSON.stringify({
+          exam:       selectedExam,
+          student_id: STUDENT_ID,          // ← wired in
+        }),
       });
       const data = await res.json();
       if (data.error) { alert(data.error); return; }
@@ -203,17 +232,19 @@ export default function AIExamMocker({ student }) {
       setIndex(0);
       setAnswers({});
       setSkipped(new Set());
+      setAgentReply("");
       await fetchQuestion(data.session_id, 0);
     } finally { setLoading(false); }
   };
 
+  // ── API: get question ──────────────────────────────────────────────────────
   const fetchQuestion = async (sid, i) => {
     setLoading(true);
     try {
       const res  = await fetch(`${API}/question`, {
-        method: "POST",
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sid, index: i }),
+        body:    JSON.stringify({ session_id: sid, index: i }),
       });
       const data = await res.json();
       setQuestion(data);
@@ -221,18 +252,19 @@ export default function AIExamMocker({ student }) {
     } finally { setLoading(false); }
   };
 
+  // ── API: save answer ───────────────────────────────────────────────────────
   const saveAnswer = async (value) => {
     setAnswers(prev => ({ ...prev, [index]: value }));
-    setCurrentAnswer(value);
     try {
       await fetch(`${API}/answer`, {
-        method: "POST",
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionId, index, answer: value }),
+        body:    JSON.stringify({ session_id: sessionId, index, answer: value }),
       });
     } catch (e) { console.error("saveAnswer:", e); }
   };
 
+  // ── API: submit — NOW sends student_id so agent updates study plan ─────────
   const submitExam = async () => {
     const unanswered = totalQ - Object.keys(answers).length;
     if (unanswered > 0) {
@@ -241,52 +273,84 @@ export default function AIExamMocker({ student }) {
     setSaving(true);
     if (isFullscreen) exitFullscreen();
     try {
-      await addDoc(collection(db, "exam_attempts"), {
-        studentId: student?.id || "demo",
-        exam:      selectedExam,
-        answers,
-        skipped:   [...skipped],
-        createdAt: serverTimestamp(),
-      });
+      // 1. Submit to backend first — get marked results + AI feedback
       const res  = await fetch(`${API}/submit`, {
-        method: "POST",
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionId }),
+        body:    JSON.stringify({
+          session_id: sessionId,
+          student_id: STUDENT_ID,
+        }),
       });
       const data = await res.json();
       if (data.error) { alert(data.error); return; }
+
+      // 2. Save full attempt + marked results to Firestore so
+      //    ExamResultsDisplay can read everything from one doc.
+      await addDoc(collection(db, "exam_attempts"), {
+        studentId:      STUDENT_ID,
+        exam:           selectedExam,
+        answers,
+        skipped:        [...skipped],
+        answeredCount:  Object.keys(answers).length,
+        score:          data.score,
+        total:          data.total,
+        percentage:     data.percentage,
+        markedResults:  data.results || [],   // per-question breakdown
+        aiFeedback:     data.feedback || "",  // AI summary feedback
+        completedAt:    serverTimestamp(),
+        createdAt:      serverTimestamp(),
+      });
+
       setResults(data);
       setSubmitted(true);
     } finally { setSaving(false); }
   };
 
-  // ── Exit / cancel exam ──────────────────────────────────────────────────────
-  const cancelExam = () => {
-    if (isFullscreen) exitFullscreen();
-    setShowExitModal(false);
-    setStarted(false);
-    setSubmitted(false);
-    setResults(null);
-    setQuestion(null);
-    setAnswers({});
-    setSkipped(new Set());
-    setSessionId(null);
-    setIndex(0);
+  // ── API: post-submit agent question ───────────────────────────────────────
+  const askAgent = async () => {
+    const q = agentQuestion.trim();
+    if (!q || agentLoading) return;
+    setAgentLoading(true);
+    setAgentReply("");
+    try {
+      const res  = await fetch(`${API}/agent-chat`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ student_id: STUDENT_ID, message: q }),
+      });
+      const data = await res.json();
+      setAgentReply(data.response || data.answer || "No response.");
+    } catch (e) {
+      setAgentReply("⚠️ Could not reach the agent.");
+    } finally {
+      setAgentLoading(false);
+      setAgentQuestion("");
+    }
   };
 
-  // ── Navigation ──────────────────────────────────────────────────────────────
+  // ── Navigation ─────────────────────────────────────────────────────────────
+  const goTo = (i) => fetchQuestion(sessionId, i);
+  const next  = () => { if (index < totalQ - 1) goTo(index + 1); };
+  const prev  = () => { if (index > 0) goTo(index - 1); };
   const skipQuestion = () => {
     setSkipped(prev => new Set([...prev, index]));
     if (index < totalQ - 1) goTo(index + 1);
   };
-  const goTo = (i) => fetchQuestion(sessionId, i);
-  const next  = () => { if (index < totalQ - 1) goTo(index + 1); };
-  const prev  = () => { if (index > 0) goTo(index - 1); };
 
-  // ── Dot style for navigator ─────────────────────────────────────────────────
+  // ── Cancel / exit exam ─────────────────────────────────────────────────────
+  const cancelExam = () => {
+    if (isFullscreen) exitFullscreen();
+    setShowExitModal(false);
+    setStarted(false); setSubmitted(false); setResults(null);
+    setQuestion(null); setAnswers({}); setSkipped(new Set());
+    setSessionId(null); setIndex(0); setAgentReply("");
+  };
+
+  // ── Question navigator dot style ───────────────────────────────────────────
   const dotStyle = (i) => {
-    const isAnswered = !!answers[i];
     const isCurrent  = i === index;
+    const isAnswered = !!answers[i];
     const isSkip     = skipped.has(i);
     return {
       ...S.qDot,
@@ -298,20 +362,23 @@ export default function AIExamMocker({ student }) {
     };
   };
 
-  // ── Question answer renderer ────────────────────────────────────────────────
+  // ── Answer input renderer ──────────────────────────────────────────────────
   const renderInput = () => {
     if (!question) return null;
     const q     = question;
     const saved = answers[index] || "";
 
+    // MCQ
     if (q.type === "mcq" && Array.isArray(q.options) && q.options.length > 0) {
       return (
         <div>
           {q.options.map((opt) => {
             const sel = saved === opt.key;
             return (
-              <label key={opt.key} style={{ ...S.optLabel, ...(sel ? S.optSel : {}) }} onClick={() => saveAnswer(opt.key)}>
-                <input type="radio" name="mcq" value={opt.key} checked={sel} onChange={() => saveAnswer(opt.key)} style={{ accentColor: "#6366f1" }} />
+              <label key={opt.key} style={{ ...S.optLabel, ...(sel ? S.optSel : {}) }}
+                onClick={() => saveAnswer(opt.key)}>
+                <input type="radio" name="mcq" value={opt.key} checked={sel}
+                  onChange={() => saveAnswer(opt.key)} style={{ accentColor: "#6366f1" }} />
                 <span style={S.optKey}>{opt.key}.</span>
                 <span>{opt.value}</span>
               </label>
@@ -321,6 +388,7 @@ export default function AIExamMocker({ student }) {
       );
     }
 
+    // True/False
     if (q.type === "true_false") {
       const isFalse = saved.startsWith("False");
       return (
@@ -342,18 +410,25 @@ export default function AIExamMocker({ student }) {
           {isFalse && (
             <div>
               <label style={{ fontSize: 13, color: "#555" }}>Correct the underlined word/phrase:</label>
-              <input type="text" style={S.corrInput} placeholder="e.g. secondary memory" value={tfCorrection}
-                onChange={(e) => { setTfCorrection(e.target.value); saveAnswer(`False — ${e.target.value}`); }} />
+              <input type="text" style={S.corrInput}
+                placeholder="e.g. secondary memory"
+                value={tfCorrection}
+                onChange={(e) => {
+                  setTfCorrection(e.target.value);
+                  saveAnswer(`False — ${e.target.value}`);
+                }} />
             </div>
           )}
         </div>
       );
     }
 
+    // Matching
     if (q.type === "matching" && Array.isArray(q.column_a) && q.column_a.length > 0) {
       let savedMap = {};
-      try { savedMap = JSON.parse(saved || "{}"); } catch (e) {}
-      const updateMatch = (item, value) => saveAnswer(JSON.stringify({ ...savedMap, [item]: value }));
+      try { savedMap = JSON.parse(saved || "{}"); } catch (_) {}
+      const updateMatch = (item, value) =>
+        saveAnswer(JSON.stringify({ ...savedMap, [item]: value }));
       return (
         <div>
           <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 10 }}>
@@ -371,7 +446,8 @@ export default function AIExamMocker({ student }) {
                 <tr key={i}>
                   <td style={S.td}>{item}</td>
                   <td style={S.td}>
-                    <select style={S.sel} value={savedMap[item] || ""} onChange={(e) => updateMatch(item, e.target.value)}>
+                    <select style={S.sel} value={savedMap[item] || ""}
+                      onChange={(e) => updateMatch(item, e.target.value)}>
                       <option value="">— Select —</option>
                       {q.column_b.map((b, j) => <option key={j} value={b}>{b}</option>)}
                     </select>
@@ -384,26 +460,30 @@ export default function AIExamMocker({ student }) {
       );
     }
 
+    // Open
     return (
-      <textarea style={S.textarea} placeholder="Write your answer here..." value={saved}
-        onChange={(e) => saveAnswer(e.target.value)} />
+      <textarea style={S.textarea} placeholder="Write your answer here..."
+        value={saved} onChange={(e) => saveAnswer(e.target.value)} />
     );
   };
 
-  // ── Shared navigator drawer ─────────────────────────────────────────────────
+  // ── Navigator drawer ───────────────────────────────────────────────────────
   const NavigatorDrawer = () => (
     <div style={S.drawer}>
       <div style={S.drawerHd}>
         <span>Questions</span>
-        <button style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer" }} onClick={() => setDrawerOpen(false)}>✕</button>
+        <button style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer" }}
+          onClick={() => setDrawerOpen(false)}>✕</button>
       </div>
       {question && (
         <div style={{ marginBottom: 16, padding: "10px 14px", background: "#f9fafb", borderRadius: 10 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", marginBottom: 8 }}>CURRENT SECTION: {question.section || "—"}</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", marginBottom: 8 }}>
+            CURRENT SECTION: {question.section || "—"}
+          </div>
           <button style={{ ...S.btnSkip, width: "100%" }}
             onClick={() => {
-              const next = [...Array(totalQ).keys()].find(i => i > index && !answers[i]);
-              goTo(next !== undefined ? next : Math.min(index + 1, totalQ - 1));
+              const nxt = [...Array(totalQ).keys()].find(i => i > index && !answers[i]);
+              goTo(nxt !== undefined ? nxt : Math.min(index + 1, totalQ - 1));
               setDrawerOpen(false);
             }}>
             ⏭ Skip to Next Unanswered
@@ -419,7 +499,8 @@ export default function AIExamMocker({ student }) {
       </div>
       <div style={{ display: "flex", flexWrap: "wrap" }}>
         {[...Array(totalQ)].map((_, i) => (
-          <span key={i} style={dotStyle(i)} onClick={() => { goTo(i); setDrawerOpen(false); }}
+          <span key={i} style={dotStyle(i)}
+            onClick={() => { goTo(i); setDrawerOpen(false); }}
             title={`Q${i+1}${answers[i]?" ✓":""}${skipped.has(i)?" (skipped)":""}`}>
             {i + 1}
           </span>
@@ -428,7 +509,7 @@ export default function AIExamMocker({ student }) {
     </div>
   );
 
-  // ── Exit confirm modal ──────────────────────────────────────────────────────
+  // ── Exit confirm modal ─────────────────────────────────────────────────────
   const ExitModal = () => (
     <div style={S.overlay} onClick={() => setShowExitModal(false)}>
       <div style={S.modal} onClick={(e) => e.stopPropagation()}>
@@ -450,19 +531,26 @@ export default function AIExamMocker({ student }) {
     </div>
   );
 
-  // ── Question card content (shared between normal & fullscreen) ───────────────
+  // ── Question card (shared between normal + fullscreen) ─────────────────────
   const QuestionContent = ({ cardStyle }) => {
-    const q         = question;
-    const isSkip    = skipped.has(index);
-    const answered  = Object.keys(answers).length;
+    const q        = question;
+    const answered = Object.keys(answers).length;
+    const isSkip   = skipped.has(index);
 
     return (
       <div style={cardStyle}>
-        {/* Section badge */}
         <div>
-          <span style={S.secBadge}>Section {q?.section}{q?.section_title ? ` — ${q.section_title}` : ""}</span>
-          {q?.section_instructions && <p style={{ fontSize: 12, color: "#6b7280", margin: "4px 0 10px" }}>{q.section_instructions}</p>}
-          {q?.section_total_marks  && <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 10px" }}>Section total: <b>{q.section_total_marks} marks</b></p>}
+          <span style={S.secBadge}>
+            Section {q?.section}{q?.section_title ? ` — ${q.section_title}` : ""}
+          </span>
+          {q?.section_instructions && (
+            <p style={{ fontSize: 12, color: "#6b7280", margin: "4px 0 10px" }}>{q.section_instructions}</p>
+          )}
+          {q?.section_total_marks && (
+            <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 10px" }}>
+              Section total: <b>{q.section_total_marks} marks</b>
+            </p>
+          )}
         </div>
 
         {q?.parent_question && <div style={S.parentHd}>{q.parent_question}</div>}
@@ -482,13 +570,15 @@ export default function AIExamMocker({ student }) {
 
         {renderInput()}
 
-        {/* Nav */}
         <div style={S.navBar}>
-          <button style={{ ...S.btn, ...S.btnSec }}      onClick={prev}         disabled={index === 0}>⬅ Back</button>
-          <button style={S.btnSkip}                       onClick={skipQuestion}  disabled={index >= totalQ - 1}>Skip ⏭</button>
-          <button style={{ ...S.btn, ...S.btnSec }}      onClick={next}         disabled={index >= totalQ - 1}>Next ➡</button>
-          <button style={{ ...S.btn, ...S.btnWarn, marginLeft: "auto" }} onClick={() => setShowExitModal(true)}>🚪 Exit</button>
-          <button style={{ ...S.btn, ...S.btnDanger, opacity: saving ? .7 : 1 }} onClick={submitExam} disabled={saving}>
+          <button style={{ ...S.btn, ...S.btnSec }} onClick={prev} disabled={index === 0}>⬅ Back</button>
+          <button style={S.btnSkip} onClick={skipQuestion} disabled={index >= totalQ - 1}>Skip ⏭</button>
+          <button style={{ ...S.btn, ...S.btnSec }} onClick={next} disabled={index >= totalQ - 1}>Next ➡</button>
+          <button style={{ ...S.btn, ...S.btnWarn, marginLeft: "auto" }} onClick={() => setShowExitModal(true)}>
+            🚪 Exit
+          </button>
+          <button style={{ ...S.btn, ...S.btnDanger, opacity: saving ? .7 : 1 }}
+            onClick={submitExam} disabled={saving}>
             {saving ? "Submitting…" : "✅ Submit"}
           </button>
         </div>
@@ -496,7 +586,8 @@ export default function AIExamMocker({ student }) {
         <p style={S.progress}>
           Q {index + 1} of {totalQ} &nbsp;|&nbsp; {totalQ - answered} remaining
           {skipped.size > 0 ? ` | ${skipped.size} skipped` : ""}
-          &nbsp;|&nbsp; <kbd style={{ fontSize: 11, background: "#f3f4f6", padding: "1px 5px", borderRadius: 4 }}>← →</kbd> navigate
+          &nbsp;|&nbsp;
+          <kbd style={{ fontSize: 11, background: "#f3f4f6", padding: "1px 5px", borderRadius: 4 }}>← →</kbd> navigate
         </p>
       </div>
     );
@@ -506,46 +597,123 @@ export default function AIExamMocker({ student }) {
   // RESULTS VIEW
   // ─────────────────────────────────────────────────────────────────────────
   if (submitted && results) {
+    const pct = results.percentage || 0;
+    const pctColor = pct >= 70 ? "#22c55e" : pct >= 50 ? "#f59e0b" : "#ef4444";
+
     return (
       <div style={S.wrap} ref={containerRef}>
         <FontLoader />
-        <div style={S.card}>
-          <h1 style={S.title}>📊 Results</h1>
-          <p style={S.subtitle}>
-            Score: <b>{results.score} / {results.total}</b> &nbsp;|&nbsp; <b>{results.percentage}%</b>
-          </p>
-          {results.feedback && (
-            <div style={{ ...S.feedBox, marginTop: 16 }}>
-              🤖 <b>AI Feedback:</b><br />{results.feedback}
-            </div>
-          )}
+
+        {/* Score banner */}
+        <div style={S.scoreBanner}>
+          <div style={S.scoreNum}>{results.score} / {results.total}</div>
+          <div style={{ ...S.scorePct, color: pct >= 70 ? "#bbf7d0" : pct >= 50 ? "#fef08a" : "#fca5a5" }}>
+            {pct}%
+          </div>
+          <div style={S.scoreSub}>
+            {pct >= 70 ? "🎉 Great work!" : pct >= 50 ? "📈 Good effort — keep practising" : "💪 Keep going — review your weak areas"}
+          </div>
+          <div style={{ fontSize: 11, opacity: .5, marginTop: 8 }}>
+            Student: {STUDENT_ID}
+          </div>
         </div>
 
+        {/* AI feedback */}
+        {results.feedback && (
+          <div style={S.feedBox}>
+            🤖 <b>AI Feedback:</b><br />{results.feedback}
+          </div>
+        )}
+
+        {/* Agent follow-up panel */}
+        <div style={S.agentPanel}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: "#3730a3", marginBottom: 6 }}>
+            🤖 Ask the AI Agent about your results
+          </div>
+          <p style={{ fontSize: 13, color: "#4b5563", margin: "0 0 8px" }}>
+            E.g. "Explain question 4.1" · "What should I study?" · "Give me a hint for Q3.2"
+          </p>
+          {agentReply && (
+            <div style={{ background: "#fff", border: "1px solid #c7d2fe", borderRadius: 10, padding: "12px 16px", fontSize: 13, lineHeight: 1.7, marginBottom: 10, color: "#1a1a2e", whiteSpace: "pre-wrap" }}>
+              {agentReply}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="text"
+              style={S.agentInput}
+              placeholder="Ask the agent anything about this exam…"
+              value={agentQuestion}
+              onChange={(e) => setAgentQuestion(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") askAgent(); }}
+            />
+            <button
+              style={{ ...S.btn, ...S.btnPri, whiteSpace: "nowrap", opacity: agentLoading || !agentQuestion.trim() ? .6 : 1 }}
+              onClick={askAgent}
+              disabled={agentLoading || !agentQuestion.trim()}>
+              {agentLoading ? "…" : "Ask"}
+            </button>
+          </div>
+        </div>
+
+        {/* Per-question results */}
         {(results.results || []).map((r, i) => {
           const st = STATUS_COLOR[r.status] || STATUS_COLOR.missing;
+
+          // Format student answer for display
+          let studentDisplay = r.student_answer || "No answer";
+          if (r.type === "matching" && r.student_answer && r.student_answer !== "No answer") {
+            try {
+              const obj = JSON.parse(r.student_answer);
+              studentDisplay = Object.entries(obj).map(([k,v]) => `${k} → ${v}`).join("\n");
+            } catch (_) {}
+          }
+
           return (
             <div key={i} style={{ ...S.resultCard, background: st.bg, borderColor: st.border }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ fontWeight: 800 }}>{st.icon} {r.question_number}&nbsp;
+                <span style={{ fontWeight: 800 }}>
+                  {st.icon} {r.question_number}&nbsp;
                   <span style={{ fontWeight: 400, fontSize: 13 }}>{r.question}</span>
                 </span>
-                <span style={{ fontWeight: 700, fontSize: 13, color: "#374151" }}>{r.earned}/{r.marks}</span>
+                <span style={{ fontWeight: 700, fontSize: 13, color: "#374151", whiteSpace: "nowrap", marginLeft: 8 }}>
+                  {r.earned}/{r.marks}
+                </span>
               </div>
               <div style={{ fontSize: 13, color: "#374151" }}>
-                <b>Your answer:</b> {r.student_answer || <i>No answer</i>}<br />
-                <b>Correct answer:</b> {r.correct_answer || <i>Not available</i>}<br />
+                <b>Your answer:</b>{" "}
+                <span style={{ whiteSpace: "pre-wrap" }}>{studentDisplay}</span>
+                <br />
+                <b>Correct answer:</b> {r.correct_answer || <i>Not available</i>}
+                <br />
                 {r.feedback && <><b>Feedback:</b> {r.feedback}</>}
               </div>
-              <div style={{ marginTop: 6 }}>
-                <span style={{ ...S.pill, background: st.bg, color: "#374151", border: `1px solid ${st.border}` }}>{r.status}</span>
+              <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ ...S.pill, background: st.bg, color: "#374151", border: `1px solid ${st.border}` }}>
+                  {r.status}
+                </span>
                 <span style={{ ...S.pill, background: "#f3f4f6", color: "#374151" }}>{r.type}</span>
+                {/* Quick hint button for incorrect/partial */}
+                {(r.status === "incorrect" || r.status === "partial") && (
+                  <button
+                    style={{ ...S.btnSkip, fontSize: 12, padding: "3px 10px", background: "#eef2ff", color: "#4338ca", border: "1px solid #c7d2fe" }}
+                    onClick={() => {
+                      setAgentQuestion(`Give me a Socratic hint for question ${r.question_number}: "${r.question}"`);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}>
+                    💡 Get hint
+                  </button>
+                )}
               </div>
             </div>
           );
         })}
 
         <button style={{ ...S.btn, ...S.btnPri, width: "100%", marginTop: 8 }}
-          onClick={() => { setSubmitted(false); setStarted(false); setResults(null); setAnswers({}); setSkipped(new Set()); }}>
+          onClick={() => {
+            setSubmitted(false); setStarted(false); setResults(null);
+            setAnswers({}); setSkipped(new Set()); setAgentReply("");
+          }}>
           🔄 Try Another Exam
         </button>
       </div>
@@ -562,13 +730,18 @@ export default function AIExamMocker({ student }) {
         <div style={S.card}>
           <h1 style={S.title}>📝 Exam Mocker</h1>
           <p style={S.subtitle}>Select a paper and start practising</p>
-          <select style={{ ...S.select, marginTop: 20 }} value={selectedExam} onChange={(e) => setSelectedExam(e.target.value)}>
+          <div style={{ marginTop: 12, marginBottom: 16, fontSize: 12, color: "#9ca3af", fontFamily: "monospace" }}>
+            Student: {STUDENT_ID}
+          </div>
+          <select style={{ ...S.select, marginTop: 8 }} value={selectedExam}
+            onChange={(e) => setSelectedExam(e.target.value)}>
             <option value="">— Select Exam —</option>
             {exams.map((ex, i) => (
               <option key={i} value={ex}>{ex.replace("_exam.json","").replace(/_/g," ")}</option>
             ))}
           </select>
-          <button style={{ ...S.startBtn, opacity: loading || !selectedExam ? 0.6 : 1 }} onClick={startExam} disabled={loading || !selectedExam}>
+          <button style={{ ...S.startBtn, opacity: loading || !selectedExam ? 0.6 : 1 }}
+            onClick={startExam} disabled={loading || !selectedExam}>
             {loading ? "Loading…" : "▶ Start Exam"}
           </button>
         </div>
@@ -586,7 +759,6 @@ export default function AIExamMocker({ student }) {
         {showExitModal && <ExitModal />}
         {drawerOpen    && <NavigatorDrawer />}
 
-        {/* Dark top bar */}
         <div style={S.topBar}>
           <span style={S.topBarTitle}>
             📝 {selectedExam.replace("_exam.json","").replace(/_/g," ")}
@@ -598,9 +770,11 @@ export default function AIExamMocker({ student }) {
             {Object.keys(answers).length}/{totalQ} answered
           </span>
           <button style={{ ...S.btn, ...S.btnGhost, fontSize: 13, color: "#e5e7eb", borderColor: "#374151" }}
-            onClick={() => setDrawerOpen(true)}>☰ Questions</button>
+            onClick={() => setDrawerOpen(true)}>
+            ☰ Questions
+          </button>
           <button style={{ ...S.btn, background: "#374151", color: "#fff", fontSize: 13 }}
-            onClick={exitFullscreen} title="Exit fullscreen (Esc)">
+            onClick={exitFullscreen}>
             ⛶ Exit Fullscreen
           </button>
           <button style={{ ...S.btn, ...S.btnWarn, fontSize: 13 }}
@@ -609,7 +783,6 @@ export default function AIExamMocker({ student }) {
           </button>
         </div>
 
-        {/* Scrollable question area */}
         {loading ? (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: 16 }}>
             Loading question…
@@ -636,16 +809,19 @@ export default function AIExamMocker({ student }) {
       {showExitModal && <ExitModal />}
       {drawerOpen    && <NavigatorDrawer />}
 
-      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
         <div>
-          <h1 style={{ ...S.title, fontSize: 18 }}>📝 {selectedExam.replace("_exam.json","").replace(/_/g," ")}</h1>
+          <h1 style={{ ...S.title, fontSize: 18 }}>
+            📝 {selectedExam.replace("_exam.json","").replace(/_/g," ")}
+          </h1>
           <p style={S.subtitle}>{answered} of {totalQ} answered</p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <button style={{ ...S.btn, ...S.btnSec, fontSize: 13 }} onClick={() => setDrawerOpen(true)}>☰ Questions</button>
+          <button style={{ ...S.btn, ...S.btnSec, fontSize: 13 }} onClick={() => setDrawerOpen(true)}>
+            ☰ Questions
+          </button>
           <button style={{ ...S.btn, background: "#1a1a2e", color: "#fff", fontSize: 13 }}
-            onClick={enterFullscreen} title="Enter fullscreen (Ctrl+F)">
+            onClick={enterFullscreen}>
             ⛶ Fullscreen
           </button>
           <button style={{ ...S.btn, ...S.btnWarn, fontSize: 13 }} onClick={() => setShowExitModal(true)}>
@@ -654,12 +830,10 @@ export default function AIExamMocker({ student }) {
         </div>
       </div>
 
-      {/* Memo tag */}
       <div style={{ ...S.memoTag, background: memoMerged ? "#d1fae5" : "#fef9c3", color: memoMerged ? "#065f46" : "#92400e", marginBottom: 14 }}>
         {memoMerged ? "✅ Memo loaded — AI marking enabled" : "⚠️ No memo — AI feedback only"}
       </div>
 
-      {/* Question card */}
       {loading ? (
         <div style={{ ...S.card, textAlign: "center", color: "#9ca3af", padding: 40 }}>Loading question…</div>
       ) : question ? (
