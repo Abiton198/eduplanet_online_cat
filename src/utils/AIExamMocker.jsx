@@ -6,16 +6,7 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 const API = "https://abitonp.pythonanywhere.com";
 
-// ─── Persistent student ID (same logic as CATTutor) ───────────────────────────
-const getStudentId = () => {
-  let sid = localStorage.getItem("educat_sid");
-  if (!sid) {
-    sid = "stu_" + Math.random().toString(36).slice(2, 10);
-    localStorage.setItem("educat_sid", sid);
-  }
-  return sid;
-};
-const STUDENT_ID = getStudentId();
+import { useStudentId } from "./StudentId";
 
 // ─── Status colours ───────────────────────────────────────────────────────────
 const STATUS_COLOR = {
@@ -113,6 +104,7 @@ const FontLoader = () => (
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AIExamMocker({ student }) {
   const containerRef = useRef(null);
+  const STUDENT_ID   = useStudentId();  // resolves to student's real name from Firebase
 
   // ── Exam list & setup ──────────────────────────────────────────────────────
   const [exams, setExams]             = useState([]);
