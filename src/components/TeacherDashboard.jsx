@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from '../utils/firebase';
+import { useNavigate } from 'react-router-dom';
+
 import {
   User,
   BookOpen,
@@ -33,6 +35,8 @@ export default function TeacherDashboard() {
   const [paperSubject, setPaperSubject] = useState('CAT');
   const [curriculum, setCurriculum] = useState('CAPS');
   const [uploadedExams, setUploadedExams] = useState([]);
+  const navigate = useNavigate();
+  const auth = getAuth();
 
   // ─── EFFECTS ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -121,7 +125,7 @@ export default function TeacherDashboard() {
     }).then((result) => {
       if (result.isConfirmed) {
         signOut(auth);
-        setStudentInfo(null);
+        setTeacherProfile(null);
         localStorage.clear();
         navigate("/");
       }

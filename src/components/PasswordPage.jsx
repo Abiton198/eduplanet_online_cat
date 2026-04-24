@@ -168,18 +168,54 @@ export default function AuthPage({ setStudentInfo }) {
           South Africa's first <b>Agentic AI</b> ecosystem for <b>CAPS, IEB, & SACAI</b>. We don't just host exams; we build active learning agents that guide every learner toward a Distinction.
         </p>
 
-        {/* Cards */}
+        {/* Agentic Learning Card */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl w-full pb-32">
           <div className="relative group p-10 rounded-[3rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-left transition-all hover:scale-[1.02] hover:shadow-2xl">
-            <div className="absolute top-8 right-8 bg-indigo-600/10 text-indigo-600 p-2 rounded-xl"><Zap className="w-5 h-5" /></div>
-            <div className="mb-6 p-4 bg-indigo-600 text-white rounded-3xl w-fit shadow-lg shadow-indigo-200"><BrainCircuit className="w-8 h-8" /></div>
+            <div className="absolute top-8 right-8 bg-indigo-600/10 text-indigo-600 p-2 rounded-xl">
+              <Zap className="w-5 h-5" />
+            </div>
+            <div className="mb-6 p-4 bg-indigo-600 text-white rounded-3xl w-fit shadow-lg shadow-indigo-200">
+              <BrainCircuit className="w-8 h-8" />
+            </div>
             <h3 className="text-2xl font-black mb-4">Agentic AI Tutor</h3>
-            <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-6">Not a chatbot—an Agent. It monitors weak points and generates roadmaps.</p>
-            <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 uppercase tracking-widest">Proactive Support</div>
+            <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+              Not a chatbot—an <b>Agent</b>. It monitors your weak points in Mathematics or Physical Science and automatically generates a custom revision roadmap.
+            </p>
+            <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 uppercase tracking-widest">
+              Proactive Support <div className="h-1 w-1 bg-indigo-600 rounded-full"></div> Real-time Analysis
+            </div>
           </div>
-          {/* Card 2 & 3 would follow same pattern... */}
+
+          {/* Smart Exam Intelligence Card */}
+          <div className="relative group p-10 rounded-[3rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-left transition-all hover:scale-[1.02] hover:shadow-2xl">
+            <div className="mb-6 p-4 bg-purple-600 text-white rounded-3xl w-fit shadow-lg shadow-purple-200">
+              <Target className="w-8 h-8" />
+            </div>
+            <h3 className="text-2xl font-black mb-4">Precision Mastery</h3>
+            <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+              Our AI predicts your final Grade 12 results by analyzing patterns in your CAPS, IEB & SACAI mock exams. Identify "Critical Success Zones" before you sit for finals.
+            </p>
+            <div className="flex items-center gap-2 text-xs font-bold text-purple-600 uppercase tracking-widest">
+              Predictive Scoring <div className="h-1 w-1 bg-purple-600 rounded-full"></div> Pattern Recognition
+            </div>
+          </div>
+
+          {/* Universal Content Card */}
+          <div className="relative group p-10 rounded-[3rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-left transition-all hover:scale-[1.02] hover:shadow-2xl">
+            <div className="mb-6 p-4 bg-emerald-600 text-white rounded-3xl w-fit shadow-lg shadow-emerald-200">
+              <Library className="w-8 h-8" />
+            </div>
+            <h3 className="text-2xl font-black mb-4">Omni-Subject Core</h3>
+            <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+              One unified logic for all <b>20+ DBE Subjects</b>. From Accounting to Life Sciences, every paper is indexed by AI to align with the latest 2026 ATP guidelines.
+            </p>
+            <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 uppercase tracking-widest">
+              20+ Subjects <div className="h-1 w-1 bg-emerald-600 rounded-full"></div> ATP Aligned
+            </div>
+          </div>
         </div>
       </main>
+
 
       {/* Main Auth Modal */}
       {isModalOpen && !showProfileSetup && (
