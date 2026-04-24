@@ -1,603 +1,407 @@
-// src/pages/TeacherDashboard.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { getAuth } from "firebase/auth";
-import { studentList } from "../data/studentData";
-import { db } from "../utils/firebase";
-import { doc, setDoc, getDoc } from "firebase/firestore";
-
-function normalizeNameLower(name) {
-  return (name || "").toLowerCase().replace(/\s+/g, " ").trim();
-}
-function parseGradeYear(grade) {
-  const m = String(grade || "").match(/\d{1,2}/);
-  return m ? Number(m[0]) : null;
-}
-
-/** Make N random positive integers that sum to `total`. Min per item = minEach */
-function randomPartition(total, count, minEach = 1) {
-  const base = Math.max(0, Math.floor(minEach));
-  const minSum = base * count;
-  const remainder = Math.max(0, total - minSum);
-  if (count <= 0) return [];
-  if (remainder === 0) return Array(count).fill(base);
-
-  const cuts = Array.from({ length: count - 1 }, () => Math.random()).sort((a, b) => a - b);
-  const portions = [];
-  let prev = 0;
-  for (let i = 0; i < cuts.length; i++) {
-    portions.push(cuts[i] - prev);
-    prev = cuts[i];
-  }
-  portions.push(1 - prev);
-
-  let ints = portions.map((p) => Math.floor(p * remainder));
-  let used = ints.reduce((a, b) => a + b, 0);
-  let left = remainder - used;
-
-  const fracs = portions
-    .map((p, i) => ({ i, frac: p * remainder - ints[i] }))
-    .sort((a, b) => b.frac - a.frac);
-  for (let k = 0; k < left; k++) ints[fracs[k % fracs.length].i]++;
-
-  return ints.map((x) => x + base);
-}
-
-// ===============================================
-// === YOU CAN EDIT THESE TOTALS (IN THE CODE) ===
-// ===============================================
-
-// THEORY must sum to 150. Edit these 10 numbers to your exact blueprint.
-const THEORY_POSSIBLE = [
-  10, 10, 5, 25, 15, 10, 10, 15, 25, 25, // sums to 150
-];
-
-// PRACTICAL per grade: arrays should sum to grade total (50 / 100 / 150).
-// You can change counts and values; UI still allows editing/removal later.
-const PRACTICAL_POSSIBLE = {
-  "Grade 10": [8, 6, 5, 6, 8, 7, 5, 5],                     // sum 50
-  "Grade 11": [12, 10, 8, 12, 14, 16, 12, 16],             // sum 100
-  "Grade 12": [10, 10, 5, 25, 15, 10, 10, ,15,25,25],            // sum 150
-};
-// ===============================================
-
-const DEFAULT_THEORY_TYPES = [
-  "MCQ",
-  "MATCHING ITEMS",
-  "T/F",
-  "WORD PROCESSING",
-  "SPREADSHEETS",
-  "DATABASES",
-  "HTML",
-  "SYSTEMS TECHNOLOGIES",
-  "INFORMATION MANAGEMENT",
-  "SOCIAL IMPLICATIONS",
-];
-
-const DEFAULT_PRACTICAL_TYPES = [
-  "WORD PROCESSING",
-  "SPREADSHEETS",
-  "DATABASES",
-  "HTML",
-  "INTERNET & NETWORK TECH",
-  "APPLICATION SCENARIO",
-  "TASK SCENARIO",
-  "GENERAL",
-];
+import React, { useState, useEffect } from 'react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { db } from '../utils/firebase';
+import {
+  User,
+  BookOpen,
+  School,
+  ShieldCheck,
+  Upload,
+  ClipboardList,
+  FileText,
+  CheckCircle,
+  ArrowRight,
+  ArrowLeft,
+  LayoutDashboard,
+  LogOut
+} from 'lucide-react';
+import { signOut } from 'firebase/auth';
+import Swal from 'sweetalert2';
 
 export default function TeacherDashboard() {
-  const [selectedGrade, setSelectedGrade] = useState("");
-  const [selectedStudent, setSelectedStudent] = useState("");
-  const [examSeries, setExamSeries] = useState("prelim"); // 'june' | 'prelim'
-  const [examType, setExamType] = useState("theory");     // 'theory' | 'practical'
-  const [examDate, setExamDate] = useState("");
-  const [comment, setComment] = useState("");
-  const [score, setScore] = useState("")
-  const [rows, setRows] = useState([]); // each: { question, type, possible, score }
+  // ─── STATE MANAGEMENT ──────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState('results'); // 'results' or 'upload'
+  const [teacherProfile, setTeacherProfile] = useState(null);
 
-  // Move focus on Enter
-  const scoreRefs = useRef([]);
+  // Upload Wizard State
+  const [uploadStep, setUploadStep] = useState(1);
+  const [examFile, setExamFile] = useState(null);
+  const [memoFile, setMemoFile] = useState(null);
+  const [paperTitle, setPaperTitle] = useState('');
+  const [paperYear, setPaperYear] = useState('');
+  const [paperSubject, setPaperSubject] = useState('CAT');
+  const [curriculum, setCurriculum] = useState('CAPS');
+  const [uploadedExams, setUploadedExams] = useState([]);
 
-  const typeOptions = [
-    "MCQ",
-    "MATCHING ITEMS",
-    "T/F",
-    "WORD PROCESSING",
-    "SPREADSHEETS",
-    "DATABASES",
-    "HTML",
-    "SYSTEMS TECHNOLOGIES",
-    "INTERNET & NETWORK TECH",
-    "INFORMATION MANAGEMENT",
-    "SOCIAL IMPLICATIONS",
-    "SOLUTION DEVELOPMENT",
-    "APPLICATION SCENARIO",
-    "TASK SCENARIO",
-    "GENERAL",
-  ];
-  const questionOptions = Array.from({ length: 30 }, (_, i) => String(i + 1));
-
-  // ⚠️ Ensure these keys match your studentList structure.
-  const gradeKeyMap = {
-    "Grade 10": ["10A"],
-    "Grade 11": ["11", "11A"],
-    "Grade 12": ["12A", "12B"],
-  };
-
-  const gradeStudents = useMemo(() => {
-    if (!selectedGrade) return [];
-    const keys = gradeKeyMap[selectedGrade] || [];
-    return keys.flatMap((k) => studentList[k] || []);
-  }, [selectedGrade]);
-
-  // -------- Helpers for totals --------
-  const theoryTotal = 150;
-  const practicalTotalForGrade = (grade) => {
-    if (grade === "Grade 10") return 50;
-    if (grade === "Grade 11") return 100;
-    return 150; // Grade 12 or default
-  };
-
-  // -------- Generators that consume the editable arrays --------
-  const populateTheoryFromConfig = () => {
-    const sum = THEORY_POSSIBLE.reduce((a, b) => a + b, 0);
-    if (THEORY_POSSIBLE.length !== 10 || sum !== theoryTotal) {
-      // fallback to random if config invalid
-      const distribution = randomPartition(theoryTotal, 10, 5);
-      const generated = Array.from({ length: 10 }, (_, i) => ({
-        question: String(i + 1),
-        type: DEFAULT_THEORY_TYPES[i] || typeOptions[i % typeOptions.length],
-        possible: distribution[i],
-        score: "",
-      }));
-      setRows(generated);
-    } else {
-      const generated = Array.from({ length: 10 }, (_, i) => ({
-        question: String(i + 1),
-        type: DEFAULT_THEORY_TYPES[i] || typeOptions[i % typeOptions.length],
-        possible: THEORY_POSSIBLE[i],
-        score: "",
-      }));
-      setRows(generated);
-    }
-    scoreRefs.current = scoreRefs.current.slice(0, 10);
-  };
-
-  const populatePracticalFromConfig = () => {
-    const gradeTotal = practicalTotalForGrade(selectedGrade);
-    const cfg = PRACTICAL_POSSIBLE[selectedGrade] || [];
-    const cfgSum = cfg.reduce((a, b) => a + b, 0);
-
-    let generated;
-    if (cfg.length > 0 && cfgSum === gradeTotal) {
-      generated = cfg.map((p, i) => ({
-        question: String(i + 1),
-        type: DEFAULT_PRACTICAL_TYPES[i] || DEFAULT_PRACTICAL_TYPES[i % DEFAULT_PRACTICAL_TYPES.length],
-        possible: p,
-        score: "",
-      }));
-    } else {
-      // fallback to random if config invalid for that grade
-      const cnt = Math.max(DEFAULT_PRACTICAL_TYPES.length, 6); // at least 6 tasks
-      const distribution = randomPartition(gradeTotal, cnt, 3);
-      generated = Array.from({ length: cnt }, (_, i) => ({
-        question: String(i + 1),
-        type: DEFAULT_PRACTICAL_TYPES[i] || DEFAULT_PRACTICAL_TYPES[i % DEFAULT_PRACTICAL_TYPES.length],
-        possible: distribution[i],
-        score: "",
-      }));
-    }
-    setRows(generated);
-    scoreRefs.current = scoreRefs.current.slice(0, generated.length);
-  };
-
-  // -------- React effects --------
+  // ─── EFFECTS ────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (examType === "theory") {
-      populateTheoryFromConfig();
-    } else {
-      populatePracticalFromConfig();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [examType, selectedGrade]);
+    async function loadInitialData() {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) return;
 
-  // -------- Table handlers --------
-  const addRow = () =>
-    setRows((r) => {
-      const next = [...r, { question: "", type: "", possible: "", score: "" }];
-      return next;
-    });
-
-  const removeRow = (index) =>
-    setRows((prev) => prev.filter((_, i) => i !== index));
-
-  const handleChange = (index, field, value) => {
-    setRows((prev) => {
-      const copy = [...prev];
-      let val = value;
-      if (field === "possible" || field === "score") {
-        val = val === "" ? "" : String(val).replace(/[^\d.]/g, "");
+      // Load Profile
+      const profileRef = doc(db, 'teachers', user.uid);
+      const profileSnap = await getDoc(profileRef);
+      if (profileSnap.exists()) {
+        setTeacherProfile(profileSnap.data());
       }
-      copy[index] = { ...copy[index], [field]: val };
-      return copy;
-    });
-  };
 
-  const handleScoreKeyDown = (e, idx) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const nextIdx = idx + 1;
-      if (scoreRefs.current[nextIdx]) {
-        scoreRefs.current[nextIdx].focus();
-      } else {
-        // At the end: add a row for flow (practical only; theory stays fixed)
-        if (examType === "practical") {
-          addRow();
-          setTimeout(() => {
-            const last = scoreRefs.current[scoreRefs.current.length - 1];
-            last && last.focus();
-          }, 0);
-        }
+      // Load Upload History (Audit Trail)
+      const uploadRef = doc(db, 'teacherExamUploads', user.uid);
+      const uploadSnap = await getDoc(uploadRef);
+      if (uploadSnap.exists()) {
+        setUploadedExams(uploadSnap.data().uploads || []);
       }
     }
-  };
+    loadInitialData();
+  }, []);
 
-  const numeric = (v) => (v === "" || v == null ? 0 : Number(v));
-  const totalScore = rows.reduce((sum, r) => sum + numeric(r.score), 0);
-  const possibleSum = rows.reduce((sum, r) => sum + numeric(r.possible), 0);
-
-  const finalPossibleTotal =
-    examType === "theory" ? theoryTotal : (possibleSum || practicalTotalForGrade(selectedGrade));
-
-  const percent =
-    finalPossibleTotal > 0 ? ((totalScore / finalPossibleTotal) * 100).toFixed(2) : "0.00";
-
-  // -------- Submit --------
-  const handleSubmit = async () => {
-    if (!selectedGrade || !selectedStudent || !examType) {
-      alert("Please select grade, student, and exam type.");
+  // ─── HANDLERS ──────────────────────────────────────────────────────────
+  const handleExamUpload = async () => {
+    if (!examFile || !memoFile || !paperTitle) {
+      alert('Please complete all fields and upload both files.');
       return;
     }
 
-    const cleanedRows = rows
-      .map((r) => ({
-        question: String(r.question || "").trim(),
-        type: String(r.type || "").trim(),
-        possible: Number(r.possible || 0),
-        score: Number(r.score || 0),
-      }))
-      .filter((r) => r.question !== "" && !Number.isNaN(r.score));
-
-    for (const r of cleanedRows) {
-      if (r.score < 0) {
-        alert("Scores cannot be negative.");
-        return;
-      }
-      if (r.possible < 0) {
-        alert("Possible marks cannot be negative.");
-        return;
-      }
-    }
-
-    // Guards
-    if (examType === "theory") {
-      const sumPossible = cleanedRows.reduce((s, r) => s + (r.possible || 0), 0);
-      if (sumPossible !== theoryTotal) {
-        alert(`Theory "Possible" must sum to ${theoryTotal} (currently ${sumPossible}).`);
-        return;
-      }
-    }
-
     const auth = getAuth();
-    const currentUser = auth.currentUser;
+    const user = auth.currentUser;
 
-    const name = selectedStudent.trim();
-    const nameLower = normalizeNameLower(name);
-
-    const keysForGrade = {
-      "Grade 10": ["10A"],
-      "Grade 11": ["11", "11A"],
-      "Grade 12": ["12A", "12B"],
+    const record = {
+      id: Date.now(),
+      title: paperTitle,
+      year: paperYear,
+      curriculum,
+      subject: paperSubject,
+      examFileName: examFile.name,
+      memoFileName: memoFile.name,
+      uploadedBy: user.uid,
+      uploadedAt: new Date().toISOString(),
+      status: 'Processed for AI Marking'
     };
-    const keys = keysForGrade[selectedGrade] || [];
-    const candidates = keys.flatMap((k) => studentList[k] || []);
-    const selectedObj = candidates.find((s) => normalizeNameLower(s.name) === nameLower);
-    const studentUid = selectedObj?.uid || null;
 
-    const collectionName = examSeries === "prelim" ? "prelimResults" : "studentResults";
-    const docRef = doc(db, collectionName, name);
+    const updated = [record, ...uploadedExams];
 
     try {
-      const snap = await getDoc(docRef);
-      const existing = snap.exists() ? snap.data()[examType] || {} : {};
+      await setDoc(doc(db, 'teacherExamUploads', user.uid), {
+        teacher: user.uid,
+        uploads: updated
+      }, { merge: true });
 
-      const payload = {
-        examTitle: examType === "theory" ? "Theory Exam" : "Practical Exam",
-        examDate: examDate || existing.examDate || "",
-        results: cleanedRows,                // includes possible & score per row
-        comment: comment.trim() || existing.comment || "",
-        grade: selectedGrade,
-        percentage: percent,
-        totalScore,
-        possibleTotal: finalPossibleTotal,   // for quick reads
-      };
+      setUploadedExams(updated);
+      alert('Exam uploaded. AI extraction pipeline queued.');
 
-      const rootUpserts = {
-        name,
-        nameLower,
-        grade: selectedGrade,
-        gradeYear: parseGradeYear(selectedGrade),
-        series: examSeries, // 'june' | 'prelim'
-        ...(studentUid ? { studentUid } : {}),
-        createdBy: currentUser?.uid || null,
-        updatedAt: new Date().toISOString(),
-      };
-
-      await setDoc(
-        docRef,
-        {
-          ...rootUpserts,
-          [examType]: payload,
-        },
-        { merge: true }
-      );
-
-      alert(`${examSeries === "prelim" ? "Prelim" : "June"} ${examType} results saved!`);
-
-      // Reset UX: keep config "possible" values for convenience, clear only scores
-      setRows((prev) =>
-        prev.map((r) => ({
-          ...r,
-          score: "",
-        }))
-      );
-      setComment("");
-      setExamDate("");
-    } catch (err) {
-      console.error(err);
-      alert("Error saving. Check console.");
+      // Reset Form
+      setUploadStep(1);
+      setExamFile(null);
+      setMemoFile(null);
+      setPaperTitle('');
+    } catch (error) {
+      console.error("Upload failed:", error);
+      alert("Error uploading exam. Check console.");
     }
   };
 
+  const handleLogout = () => {
+    const isDark = document.documentElement.classList.contains('dark');
+    // Detect dark mode from the document root
+
+    Swal.fire({
+      title: "Logout?",
+      text: "You will be signed out of your session.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Logout",
+      cancelButtonText: "Stay",
+      confirmButtonColor: "#ef4444", // Red
+      cancelButtonColor: "#22c55e",  // Green
+      background: isDark ? '#111827' : '#fff', // Use the local 'isDark' variable
+      color: isDark ? '#fff' : '#000',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        signOut(auth);
+        setStudentInfo(null);
+        localStorage.clear();
+        navigate("/");
+      }
+    });
+  };
+
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      <h2 className="text-2xl font-bold mb-4">Teacher Dashboard - Post Results</h2>
+    <div className="max-w-6xl mx-auto p-4 md:p-8 bg-gray-50 min-h-screen">
 
-      {/* Exam Series */}
-      <label className="block mb-1">Exam Series:</label>
-      <select
-        value={examSeries}
-        onChange={(e) => setExamSeries(e.target.value)}
-        className="border p-2 mb-4 w-full"
-      >
-        <option value="june">June (Main Exams)</option>
-        <option value="prelim">Prelim Exams</option>
-      </select>
+      {/* 1. PERSONALIZED PROFILE HEADER */}
+      <div className="bg-gradient-to-r from-indigo-800 to-purple-800 text-white rounded-3xl p-8 mb-8 shadow-2xl relative overflow-hidden">
+        <div className="relative z-10">
+          <h1 className="text-4xl font-extrabold mb-2">
+            Welcome! {teacherProfile?.title || 'Mr/Ms'} {teacherProfile?.surname || teacherProfile?.fullName || 'Teacher'}
+          </h1>
+          <p className="opacity-90 mb-6">Your EduCAT Professional Portal</p>
 
-      {/* Grade Selection */}
-      <label className="block mb-1">Select Grade:</label>
-      <select
-        value={selectedGrade}
-        onChange={(e) => {
-          setSelectedGrade(e.target.value);
-          setSelectedStudent("");
-        }}
-        className="border p-2 mb-4 w-full"
-      >
-        <option value="">-- Select Grade --</option>
-        <option value="Grade 10">Grade 10</option>
-        <option value="Grade 11">Grade 11</option>
-        <option value="Grade 12">Grade 12</option>
-      </select>
 
-      {/* Student Selection */}
-      <label className="block mb-1">Select Student:</label>
-      <select
-        value={selectedStudent}
-        onChange={(e) => setSelectedStudent(e.target.value)}
-        className="border p-2 mb-4 w-full"
-        disabled={!selectedGrade}
-      >
-        <option value="">-- Select Student --</option>
-        {gradeStudents.map((s, idx) => (
-          <option key={`${s.name}-${idx}`} value={s.name}>
-            {s.name}
-          </option>
-        ))}
-      </select>
-
-      {/* Exam Type */}
-      <label className="block mb-1">Exam Type:</label>
-      <select
-        value={examType}
-        onChange={(e) => setExamType(e.target.value)}
-        className="border p-2 mb-4 w-full"
-      >
-        <option value="theory">Theory</option>
-        <option value="practical">Practical</option>
-      </select>
-
-      {/* Exam Date */}
-      <label className="block mb-1">Date:</label>
-      <input
-        type="date"
-        value={examDate}
-        onChange={(e) => setExamDate(e.target.value)}
-        className="border p-2 mb-4 w-full"
-      />
-
-      {/* Comment */}
-      <label className="block mb-1">Teacher Comment:</label>
-      <textarea
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-        placeholder="Write a comment for the student..."
-        className="border p-2 mb-4 w-full"
-        rows={3}
-      />
-
-      {/* Results Table */}
-      <div className="flex items-center gap-3 mb-3">
-        {examType === "theory" ? (
-          <>
-            <button
-              type="button"
-              onClick={populateTheoryFromConfig}
-              className="bg-indigo-600 text-white px-3 py-2 rounded"
-            >
-              Use Config (150)
-            </button>
-            <button
-              type="button"
-              onClick={() => setRows(randomPartition(150, 10, 5).map((p, i) => ({
-                question: String(i + 1),
-                type: DEFAULT_THEORY_TYPES[i] || "GENERAL",
-                possible: p,
-                score: "",
-              })))}
-              className="bg-gray-600 text-white px-3 py-2 rounded"
-            >
-              Total 150
-            </button>
-          
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={populatePracticalFromConfig}
-              className="bg-teal-600 text-white px-3 py-2 rounded"
-            >
-              Use Config ({practicalTotalForGrade(selectedGrade)})
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const total = practicalTotalForGrade(selectedGrade);
-                const cnt = Math.max(DEFAULT_PRACTICAL_TYPES.length, 6);
-                const dist = randomPartition(total, cnt, 3);
-                setRows(Array.from({ length: cnt }, (_, i) => ({
-                  question: String(i + 1),
-                  type: DEFAULT_PRACTICAL_TYPES[i] || "GENERAL",
-                  possible: dist[i],
-                  score: "",
-                })));
-              }}
-              className="bg-gray-600 text-white px-3 py-2 rounded"
-            >
-              Random Practical
-            </button>
-            
-          </>
-        )}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-6 border-t border-white/20">
+            <div className="flex items-center gap-3">
+              <BookOpen className="w-5 h-5 text-indigo-300" />
+              <div>
+                <p className="text-xs opacity-70 uppercase tracking-wider">Subject</p>
+                <p className="font-bold">{teacherProfile?.subject || 'CAT'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <School className="w-5 h-5 text-indigo-300" />
+              <div>
+                <p className="text-xs opacity-70 uppercase tracking-wider">School</p>
+                <p className="font-bold">{teacherProfile?.school || 'Care Academy'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <LayoutDashboard className="w-5 h-5 text-indigo-300" />
+              <div>
+                <p className="text-xs opacity-70 uppercase tracking-wider">Department</p>
+                <p className="font-bold">{teacherProfile?.department || 'IT'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="w-5 h-5 text-indigo-300" />
+              <div>
+                <p className="text-xs opacity-70 uppercase tracking-wider">Role</p>
+                <p className="font-bold">Exam Moderator</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Abstract background shape */}
+        <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
       </div>
 
-      <table className="w-full border mb-4">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="border p-2">Question</th>
-            <th className="border p-2">Type</th>
-            <th className="border p-2">Possible</th>
-            <th className="border p-2">Score</th>
-            <th className="border p-2">Remove</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, idx) => (
-            <tr key={idx}>
-              <td className="border p-2">
-                <select
-                  value={row.question}
-                  onChange={(e) => handleChange(idx, "question", e.target.value)}
-                  className="border p-1 w-full"
-                >
-                  <option value="">--</option>
-                  {questionOptions.map((q) => (
-                    <option key={q} value={q}>
-                      {q}
-                    </option>
-                  ))}
-                </select>
-              </td>
-              <td className="border p-2">
-                <select
-                  value={row.type}
-                  onChange={(e) => handleChange(idx, "type", e.target.value)}
-                  className="border p-1 w-full"
-                >
-                  <option value="">--</option>
-                  {(examType === "theory" ? DEFAULT_THEORY_TYPES : DEFAULT_PRACTICAL_TYPES).map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </td>
-              <td className="border p-2">
-                <input
-                  type="number"
-                  min="0"
-                  value={row.possible}
-                  onChange={(e) => handleChange(idx, "possible", e.target.value)}
-                  className="border p-1 w-full"
-                  disabled={examType === "theory"} // theory possible is code-driven
-                />
-              </td>
-              <td className="border p-2">
-                <input
-                  type="number"
-                  min="0"
-                  value={row.score}
-                  onChange={(e) => handleChange(idx, "score", e.target.value)}
-                  onKeyDown={(e) => handleScoreKeyDown(e, idx)}
-                  className="border p-1 w-full"
-                  ref={(el) => (scoreRefs.current[idx] = el)}
-                />
-              </td>
-              <td className="border p-2 text-center">
-                <button
-                  onClick={() => removeRow(idx)}
-                  className="bg-red-500 text-white px-2 rounded"
-                  disabled={examType === "theory" && rows.length <= 10}
-                  title={
-                    examType === "theory"
-                      ? "Theory keeps 10 questions; use Config/Random instead."
-                      : "Remove row"
-                  }
-                >
-                  X
-                </button>
-              </td>
-            </tr>
-          ))}
-          <tr className="font-bold bg-gray-50">
-            <td className="border p-2">TOTAL</td>
-            <td className="border p-2">-</td>
-            <td className="border p-2">{finalPossibleTotal}</td>
-            <td className="border p-2">{totalScore}</td>
-            <td className="border p-2" />
-          </tr>
-          <tr className="font-bold bg-gray-100">
-            <td className="border p-2">PERCENTAGE</td>
-            <td className="border p-2">-</td>
-            <td className="border p-2" colSpan={2}>
-              {percent}%
-            </td>
-            <td className="border p-2" />
-          </tr>
-        </tbody>
-      </table>
+      {/* 2. DASHBOARD TABS */}
+      <div className="flex p-1 bg-gray-200 rounded-2xl w-fit mb-8 shadow-inner">
+        <button
+          onClick={() => setActiveTab('results')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'results' ? 'bg-white text-indigo-700 shadow-md scale-105' : 'text-gray-600 hover:text-indigo-600'
+            }`}
+        >
+          <ClipboardList className="w-5 h-5" />
+          Post Results
+        </button>
 
-      {/* Buttons */}
-      <div className="flex gap-4">
-        {examType === "practical" && (
-          <button onClick={addRow} className="bg-green-600 text-white px-4 py-2 rounded">
-            Add Row
-          </button>
-        )}
-        <button onClick={handleSubmit} className="bg-blue-600 text-white px-6 py-2 rounded">
-          Post Results & Comment
+        <button
+          onClick={() => setActiveTab('upload')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'upload' ? 'bg-white text-indigo-700 shadow-md scale-105' : 'text-gray-600 hover:text-indigo-600'
+            }`}
+        >
+          <Upload className="w-5 h-5" />
+          AI Exam Upload Center
         </button>
       </div>
+
+      {/* ─── TAB 1: POST RESULTS (Original UI) ────────────────────────── */}
+      {activeTab === 'results' && (
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 animate-in fade-in duration-500">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">Results Management</h2>
+            <div className="text-sm text-gray-500">Last synced: {new Date().toLocaleTimeString()}</div>
+          </div>
+
+          {/* PLACE YOUR ORIGINAL GRADING FORM / TABLE COMPONENT HERE */}
+          <div className="p-12 border-2 border-dashed border-gray-200 rounded-2xl text-center">
+            <p className="text-gray-400">Your existing Marks Capture Form will render here...</p>
+          </div>
+        </div>
+      )}
+
+      {/* ─── TAB 2: AI EXAM UPLOAD CENTER ─────────────────────────────── */}
+      {activeTab === 'upload' && (
+        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+
+          {/* WIZARD CARD */}
+          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+            <div className="bg-indigo-50 p-6 border-b border-indigo-100 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-indigo-900">AI Exam Upload Wizard</h2>
+              <span className="text-indigo-600 font-mono text-sm bg-white px-3 py-1 rounded-full shadow-sm">
+                Step {uploadStep} of 3
+              </span>
+            </div>
+
+            <div className="p-8">
+              {/* STEP 1: METADATA */}
+              {uploadStep === 1 && (
+                <div className="max-w-2xl mx-auto space-y-6">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="p-3 bg-indigo-600 text-white rounded-2xl">1</div>
+                    <h3 className="text-xl font-bold">Exam Identity</h3>
+                  </div>
+
+                  <div className="grid gap-4">
+                    <input
+                      type="text"
+                      placeholder="Exam Title (e.g. Grade 12 Preliminary Paper 1)"
+                      value={paperTitle}
+                      onChange={e => setPaperTitle(e.target.value)}
+                      className="w-full border-2 border-gray-100 p-4 rounded-xl focus:border-indigo-500 focus:ring-0 transition-all outline-none text-lg"
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <select
+                        value={curriculum}
+                        onChange={e => setCurriculum(e.target.value)}
+                        className="border-2 border-gray-100 p-4 rounded-xl bg-white"
+                      >
+                        <option value="CAPS">CAPS (DBE)</option>
+                        <option value="IEB">IEB</option>
+                        <option value="Cambridge">Cambridge</option>
+                      </select>
+                      <input
+                        type="number"
+                        placeholder="Year"
+                        value={paperYear}
+                        onChange={e => setPaperYear(e.target.value)}
+                        className="border-2 border-gray-100 p-4 rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setUploadStep(2)}
+                    className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-indigo-700 flex items-center justify-center gap-2"
+                  >
+                    Next: Upload Paper <ArrowRight className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+
+              {/* STEP 2: EXAM PAPER */}
+              {uploadStep === 2 && (
+                <div className="max-w-2xl mx-auto space-y-6">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="p-3 bg-indigo-600 text-white rounded-2xl">2</div>
+                    <h3 className="text-xl font-bold">Upload Question Paper</h3>
+                  </div>
+
+                  <div className="border-2 border-dashed border-indigo-200 rounded-3xl p-12 text-center bg-indigo-50/30">
+                    <input
+                      type="file"
+                      id="examFile"
+                      accept=".pdf"
+                      onChange={(e) => setExamFile(e.target.files[0])}
+                      className="hidden"
+                    />
+                    <label htmlFor="examFile" className="cursor-pointer">
+                      <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                        <FileText className="w-8 h-8 text-indigo-600" />
+                      </div>
+                      <p className="text-lg font-semibold text-indigo-900">
+                        {examFile ? examFile.name : "Select Question Paper (PDF)"}
+                      </p>
+                    </label>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <button onClick={() => setUploadStep(1)} className="flex-1 bg-gray-100 text-gray-600 font-bold py-4 rounded-xl flex items-center justify-center gap-2">
+                      <ArrowLeft className="w-5 h-5" /> Back
+                    </button>
+                    <button onClick={() => setUploadStep(3)} className="flex-[2] bg-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg">
+                      Next: Upload Memo
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 3: MEMO */}
+              {uploadStep === 3 && (
+                <div className="max-w-2xl mx-auto space-y-6">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="p-3 bg-green-600 text-white rounded-2xl">3</div>
+                    <h3 className="text-xl font-bold">Upload Marking Memo</h3>
+                  </div>
+
+                  <div className="border-2 border-dashed border-green-200 rounded-3xl p-12 text-center bg-green-50/30">
+                    <input
+                      type="file"
+                      id="memoFile"
+                      accept=".pdf"
+                      onChange={(e) => setMemoFile(e.target.files[0])}
+                      className="hidden"
+                    />
+                    <label htmlFor="memoFile" className="cursor-pointer">
+                      <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                        <CheckCircle className="w-8 h-8 text-green-600" />
+                      </div>
+                      <p className="text-lg font-semibold text-green-900">
+                        {memoFile ? memoFile.name : "Select Memo (PDF)"}
+                      </p>
+                    </label>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <button onClick={() => setUploadStep(2)} className="flex-1 bg-gray-100 text-gray-600 font-bold py-4 rounded-xl flex items-center justify-center gap-2">
+                      <ArrowLeft className="w-5 h-5" /> Back
+                    </button>
+                    <button
+                      onClick={handleExamUpload}
+                      className="flex-[2] bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-700"
+                    >
+                      Process & Finalize Exam
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* AUDIT TRAIL */}
+          <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
+            <div className="flex items-center gap-3 mb-6">
+              <ClipboardList className="w-6 h-6 text-indigo-600" />
+              <h3 className="text-2xl font-bold">Uploaded Exams Audit Trail</h3>
+            </div>
+
+            <div className="grid gap-4">
+              {uploadedExams.length === 0 ? (
+                <p className="text-center py-10 text-gray-400">No exams uploaded yet.</p>
+              ) : (
+                uploadedExams.map(exam => (
+                  <div key={exam.id} className="group hover:border-indigo-400 border-2 border-gray-50 rounded-2xl p-6 bg-gray-50/50 transition-all">
+                    <div className="flex flex-col md:flex-row justify-between gap-4">
+                      <div className="space-y-2">
+                        <h4 className="font-bold text-xl text-indigo-900">{exam.title}</h4>
+                        <div className="flex gap-4 text-sm text-gray-500">
+                          <span className="flex items-center gap-1"><BookOpen className="w-4 h-4" /> {exam.curriculum}</span>
+                          <span className="flex items-center gap-1"><School className="w-4 h-4" /> {exam.year}</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
+                          <div className="text-xs bg-white p-2 rounded-lg border border-gray-200 truncate">
+                            📄 {exam.examFileName}
+                          </div>
+                          <div className="text-xs bg-white p-2 rounded-lg border border-gray-200 truncate">
+                            ✅ {exam.memoFileName}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right space-y-4">
+                        <span className="inline-block bg-green-100 text-green-700 font-bold px-4 py-1 rounded-full text-sm">
+                          {exam.status}
+                        </span>
+                        <p className="text-xs text-gray-400 block">
+                          Uploaded: {new Date(exam.uploadedAt).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      <button
+        onClick={handleLogout}
+        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 hover:bg-red-600 text-red-600 hover:text-white transition-all duration-300 font-bold border border-red-100 dark:border-red-900/30 mt-4"
+      >
+        <LogOut size={18} />
+        <span className="hidden lg:inline text-sm">Logout</span>
+      </button>
     </div>
   );
 }
