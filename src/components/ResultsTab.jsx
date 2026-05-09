@@ -30,6 +30,9 @@ function AttemptCard({ attempt, teacherMode }) {
         day: "numeric", month: "short", year: "numeric",
     }) ?? "—";
 
+    // resolvedTitle is injected by ResultsTab via the exams collection lookup
+    const title = attempt.resolvedTitle || attempt.examTitle || attempt.exam || "Exam";
+
     return (
         <div className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden mb-4">
 
@@ -54,7 +57,7 @@ function AttemptCard({ attempt, teacherMode }) {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm truncate">{attempt.examTitle || attempt.exam || "Exam"}</p>
+                    <p className="font-bold text-sm truncate">{title}</p>
                     <p className="text-xs text-slate-400 mt-0.5">{date}</p>
                     <div className="flex gap-3 mt-2 flex-wrap">
                         <span className="text-xs font-semibold text-slate-500">
@@ -146,53 +149,79 @@ function AttemptCard({ attempt, teacherMode }) {
 //   teacherMode {boolean} — if true, loads ALL students' attempts (teacher view)
 export function ResultsTab({ studentId, teacherMode = false }) {
     const [attempts, setAttempts] = useState([]);
+    const [examTitles, setExamTitles] = useState({}); // { examId → "Human readable title" }
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
 
+    // ── 1. Live exam title map ────────────────────────────────────────────────
+    // Subscribes to the exams collection and builds an id→title lookup map.
+    // Stays live so a newly uploaded exam's title appears without a page refresh.
     useEffect(() => {
-        // Student mode requires a studentId; teacher mode loads everything
+        const unsub = onSnapshot(
+            collection(db, "exams"),
+            (snap) => {
+                const map = {};
+                snap.docs.forEach(d => {
+                    map[d.id] = d.data().title || d.id;
+                });
+                setExamTitles(map);
+            },
+            (err) => console.error("ResultsTab [examTitles]:", err)
+        );
+        return () => unsub();
+    }, []);
+
+    // ── 2. Live attempts query ────────────────────────────────────────────────
+    useEffect(() => {
         if (!teacherMode && !studentId) {
             setLoading(false);
             return;
         }
 
-        let q;
-
-        if (teacherMode) {
-            q = query(
+        const q = teacherMode
+            ? query(
                 collection(db, "exam_attempts"),
                 orderBy("completedAt", "desc")
-            );
-        } else {
-            q = query(
+            )
+            : query(
                 collection(db, "exam_attempts"),
                 where("studentId", "==", studentId),
                 orderBy("completedAt", "desc")
             );
-        }
 
-        const unsub = onSnapshot(q, (snap) => {
-            setAttempts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-            setLoading(false);
-        }, (err) => {
-            console.error("ResultsTab:", err);
-            setLoading(false);
-        });
+        const unsub = onSnapshot(
+            q,
+            (snap) => {
+                setAttempts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+                setLoading(false);
+            },
+            (err) => {
+                console.error("ResultsTab [attempts]:", err);
+                setLoading(false);
+            }
+        );
 
         return () => unsub();
     }, [studentId, teacherMode]);
 
-    // ── Filtered list (teacher search by student name or exam) ────────────────
-    const filtered = attempts.filter(a => {
+    // ── 3. Enrich with resolved human-readable title ──────────────────────────
+    // attempt.exam holds the raw Firestore exam ID — look it up in examTitles
+    const enriched = attempts.map(a => ({
+        ...a,
+        resolvedTitle: examTitles[a.exam] || a.examTitle || a.exam || "Exam",
+    }));
+
+    // ── 4. Search filter ──────────────────────────────────────────────────────
+    const filtered = enriched.filter(a => {
         if (!searchTerm.trim()) return true;
         const t = searchTerm.toLowerCase();
         return (
-            a.studentId?.toLowerCase().includes(t) ||
-            (a.examTitle || a.exam || "").toLowerCase().includes(t)
+            a.resolvedTitle.toLowerCase().includes(t) ||
+            (teacherMode && a.studentId?.toLowerCase().includes(t))
         );
     });
 
-    // ── Summary stats (computed from filtered) ────────────────────────────────
+    // ── 5. Summary stats (always from filtered so search updates counts) ──────
     const avgPct = filtered.length
         ? Math.round(filtered.reduce((s, a) => s + (a.percentage ?? 0), 0) / filtered.length)
         : 0;
@@ -219,11 +248,11 @@ export function ResultsTab({ studentId, teacherMode = false }) {
                     </p>
                 </div>
 
-                {/* Teacher search */}
-                {teacherMode && attempts.length > 0 && (
+                {/* Search bar — visible whenever there is data */}
+                {attempts.length > 0 && (
                     <input
                         type="text"
-                        placeholder="Search student or exam…"
+                        placeholder={teacherMode ? "Search student or exam…" : "Search exam…"}
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                         className="text-sm px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-400 w-56"
@@ -259,7 +288,7 @@ export function ResultsTab({ studentId, teacherMode = false }) {
                         ))}
                     </div>
 
-                    {/* Attempt list */}
+                    {/* Attempt cards */}
                     {filtered.map(a => (
                         <AttemptCard key={a.id} attempt={a} teacherMode={teacherMode} />
                     ))}

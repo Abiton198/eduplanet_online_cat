@@ -16,6 +16,7 @@ import AIExamMocker from '../utils/AIExamMocker';
 import { ResultsTab } from './ResultsTab';
 
 
+
 // SweetAlert2 Configuration
 const swal = Swal.mixin({
   confirmButtonColor: "#10b981",
@@ -72,6 +73,8 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
       return [];
     }
   });
+  const studentName = studentInfo?.name;
+
 
   // ─── AUTH & PROFILE SYNC ──────────────────────────────────────────────
   useEffect(() => {
@@ -387,9 +390,6 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
         </div>
       </header>
 
-      {activeTab === 'results' && (
-        <ResultsTab studentId={studentName} />
-      )}
 
       {/* ─── AI TUTOR OVERLAY ─── */}
       {showTutor && (
@@ -421,6 +421,7 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
 
           <div className="my-10">
             <ExamResultsDisplay />
+            <ResultsTab studentId={studentName} />
           </div>
 
 
