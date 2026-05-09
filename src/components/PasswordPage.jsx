@@ -356,7 +356,7 @@ export default function AuthPage({ setStudentInfo }) {
             <BrainCircuit className="text-white w-7 h-7" />
           </div>
           <span className="font-black text-2xl tracking-tighter uppercase italic">
-            EduCAT <span className="text-indigo-600 font-light not-italic">OS</span>
+            Eduket <span className="text-indigo-600 font-light not-italic">OS</span>
           </span>
         </div>
         <div className="flex items-center gap-4">
@@ -382,7 +382,7 @@ export default function AuthPage({ setStudentInfo }) {
         </h1>
         <p className="text-xl md:text-2xl opacity-70 max-w-3xl mb-16 leading-relaxed font-medium mx-auto">
           Bridge the gap between curriculum and capability.
-          <span className="text-indigo-600 dark:text-indigo-400 font-bold"> EduCAT OS </span>
+          <span className="text-indigo-600 dark:text-indigo-400 font-bold"> Eduket OS </span>
           empowers learners to master CAPS & IEB standards through an intelligent,
           agentic ecosystem designed for the modern South African classroom.
         </p>
@@ -444,7 +444,7 @@ export default function AuthPage({ setStudentInfo }) {
             </p>
 
             <p className="text-center mt-5 text-sm font-medium">
-              {isRegistering ? 'Already a member?' : 'New to EduCAT?'}{' '}
+              {isRegistering ? 'Already a member?' : 'New to Eduket?'}{' '}
               <button onClick={() => setIsRegistering(!isRegistering)}
                 className="text-indigo-600 font-black hover:underline underline-offset-4">
                 {isRegistering ? 'Sign In Instead' : 'Register Now'}
@@ -588,8 +588,8 @@ export default function AuthPage({ setStudentInfo }) {
                     ].map((ph) => (
                       <button key={ph.value} type="button" onClick={() => setTeachingPhase(ph.value)}
                         className={`p-3 rounded-2xl border-2 text-left transition-all ${teachingPhase === ph.value
-                            ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
-                            : 'border-slate-100 dark:border-slate-700 hover:border-indigo-300'
+                          ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
+                          : 'border-slate-100 dark:border-slate-700 hover:border-indigo-300'
                           }`}>
                         <p className="font-black text-xs text-slate-800 dark:text-white leading-tight">{ph.label}</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">{ph.grades}</p>
@@ -607,8 +607,8 @@ export default function AuthPage({ setStudentInfo }) {
                       {userRole === 'student' ? 'My Subjects *' : 'Subjects I Teach *'}
                     </label>
                     <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${subjects.length >= (userRole === 'student' ? 5 : 1)
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-amber-100 text-amber-700'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-amber-100 text-amber-700'
                       }`}>
                       {subjects.length} selected{userRole === 'student' ? ' / min 5' : ''}
                     </span>
@@ -619,8 +619,8 @@ export default function AuthPage({ setStudentInfo }) {
                       return (
                         <button key={s} type="button" onClick={() => toggleSubject(s)}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${active
-                              ? 'bg-indigo-600 text-white border-indigo-600'
-                              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-indigo-400'
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-indigo-400'
                             }`}>
                           {active && '✓ '}{s}
                         </button>

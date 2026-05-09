@@ -349,3 +349,58 @@ export async function ensureUserFirestoreDocs(uid, role, profileData = {}) {
 
     await Promise.all(batch);
 }
+
+// ─── AUDIT TRAIL OPERATIONS ───────────────────────────────────────────────────
+
+/**
+ * Deletes an exam from both /exams collection and the teacher's audit trail.
+ * Does NOT delete the Drive files (user keeps those in their own Drive).
+ */
+export async function deleteExamFromAudit(uid, examId) {
+    const { deleteDoc } = await import("firebase/firestore");
+
+    // Remove from primary exams collection
+    try {
+        await deleteDoc(doc(db, "exams", examId));
+    } catch (e) {
+        console.warn("Could not delete from /exams:", e.message);
+    }
+
+    // Remove from teacher's audit trail array
+    const auditRef = doc(db, "teacherExamUploads", uid);
+    const auditSnap = await getDoc(auditRef);
+    if (!auditSnap.exists()) return;
+
+    const updated = (auditSnap.data().uploads || []).filter(
+        (u) => u.examId !== examId && u.id !== examId
+    );
+    await updateDoc(auditRef, { uploads: updated });
+}
+
+/**
+ * Updates editable metadata for an exam in both /exams and the audit trail.
+ * Editable fields: title, subject, grade, year, curriculum.
+ */
+export async function updateExamInAudit(uid, examId, changes) {
+    // Update primary record
+    try {
+        await updateDoc(doc(db, "exams", examId), {
+            ...changes,
+            updatedAt: new Date().toISOString(),
+        });
+    } catch (e) {
+        console.warn("Could not update /exams:", e.message);
+    }
+
+    // Update inside audit trail array
+    const auditRef = doc(db, "teacherExamUploads", uid);
+    const auditSnap = await getDoc(auditRef);
+    if (!auditSnap.exists()) return;
+
+    const updated = (auditSnap.data().uploads || []).map((u) =>
+        (u.examId === examId || u.id === examId)
+            ? { ...u, ...changes, updatedAt: new Date().toISOString() }
+            : u
+    );
+    await updateDoc(auditRef, { uploads: updated });
+}

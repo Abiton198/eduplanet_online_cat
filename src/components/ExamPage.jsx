@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, query, onSnapshot, where, orderBy, limit, getCountFromServer } from "firebase/firestore";
 import { db, auth } from "../utils/firebase";
 import { signOut } from "firebase/auth";
 import ExamResultsDisplay from "./ExamResultsDisplay";
@@ -10,9 +10,11 @@ import { questions } from "../utils/Questions";
 import { ensureStudentProfile } from "../utils/pointsSystem/ensureStudentProfile";
 import { awardPointsFromExamHistory } from "../utils/pointsSystem/awardPointsFromExamHistory";
 import FloatingStudyHub from "../utils/FloatingStudyHub";
-import { Sun, Moon, LogOut, Clock, BookOpen, MessageSquare, Sparkles, X } from "lucide-react";
+import { Sun, Moon, LogOut, Clock, BookOpen, Sparkles, X } from "lucide-react";
 import CATTutor from '../utils/CATTutor';
 import AIExamMocker from '../utils/AIExamMocker';
+import { ResultsTab } from './ResultsTab';
+
 
 // SweetAlert2 Configuration
 const swal = Swal.mixin({
@@ -36,6 +38,7 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [expandedTerm, setExpandedTerm] = useState(null);
+  const [examView, setExamView] = useState("new");
 
   // User & Points State
   const [user, setUser] = useState(null);
@@ -53,15 +56,22 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
   const lastFocusEventTsRef = useRef(0);
 
   const examActive = authenticated && selectedExam && !submitted;
-  // ─── MERGE STATIC & DYNAMIC EXAMS ───
-  const staticGradeData = termExams[gradeKey] || {};
-  const [dynamicExams, setDynamicExams] = useState([]);
-  const [hasNotified, setHasNotified] = useState(false);
   // Grade Filtering Logic
   const cleanedGrade = (studentInfo?.grade || "").toLowerCase();
   const gradeKey = cleanedGrade.includes("12") ? "Grade 12" : cleanedGrade.includes("11") ? "Grade 11" : "Grade 10";
   const gradeData = termExams[gradeKey] || {};
 
+  // ─── MERGE STATIC & DYNAMIC EXAMS ───
+  const staticGradeData = termExams[gradeKey] || {};
+  const [dynamicExams, setDynamicExams] = useState([]);
+  const [hasNotified, setHasNotified] = useState(false);
+  const [seenExams, setSeenExams] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("seenExams") || "[]");
+    } catch {
+      return [];
+    }
+  });
 
   // ─── AUTH & PROFILE SYNC ──────────────────────────────────────────────
   useEffect(() => {
@@ -264,9 +274,8 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
 
   // ─── LISTEN FOR TEACHER UPLOADS ───────────────────────────────────────
   useEffect(() => {
-    if (!user || !studentInfo) return;
+    if (!user || !studentInfo?.grade || !studentInfo?.subject) return;
 
-    // Filter exams by the student's Grade and Subject
     const q = query(
       collection(db, "exams"),
       where("grade", "==", studentInfo.grade),
@@ -275,43 +284,52 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
     );
 
     const unsub = onSnapshot(q, (snap) => {
-      const exams = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), isDynamic: true }));
+      const exams = snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+
       setDynamicExams(exams);
 
-      // ─── POPUP NOTIFICATION FOR NEW EXAMS ───
-      if (exams.length > 0 && !hasNotified) {
-        const latestExam = exams[0];
+      if (exams.length === 0) return;
 
-        // Only notify if uploaded in the last 24 hours to prevent old spam
-        const isRecent = new Date() - new Date(latestExam.uploadedAt) < 86400000;
+      const latestExam = exams[0];
 
-        if (isRecent) {
-          swal.fire({
-            title: "New Exam Available!",
-            text: `Teacher ${latestExam.teacherName} just uploaded: ${latestExam.title}`,
-            icon: "info",
-            showCancelButton: true,
-            confirmButtonText: "View Now",
-            cancelButtonText: "Later",
-            toast: true,
-            position: 'top-end',
-            timer: 10000,
-            background: isDark ? '#1e1b4b' : '#fff',
-            color: isDark ? '#fff' : '#000',
-          }).then((res) => {
-            if (res.isConfirmed) {
-              // Direct the user to the exam or open the Drive link
-              window.open(latestExam.examDriveLink, "_blank");
-            }
-          });
-          setHasNotified(true);
-        }
+      // ✅ Only show if NOT seen
+      if (!seenExams.includes(latestExam.id)) {
+
+        Swal.fire({
+          title: "📢 New Exam Uploaded!",
+          html: `
+          <b>${latestExam.title}</b><br/>
+          Subject: ${latestExam.subject}<br/>
+          Teacher: ${latestExam.teacherName}
+        `,
+          icon: "info",
+          showCancelButton: true,
+          showCloseButton: true,
+          confirmButtonText: "Start Now",
+          cancelButtonText: "Later",
+          allowOutsideClick: false,
+          background: isDark ? '#1e1b4b' : '#fff',
+          color: isDark ? '#fff' : '#000',
+        }).then((result) => {
+          // Save as seen
+          const updatedSeen = [...seenExams, latestExam.id];
+          setSeenExams(updatedSeen);
+          localStorage.setItem("seenExams", JSON.stringify(updatedSeen));
+
+          if (result.isConfirmed) {
+            navigate(`/student/exam/${latestExam.id}`);
+          }
+        });
       }
+
     });
 
     return () => unsub();
-  }, [user, studentInfo, isDark]);
-
+  }, [user, studentInfo, isDark, seenExams]);
 
   // Helper to handle both Static (Quiz) and Dynamic (PDF) exams
   const handleStartExam = (exam) => {
@@ -332,6 +350,8 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
       handleSelectExam(exam);
     }
   };
+  const newExams = dynamicExams.filter(exam => !seenExams.includes(exam.id));
+
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-500">
@@ -367,6 +387,10 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
         </div>
       </header>
 
+      {activeTab === 'results' && (
+        <ResultsTab studentId={studentName} />
+      )}
+
       {/* ─── AI TUTOR OVERLAY ─── */}
       {showTutor && (
         <div className="fixed inset-0 z-[100] bg-white dark:bg-gray-950 flex flex-col animate-in fade-in duration-300">
@@ -397,6 +421,42 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
 
           <div className="my-10">
             <ExamResultsDisplay />
+          </div>
+
+
+          {/* NEW EXAMS BUTTON */}
+          <div className="flex justify-center mb-10">
+            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-2xl p-1">
+              <button
+                onClick={() => setExamView("new")}
+                className={`px-6 py-3 rounded-xl font-bold transition-all relative ${examView === "new"
+                  ? "bg-indigo-600 text-white shadow-lg"
+                  : "text-gray-500"
+                  }`}
+              >
+                🆕 New Exams (
+                {newExams.length > 0 && (
+                  <span className={`ml-2 inline-flex items-center justify-center 
+      px-2 py-0.5 text-xs font-bold rounded-full
+      ${examView === "new"
+                      ? "bg-white text-indigo-600"
+                      : "bg-indigo-600 text-white"
+                    }`}>
+                    {newExams.length}
+                  </span>
+                )})
+              </button>
+
+              <button
+                onClick={() => setExamView("all")}
+                className={`px-6 py-3 rounded-xl font-bold transition-all ${examView === "all"
+                  ? "bg-indigo-600 text-white shadow-lg"
+                  : "text-gray-500"
+                  }`}
+              >
+                📚 All Exams ({dynamicExams.length})
+              </button>
+            </div>
           </div>
 
           <section className="bg-white dark:bg-gray-900 rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-gray-100 dark:border-gray-800">
@@ -438,30 +498,35 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
       )}
 
       {/* ─── NEW: TEACHER UPLOAD SECTION ─── */}
-      {dynamicExams.length > 0 && (
-        <section className="mb-12">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-amber-500 rounded-lg text-white">
-              <BookOpen size={20} />
-            </div>
-            <h2 className="text-2xl font-black dark:text-white uppercase tracking-tight">Teacher Uploads</h2>
-          </div>
+      {examView === "new" && newExams.length > 0 && (
+        <section className="mb-12 animate-in fade-in">
+          <h2 className="text-3xl font-black mb-6 text-indigo-600">
+            🔔 New Exams Just Uploaded
+          </h2>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {dynamicExams.map((exam) => (
-              <div key={exam.id} className="p-6 bg-white dark:bg-gray-900 rounded-3xl border-2 border-amber-100 dark:border-amber-900/30 shadow-sm hover:shadow-md transition-all">
-                <div className="flex justify-between items-start mb-4">
-                  <span className="px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 text-[10px] font-black rounded-full uppercase">
-                    {exam.subject}
-                  </span>
-                  <span className="text-[10px] text-gray-400 font-bold">{new Date(exam.uploadedAt).toLocaleDateString()}</span>
-                </div>
-                <h3 className="text-lg font-bold dark:text-white mb-1">{exam.title}</h3>
-                <p className="text-xs text-gray-500 mb-6">Uploaded by {exam.teacherName}</p>
+            {newExams.map((exam) => (
+              <div
+                key={exam.id}
+                className="p-6 rounded-3xl border-2 border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 shadow-xl animate-pulse"
+              >
+                <span className="text-xs font-black text-indigo-600 uppercase">
+                  NEW
+                </span>
+
+                <h3 className="text-lg font-bold mt-2 dark:text-white">
+                  {exam.title}
+                </h3>
+
+                <p className="text-xs text-gray-500 mb-4">
+                  {exam.subject} • {exam.teacherName}
+                </p>
+
                 <button
                   onClick={() => handleStartExam(exam)}
-                  className="w-full py-3 bg-amber-500 text-white rounded-xl font-black shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all"
+                  className="w-full py-3 bg-indigo-600 text-white rounded-xl font-black hover:bg-indigo-700"
                 >
-                  VIEW PAPER
+                  Start / View
                 </button>
               </div>
             ))}

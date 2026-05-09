@@ -4,92 +4,92 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { db } from "./firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
-const API = "https://abitonp.pythonanywhere.com";
+const API = "https://chatbot-backend-educat.onrender.com";
 
 import { useStudentId } from "./StudentId";
 
 // ─── Status colours ───────────────────────────────────────────────────────────
 const STATUS_COLOR = {
-  correct:   { bg: "#d1fae5", border: "#6ee7b7", icon: "✅" },
-  partial:   { bg: "#fef9c3", border: "#fde68a", icon: "⚠️" },
+  correct: { bg: "#d1fae5", border: "#6ee7b7", icon: "✅" },
+  partial: { bg: "#fef9c3", border: "#fde68a", icon: "⚠️" },
   incorrect: { bg: "#fee2e2", border: "#fca5a5", icon: "❌" },
-  missing:   { bg: "#f3f4f6", border: "#d1d5db", icon: "—"  },
-  no_memo:   { bg: "#ede9fe", border: "#c4b5fd", icon: "ℹ️" },
+  missing: { bg: "#f3f4f6", border: "#d1d5db", icon: "—" },
+  no_memo: { bg: "#ede9fe", border: "#c4b5fd", icon: "ℹ️" },
 };
 
 // ─── Style tokens ─────────────────────────────────────────────────────────────
 const S = {
-  wrap:      { fontFamily: "'DM Sans', sans-serif", maxWidth: 800, margin: "0 auto", padding: "24px 16px", color: "#1a1a2e", minHeight: "100vh", background: "#f4f6fb" },
-  wrapFull:  { fontFamily: "'DM Sans', sans-serif", width: "100vw", height: "100vh", margin: 0, padding: 0, color: "#1a1a2e", background: "#f4f6fb", display: "flex", flexDirection: "column", overflow: "hidden" },
-  card:      { background: "#fff", borderRadius: 16, padding: 28, boxShadow: "0 2px 16px rgba(30,30,60,.08)", marginBottom: 20 },
-  cardFull:  { background: "#fff", borderRadius: 0, padding: "20px 32px", boxShadow: "none", flex: 1, overflowY: "auto", marginBottom: 0 },
-  title:     { fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px", color: "#1a1a2e", margin: 0 },
-  subtitle:  { fontSize: 13, color: "#6b7280", marginTop: 4, marginBottom: 0 },
+  wrap: { fontFamily: "'DM Sans', sans-serif", maxWidth: 800, margin: "0 auto", padding: "24px 16px", color: "#1a1a2e", minHeight: "100vh", background: "#f4f6fb" },
+  wrapFull: { fontFamily: "'DM Sans', sans-serif", width: "100vw", height: "100vh", margin: 0, padding: 0, color: "#1a1a2e", background: "#f4f6fb", display: "flex", flexDirection: "column", overflow: "hidden" },
+  card: { background: "#fff", borderRadius: 16, padding: 28, boxShadow: "0 2px 16px rgba(30,30,60,.08)", marginBottom: 20 },
+  cardFull: { background: "#fff", borderRadius: 0, padding: "20px 32px", boxShadow: "none", flex: 1, overflowY: "auto", marginBottom: 0 },
+  title: { fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px", color: "#1a1a2e", margin: 0 },
+  subtitle: { fontSize: 13, color: "#6b7280", marginTop: 4, marginBottom: 0 },
 
-  secBadge:  { display: "inline-block", fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", background: "#e0e7ff", color: "#3730a3", borderRadius: 6, padding: "3px 10px", marginBottom: 8 },
-  parentHd:  { fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: .8, color: "#9ca3af", marginBottom: 6 },
-  context:   { background: "#fffbeb", borderLeft: "3px solid #f59e0b", padding: "8px 14px", borderRadius: 6, fontSize: 13, color: "#78350f", marginBottom: 14 },
-  qRow:      { display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 18 },
-  qNum:      { fontWeight: 800, fontSize: 15, color: "#3730a3", minWidth: 36, paddingTop: 2 },
-  qText:     { flex: 1, fontSize: 15, lineHeight: 1.65, color: "#1a1a2e" },
-  qMark:     { fontWeight: 700, fontSize: 13, color: "#dc2626", whiteSpace: "nowrap", paddingTop: 2 },
+  secBadge: { display: "inline-block", fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", background: "#e0e7ff", color: "#3730a3", borderRadius: 6, padding: "3px 10px", marginBottom: 8 },
+  parentHd: { fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: .8, color: "#9ca3af", marginBottom: 6 },
+  context: { background: "#fffbeb", borderLeft: "3px solid #f59e0b", padding: "8px 14px", borderRadius: 6, fontSize: 13, color: "#78350f", marginBottom: 14 },
+  qRow: { display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 18 },
+  qNum: { fontWeight: 800, fontSize: 15, color: "#3730a3", minWidth: 36, paddingTop: 2 },
+  qText: { flex: 1, fontSize: 15, lineHeight: 1.65, color: "#1a1a2e" },
+  qMark: { fontWeight: 700, fontSize: 13, color: "#dc2626", whiteSpace: "nowrap", paddingTop: 2 },
 
-  optLabel:  { display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, marginBottom: 8, cursor: "pointer", transition: "all .15s", fontSize: 14 },
-  optSel:    { borderColor: "#6366f1", background: "#eef2ff" },
-  optKey:    { fontWeight: 700, color: "#6366f1", minWidth: 20 },
+  optLabel: { display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, marginBottom: 8, cursor: "pointer", transition: "all .15s", fontSize: 14 },
+  optSel: { borderColor: "#6366f1", background: "#eef2ff" },
+  optKey: { fontWeight: 700, color: "#6366f1", minWidth: 20 },
 
-  tfBtn:     { display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 22px", border: "1.5px solid #e5e7eb", borderRadius: 10, marginRight: 10, cursor: "pointer", fontSize: 14, fontWeight: 600, transition: "all .15s", background: "#fff" },
-  tfSel:     { borderColor: "#6366f1", background: "#eef2ff", color: "#3730a3" },
+  tfBtn: { display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 22px", border: "1.5px solid #e5e7eb", borderRadius: 10, marginRight: 10, cursor: "pointer", fontSize: 14, fontWeight: 600, transition: "all .15s", background: "#fff" },
+  tfSel: { borderColor: "#6366f1", background: "#eef2ff", color: "#3730a3" },
 
-  table:     { width: "100%", borderCollapse: "collapse", marginTop: 10, fontSize: 14 },
-  th:        { textAlign: "left", padding: "8px 12px", borderBottom: "2px solid #e5e7eb", background: "#f9fafb", fontWeight: 700, fontSize: 12, textTransform: "uppercase", letterSpacing: .5, color: "#6b7280" },
-  td:        { padding: "9px 12px", borderBottom: "1px solid #f3f4f6", verticalAlign: "middle" },
-  sel:       { width: "100%", padding: "7px 10px", borderRadius: 8, border: "1.5px solid #d1d5db", fontSize: 13, background: "#fff" },
+  table: { width: "100%", borderCollapse: "collapse", marginTop: 10, fontSize: 14 },
+  th: { textAlign: "left", padding: "8px 12px", borderBottom: "2px solid #e5e7eb", background: "#f9fafb", fontWeight: 700, fontSize: 12, textTransform: "uppercase", letterSpacing: .5, color: "#6b7280" },
+  td: { padding: "9px 12px", borderBottom: "1px solid #f3f4f6", verticalAlign: "middle" },
+  sel: { width: "100%", padding: "7px 10px", borderRadius: 8, border: "1.5px solid #d1d5db", fontSize: 13, background: "#fff" },
 
-  textarea:  { width: "100%", minHeight: 110, padding: "10px 14px", border: "1.5px solid #d1d5db", borderRadius: 10, fontSize: 14, lineHeight: 1.6, resize: "vertical", fontFamily: "inherit", marginTop: 8, outline: "none", boxSizing: "border-box" },
+  textarea: { width: "100%", minHeight: 110, padding: "10px 14px", border: "1.5px solid #d1d5db", borderRadius: 10, fontSize: 14, lineHeight: 1.6, resize: "vertical", fontFamily: "inherit", marginTop: 8, outline: "none", boxSizing: "border-box" },
   corrInput: { width: "100%", padding: "9px 12px", border: "1.5px solid #d1d5db", borderRadius: 8, fontSize: 14, fontFamily: "inherit", marginTop: 8, boxSizing: "border-box" },
 
-  navBar:    { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginTop: 20 },
-  btn:       { padding: "9px 18px", borderRadius: 10, border: "none", fontWeight: 700, fontSize: 14, cursor: "pointer", transition: "opacity .15s" },
-  btnPri:    { background: "#6366f1", color: "#fff" },
-  btnSec:    { background: "#f3f4f6", color: "#374151" },
+  navBar: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginTop: 20 },
+  btn: { padding: "9px 18px", borderRadius: 10, border: "none", fontWeight: 700, fontSize: 14, cursor: "pointer", transition: "opacity .15s" },
+  btnPri: { background: "#6366f1", color: "#fff" },
+  btnSec: { background: "#f3f4f6", color: "#374151" },
   btnDanger: { background: "#dc2626", color: "#fff" },
-  btnWarn:   { background: "#fff7ed", color: "#c2410c", border: "1.5px solid #fed7aa" },
-  btnGhost:  { background: "transparent", color: "#6b7280", border: "1.5px solid #e5e7eb" },
-  btnSkip:   { background: "#fff", color: "#6b7280", border: "1.5px solid #e5e7eb", borderRadius: 10, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
+  btnWarn: { background: "#fff7ed", color: "#c2410c", border: "1.5px solid #fed7aa" },
+  btnGhost: { background: "transparent", color: "#6b7280", border: "1.5px solid #e5e7eb" },
+  btnSkip: { background: "#fff", color: "#6b7280", border: "1.5px solid #e5e7eb", borderRadius: 10, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
 
-  progress:  { fontSize: 13, color: "#9ca3af", marginTop: 10 },
+  progress: { fontSize: 13, color: "#9ca3af", marginTop: 10 },
 
-  topBar:    { background: "#1a1a2e", color: "#fff", padding: "10px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, gap: 12 },
+  topBar: { background: "#1a1a2e", color: "#fff", padding: "10px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, gap: 12 },
   topBarTitle: { fontWeight: 800, fontSize: 15, letterSpacing: "-.3px", flex: 1 },
 
-  drawer:    { position: "fixed", top: 0, right: 0, height: "100vh", width: 300, background: "#fff", boxShadow: "-4px 0 24px rgba(0,0,0,.12)", zIndex: 200, overflowY: "auto", padding: 20 },
-  drawerHd:  { fontWeight: 800, fontSize: 16, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" },
-  qDot:      { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", margin: 4, border: "1.5px solid #e5e7eb" },
+  drawer: { position: "fixed", top: 0, right: 0, height: "100vh", width: 300, background: "#fff", boxShadow: "-4px 0 24px rgba(0,0,0,.12)", zIndex: 200, overflowY: "auto", padding: 20 },
+  drawerHd: { fontWeight: 800, fontSize: 16, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" },
+  qDot: { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", margin: 4, border: "1.5px solid #e5e7eb" },
 
   resultCard: { borderRadius: 12, padding: "14px 18px", marginBottom: 12, border: "1.5px solid", fontSize: 14, lineHeight: 1.7 },
-  feedBox:    { background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 12, padding: "14px 18px", marginBottom: 20, fontSize: 14, lineHeight: 1.7 },
-  pill:       { display: "inline-block", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 700, marginRight: 6 },
+  feedBox: { background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 12, padding: "14px 18px", marginBottom: 20, fontSize: 14, lineHeight: 1.7 },
+  pill: { display: "inline-block", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 700, marginRight: 6 },
 
   // Score banner
   scoreBanner: { background: "linear-gradient(135deg,#6366f1,#8b5cf6)", borderRadius: 16, padding: "28px 32px", marginBottom: 20, color: "#fff", textAlign: "center" },
-  scoreNum:    { fontSize: 52, fontWeight: 800, letterSpacing: "-2px", lineHeight: 1 },
-  scorePct:    { fontSize: 20, fontWeight: 700, opacity: .85, marginTop: 6 },
-  scoreSub:    { fontSize: 13, opacity: .7, marginTop: 4 },
+  scoreNum: { fontSize: 52, fontWeight: 800, letterSpacing: "-2px", lineHeight: 1 },
+  scorePct: { fontSize: 20, fontWeight: 700, opacity: .85, marginTop: 6 },
+  scoreSub: { fontSize: 13, opacity: .7, marginTop: 4 },
 
   // Post-submit agent panel
-  agentPanel:  { background: "#eef2ff", border: "1.5px solid #c7d2fe", borderRadius: 12, padding: "16px 20px", marginBottom: 20, fontSize: 14 },
-  agentInput:  { width: "100%", padding: "10px 14px", border: "1.5px solid #c7d2fe", borderRadius: 10, fontSize: 14, fontFamily: "inherit", marginTop: 10, boxSizing: "border-box" },
+  agentPanel: { background: "#eef2ff", border: "1.5px solid #c7d2fe", borderRadius: 12, padding: "16px 20px", marginBottom: 20, fontSize: 14 },
+  agentInput: { width: "100%", padding: "10px 14px", border: "1.5px solid #c7d2fe", borderRadius: 10, fontSize: 14, fontFamily: "inherit", marginTop: 10, boxSizing: "border-box" },
 
-  select:    { width: "100%", padding: "11px 14px", borderRadius: 10, border: "1.5px solid #d1d5db", fontSize: 14, background: "#fff", marginBottom: 14, fontFamily: "inherit" },
-  startBtn:  { width: "100%", padding: "13px", background: "#6366f1", color: "#fff", border: "none", borderRadius: 12, fontSize: 16, fontWeight: 800, cursor: "pointer", letterSpacing: "-.3px" },
-  memoTag:   { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, borderRadius: 8, padding: "4px 10px" },
+  select: { width: "100%", padding: "11px 14px", borderRadius: 10, border: "1.5px solid #d1d5db", fontSize: 14, background: "#fff", marginBottom: 14, fontFamily: "inherit" },
+  startBtn: { width: "100%", padding: "13px", background: "#6366f1", color: "#fff", border: "none", borderRadius: 12, fontSize: 16, fontWeight: 800, cursor: "pointer", letterSpacing: "-.3px" },
+  memoTag: { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, borderRadius: 8, padding: "4px 10px" },
 
-  overlay:   { position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 },
-  modal:     { background: "#fff", borderRadius: 18, padding: 32, maxWidth: 420, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,.2)", textAlign: "center" },
+  overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 },
+  modal: { background: "#fff", borderRadius: 18, padding: 32, maxWidth: 420, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,.2)", textAlign: "center" },
   modalIcon: { fontSize: 42, marginBottom: 12 },
-  modalTitle:{ fontWeight: 800, fontSize: 20, color: "#1a1a2e", marginBottom: 8 },
-  modalSub:  { fontSize: 14, color: "#6b7280", marginBottom: 24, lineHeight: 1.6 },
+  modalTitle: { fontWeight: 800, fontSize: 20, color: "#1a1a2e", marginBottom: 8 },
+  modalSub: { fontSize: 14, color: "#6b7280", marginBottom: 24, lineHeight: 1.6 },
   modalBtns: { display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" },
 };
 
@@ -104,36 +104,36 @@ const FontLoader = () => (
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AIExamMocker({ student }) {
   const containerRef = useRef(null);
-  const STUDENT_ID   = useStudentId();  // resolves to student's real name from Firebase
+  const STUDENT_ID = useStudentId();  // resolves to student's real name from Firebase
 
   // ── Exam list & setup ──────────────────────────────────────────────────────
-  const [exams, setExams]             = useState([]);
+  const [exams, setExams] = useState([]);
   const [selectedExam, setSelectedExam] = useState("");
-  const [sessionId, setSessionId]     = useState(null);
-  const [totalQ, setTotalQ]           = useState(0);
-  const [memoMerged, setMemoMerged]   = useState(false);
+  const [sessionId, setSessionId] = useState(null);
+  const [totalQ, setTotalQ] = useState(0);
+  const [memoMerged, setMemoMerged] = useState(false);
 
   // ── Exam state ─────────────────────────────────────────────────────────────
   const [question, setQuestion] = useState(null);
-  const [index, setIndex]       = useState(0);
-  const [answers, setAnswers]   = useState({});
-  const [skipped, setSkipped]   = useState(new Set());
+  const [index, setIndex] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [skipped, setSkipped] = useState(new Set());
 
   // ── UI state ───────────────────────────────────────────────────────────────
-  const [started, setStarted]         = useState(false);
-  const [submitted, setSubmitted]     = useState(false);
-  const [results, setResults]         = useState(null);
-  const [loading, setLoading]         = useState(false);
-  const [saving, setSaving]           = useState(false);
-  const [drawerOpen, setDrawerOpen]   = useState(false);
+  const [started, setStarted] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [results, setResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
-  const [tfCorrection, setTfCorrection]   = useState("");
+  const [tfCorrection, setTfCorrection] = useState("");
 
   // ── Post-submit agent chat (ask about results) ─────────────────────────────
   const [agentQuestion, setAgentQuestion] = useState("");
-  const [agentReply, setAgentReply]       = useState("");
-  const [agentLoading, setAgentLoading]   = useState(false);
+  const [agentReply, setAgentReply] = useState("");
+  const [agentLoading, setAgentLoading] = useState(false);
 
   // ── Load exams on mount ────────────────────────────────────────────────────
   useEffect(() => { loadExams(); }, []);
@@ -181,7 +181,7 @@ export default function AIExamMocker({ student }) {
     if (!started || submitted) return;
     const h = (e) => {
       if (e.key === "ArrowRight" || e.key === "PageDown") next();
-      if (e.key === "ArrowLeft"  || e.key === "PageUp")   prev();
+      if (e.key === "ArrowLeft" || e.key === "PageUp") prev();
       if (e.key === "Escape" && isFullscreen) exitFullscreen();
       if (e.key === "f" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
@@ -195,10 +195,10 @@ export default function AIExamMocker({ student }) {
   // ── API: load exam list ────────────────────────────────────────────────────
   const loadExams = async () => {
     try {
-      const res  = await fetch(`${API}/exams`);
+      const res = await fetch(`${API}/exams`);
       const data = await res.json();
       setExams(data.exams || []);
-      if (data.exams?.length) setSelectedExam(data.exams[0]);
+      if (data.exams?.length) setSelectedExam(data.exams[0].id || data.exams[0]);
     } catch (e) { console.error("loadExams:", e); }
   };
 
@@ -207,11 +207,11 @@ export default function AIExamMocker({ student }) {
     if (!selectedExam) return;
     setLoading(true);
     try {
-      const res  = await fetch(`${API}/start-exam`, {
-        method:  "POST",
+      const res = await fetch(`${API}/start-exam`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          exam:       selectedExam,
+        body: JSON.stringify({
+          exam: selectedExam,
           student_id: STUDENT_ID,          // ← wired in
         }),
       });
@@ -233,10 +233,10 @@ export default function AIExamMocker({ student }) {
   const fetchQuestion = async (sid, i) => {
     setLoading(true);
     try {
-      const res  = await fetch(`${API}/question`, {
-        method:  "POST",
+      const res = await fetch(`${API}/question`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ session_id: sid, index: i }),
+        body: JSON.stringify({ session_id: sid, index: i }),
       });
       const data = await res.json();
       setQuestion(data);
@@ -249,9 +249,9 @@ export default function AIExamMocker({ student }) {
     setAnswers(prev => ({ ...prev, [index]: value }));
     try {
       await fetch(`${API}/answer`, {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ session_id: sessionId, index, answer: value }),
+        body: JSON.stringify({ session_id: sessionId, index, answer: value }),
       });
     } catch (e) { console.error("saveAnswer:", e); }
   };
@@ -266,10 +266,10 @@ export default function AIExamMocker({ student }) {
     if (isFullscreen) exitFullscreen();
     try {
       // 1. Submit to backend first — get marked results + AI feedback
-      const res  = await fetch(`${API}/submit`, {
-        method:  "POST",
+      const res = await fetch(`${API}/submit`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
+        body: JSON.stringify({
           session_id: sessionId,
           student_id: STUDENT_ID,
         }),
@@ -280,18 +280,18 @@ export default function AIExamMocker({ student }) {
       // 2. Save full attempt + marked results to Firestore so
       //    ExamResultsDisplay can read everything from one doc.
       await addDoc(collection(db, "exam_attempts"), {
-        studentId:      STUDENT_ID,
-        exam:           selectedExam,
+        studentId: STUDENT_ID,
+        exam: selectedExam,
         answers,
-        skipped:        [...skipped],
-        answeredCount:  Object.keys(answers).length,
-        score:          data.score,
-        total:          data.total,
-        percentage:     data.percentage,
-        markedResults:  data.results || [],   // per-question breakdown
-        aiFeedback:     data.feedback || "",  // AI summary feedback
-        completedAt:    serverTimestamp(),
-        createdAt:      serverTimestamp(),
+        skipped: [...skipped],
+        answeredCount: Object.keys(answers).length,
+        score: data.score,
+        total: data.total,
+        percentage: data.percentage,
+        markedResults: data.results || [],   // per-question breakdown
+        aiFeedback: data.feedback || "",  // AI summary feedback
+        completedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
       });
 
       setResults(data);
@@ -306,10 +306,10 @@ export default function AIExamMocker({ student }) {
     setAgentLoading(true);
     setAgentReply("");
     try {
-      const res  = await fetch(`${API}/agent-chat`, {
-        method:  "POST",
+      const res = await fetch(`${API}/agent-chat`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ student_id: STUDENT_ID, message: q }),
+        body: JSON.stringify({ student_id: STUDENT_ID, message: q }),
       });
       const data = await res.json();
       setAgentReply(data.response || data.answer || "No response.");
@@ -323,8 +323,8 @@ export default function AIExamMocker({ student }) {
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   const goTo = (i) => fetchQuestion(sessionId, i);
-  const next  = () => { if (index < totalQ - 1) goTo(index + 1); };
-  const prev  = () => { if (index > 0) goTo(index - 1); };
+  const next = () => { if (index < totalQ - 1) goTo(index + 1); };
+  const prev = () => { if (index > 0) goTo(index - 1); };
   const skipQuestion = () => {
     setSkipped(prev => new Set([...prev, index]));
     if (index < totalQ - 1) goTo(index + 1);
@@ -341,23 +341,23 @@ export default function AIExamMocker({ student }) {
 
   // ── Question navigator dot style ───────────────────────────────────────────
   const dotStyle = (i) => {
-    const isCurrent  = i === index;
+    const isCurrent = i === index;
     const isAnswered = !!answers[i];
-    const isSkip     = skipped.has(i);
+    const isSkip = skipped.has(i);
     return {
       ...S.qDot,
-      background:  isCurrent ? "#6366f1" : isSkip ? "#fef9c3" : isAnswered ? "#d1fae5" : "#f9fafb",
-      color:       isCurrent ? "#fff"    : isSkip ? "#92400e" : isAnswered ? "#065f46" : "#374151",
+      background: isCurrent ? "#6366f1" : isSkip ? "#fef9c3" : isAnswered ? "#d1fae5" : "#f9fafb",
+      color: isCurrent ? "#fff" : isSkip ? "#92400e" : isAnswered ? "#065f46" : "#374151",
       borderColor: isCurrent ? "#6366f1" : isSkip ? "#fde68a" : isAnswered ? "#6ee7b7" : "#e5e7eb",
-      transform:   isCurrent ? "scale(1.15)" : "scale(1)",
-      transition:  "all .15s",
+      transform: isCurrent ? "scale(1.15)" : "scale(1)",
+      transition: "all .15s",
     };
   };
 
   // ── Answer input renderer ──────────────────────────────────────────────────
   const renderInput = () => {
     if (!question) return null;
-    const q     = question;
+    const q = question;
     const saved = answers[index] || "";
 
     // MCQ
@@ -418,7 +418,7 @@ export default function AIExamMocker({ student }) {
     // Matching
     if (q.type === "matching" && Array.isArray(q.column_a) && q.column_a.length > 0) {
       let savedMap = {};
-      try { savedMap = JSON.parse(saved || "{}"); } catch (_) {}
+      try { savedMap = JSON.parse(saved || "{}"); } catch (_) { }
       const updateMatch = (item, value) =>
         saveAnswer(JSON.stringify({ ...savedMap, [item]: value }));
       return (
@@ -483,7 +483,7 @@ export default function AIExamMocker({ student }) {
         </div>
       )}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12, fontSize: 11 }}>
-        {[["#d1fae5","Answered"],["#fef9c3","Skipped"],["#f9fafb","Not answered"],["#6366f1","Current"]].map(([c,l]) => (
+        {[["#d1fae5", "Answered"], ["#fef9c3", "Skipped"], ["#f9fafb", "Not answered"], ["#6366f1", "Current"]].map(([c, l]) => (
           <span key={l} style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <span style={{ width: 12, height: 12, borderRadius: 3, background: c, display: "inline-block", border: "1px solid #e5e7eb" }} />{l}
           </span>
@@ -493,7 +493,7 @@ export default function AIExamMocker({ student }) {
         {[...Array(totalQ)].map((_, i) => (
           <span key={i} style={dotStyle(i)}
             onClick={() => { goTo(i); setDrawerOpen(false); }}
-            title={`Q${i+1}${answers[i]?" ✓":""}${skipped.has(i)?" (skipped)":""}`}>
+            title={`Q${i + 1}${answers[i] ? " ✓" : ""}${skipped.has(i) ? " (skipped)" : ""}`}>
             {i + 1}
           </span>
         ))}
@@ -525,9 +525,9 @@ export default function AIExamMocker({ student }) {
 
   // ── Question card (shared between normal + fullscreen) ─────────────────────
   const QuestionContent = ({ cardStyle }) => {
-    const q        = question;
+    const q = question;
     const answered = Object.keys(answers).length;
-    const isSkip   = skipped.has(index);
+    const isSkip = skipped.has(index);
 
     return (
       <div style={cardStyle}>
@@ -546,7 +546,7 @@ export default function AIExamMocker({ student }) {
         </div>
 
         {q?.parent_question && <div style={S.parentHd}>{q.parent_question}</div>}
-        {q?.parent_context  && <div style={S.context}>📌 {q.parent_context}</div>}
+        {q?.parent_context && <div style={S.context}>📌 {q.parent_context}</div>}
 
         <div style={S.qRow}>
           <span style={S.qNum}>{q?.question_number}.</span>
@@ -657,8 +657,8 @@ export default function AIExamMocker({ student }) {
           if (r.type === "matching" && r.student_answer && r.student_answer !== "No answer") {
             try {
               const obj = JSON.parse(r.student_answer);
-              studentDisplay = Object.entries(obj).map(([k,v]) => `${k} → ${v}`).join("\n");
-            } catch (_) {}
+              studentDisplay = Object.entries(obj).map(([k, v]) => `${k} → ${v}`).join("\n");
+            } catch (_) { }
           }
 
           return (
@@ -728,9 +728,17 @@ export default function AIExamMocker({ student }) {
           <select style={{ ...S.select, marginTop: 8 }} value={selectedExam}
             onChange={(e) => setSelectedExam(e.target.value)}>
             <option value="">— Select Exam —</option>
-            {exams.map((ex, i) => (
-              <option key={i} value={ex}>{ex.replace("_exam.json","").replace(/_/g," ")}</option>
-            ))}
+            {exams.map((ex) => {
+              const id = typeof ex === "string" ? ex : ex.id;
+              const label = typeof ex === "string"
+                ? ex.replace("_exam.json", "").replace(/_/g, " ")
+                : `${ex.name}${ex.grade ? ` — Grade ${ex.grade}` : ""}${ex.year ? ` (${ex.year})` : ""}`;
+              return (
+                <option key={id} value={id}>
+                  {label}
+                </option>
+              );
+            })}
           </select>
           <button style={{ ...S.startBtn, opacity: loading || !selectedExam ? 0.6 : 1 }}
             onClick={startExam} disabled={loading || !selectedExam}>
@@ -749,11 +757,11 @@ export default function AIExamMocker({ student }) {
       <div style={S.wrapFull} ref={containerRef}>
         <FontLoader />
         {showExitModal && <ExitModal />}
-        {drawerOpen    && <NavigatorDrawer />}
+        {drawerOpen && <NavigatorDrawer />}
 
         <div style={S.topBar}>
           <span style={S.topBarTitle}>
-            📝 {selectedExam.replace("_exam.json","").replace(/_/g," ")}
+            📝 {exams.find(e => (e.id || e) === selectedExam)?.name || selectedExam?.replace(/_/g, " ")}
           </span>
           <span style={{ ...S.memoTag, background: memoMerged ? "#d1fae5" : "#fef9c3", color: memoMerged ? "#065f46" : "#92400e" }}>
             {memoMerged ? "✅ Memo" : "⚠️ No Memo"}
@@ -780,7 +788,7 @@ export default function AIExamMocker({ student }) {
             Loading question…
           </div>
         ) : question ? (
-          <QuestionContent cardStyle={{ ...S.cardFull, maxWidth: 760, margin: "0 auto", width: "100%", padding: "28px 40px" }} />
+          QuestionContent({ cardStyle: { ...S.cardFull, maxWidth: 760, margin: "0 auto", width: "100%", padding: "28px 40px" } })  // ← changed
         ) : (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444" }}>
             ⚠️ Failed to load question.
@@ -799,12 +807,12 @@ export default function AIExamMocker({ student }) {
     <div style={S.wrap} ref={containerRef}>
       <FontLoader />
       {showExitModal && <ExitModal />}
-      {drawerOpen    && <NavigatorDrawer />}
+      {drawerOpen && <NavigatorDrawer />}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
         <div>
           <h1 style={{ ...S.title, fontSize: 18 }}>
-            📝 {selectedExam.replace("_exam.json","").replace(/_/g," ")}
+            📝 {exams.find(e => (e.id || e) === selectedExam)?.name || selectedExam?.replace(/_/g, " ")}
           </h1>
           <p style={S.subtitle}>{answered} of {totalQ} answered</p>
         </div>
@@ -829,7 +837,7 @@ export default function AIExamMocker({ student }) {
       {loading ? (
         <div style={{ ...S.card, textAlign: "center", color: "#9ca3af", padding: 40 }}>Loading question…</div>
       ) : question ? (
-        <QuestionContent cardStyle={S.card} />
+        QuestionContent({ cardStyle: S.card })   // ← changed
       ) : (
         <div style={{ ...S.card, color: "#ef4444" }}>⚠️ Failed to load question.</div>
       )}
