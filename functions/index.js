@@ -3,12 +3,41 @@ const { defineSecret } = require("firebase-functions/params");
 
 const groqKey = defineSecret("GROQ_API_KEY");
 
+// ── Repair common AI JSON mistakes ────────────────────────────────────────────
+function repairJson(raw) {
+    let text = raw.replace(/```json|```/g, "").trim();
+
+    // Try straight parse first
+    try { return JSON.parse(text); } catch (_) { }
+
+    // Fix 1: last object missing closing brace  ..."]  →  ..."}]
+    // e.g.  "feedback": "some text."]  →  "feedback": "some text."}]
+    text = text.replace(/("[\w\s.,!?'-]+")\s*\](\s*)$/, '$1}]$2');
+
+    try { return JSON.parse(text); } catch (_) { }
+
+    // Fix 2: trailing commas before ] or }
+    text = text.replace(/,\s*([\]}])/g, '$1');
+
+    try { return JSON.parse(text); } catch (_) { }
+
+    // Fix 3: ensure array is closed
+    const openBraces = (text.match(/\{/g) || []).length;
+    const closeBraces = (text.match(/\}/g) || []).length;
+    if (openBraces > closeBraces) {
+        text += "}".repeat(openBraces - closeBraces);
+    }
+    if (!text.trimEnd().endsWith("]")) text = text.trimEnd() + "]";
+
+    return JSON.parse(text); // throws if still broken — caught upstream
+}
+
 exports.remarkWithAI = onCall(
     {
         secrets: [groqKey],
         region: "us-central1",
-        cors: true,         // ← explicitly allow all origins (fixes the CORS block)
-        invoker: "public",  // ← allow calls from your app without extra IAM setup
+        cors: true,
+        invoker: "public",
     },
     async (request) => {
         const { markedResults } = request.data;
@@ -26,14 +55,10 @@ Correct answer: ${r.correct_answer || "Not provided"}
 Student answer: ${r.student_answer || "No answer given"}
 `).join("\n")}
 
-Respond with ONLY a JSON array (no markdown fences, no preamble) of objects:
-[{ "idx": 0, "earned": <number>, "status": "correct|partial|incorrect|no_memo", "feedback": "<one sentence>" }, ...]
+Respond with ONLY a valid JSON array. No markdown. No explanation. No text before or after.
+Each element: { "idx": <number>, "earned": <number>, "status": "correct|partial|incorrect|no_memo", "feedback": "<one sentence>" }
 
-Rules:
-- earned must be between 0 and the question's total marks (inclusive, decimals allowed)
-- status must be exactly one of: correct, partial, incorrect, no_memo
-- no_memo means the student shows understanding but did not use required memorandum phrasing
-- Return ONLY the JSON array, nothing else`;
+IMPORTANT: Make sure every object has a closing brace and the array has a closing bracket.`;
 
         let groqResponse;
         try {
@@ -46,40 +71,36 @@ Rules:
                 body: JSON.stringify({
                     model: "llama-3.3-70b-versatile",
                     temperature: 0.1,
-                    max_tokens: 1000,
+                    max_tokens: 1500,  // bumped up — 13 questions was hitting the limit
                     messages: [
                         {
                             role: "system",
-                            content: "You are an exam marking assistant. You always respond with valid JSON only — no explanation, no markdown, no preamble.",
+                            content: "You are an exam marking assistant. Output ONLY a valid JSON array. Never truncate your response. Always close every object with } and the array with ].",
                         },
-                        {
-                            role: "user",
-                            content: prompt,
-                        },
+                        { role: "user", content: prompt },
                     ],
                 }),
             });
         } catch (fetchErr) {
             console.error("Groq fetch failed:", fetchErr);
-            throw new HttpsError("unavailable", "Could not reach Groq API. Check network or API key.");
+            throw new HttpsError("unavailable", "Could not reach Groq API.");
         }
 
         if (!groqResponse.ok) {
             const errText = await groqResponse.text();
-            console.error("Groq error response:", errText);
+            console.error("Groq error:", errText);
             throw new HttpsError("internal", `Groq API returned ${groqResponse.status}: ${errText}`);
         }
 
         const data = await groqResponse.json();
-        const text = data.choices?.[0]?.message?.content || "";
-        const clean = text.replace(/```json|```/g, "").trim();
+        const raw = data.choices?.[0]?.message?.content || "";
 
         try {
-            const results = JSON.parse(clean);
+            const results = repairJson(raw);
             return { results };
         } catch (parseErr) {
-            console.error("JSON parse failed. Raw response:", clean);
-            throw new HttpsError("internal", `AI returned unparseable response: ${clean}`);
+            console.error("JSON repair failed. Raw:", raw);
+            throw new HttpsError("internal", `AI returned unparseable response: ${raw}`);
         }
     }
 );
