@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
-import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, updateDoc, doc } from "firebase/firestore";
 import { db } from "../utils/firebase";
-import { ClipboardList, ChevronDown, ChevronUp, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import {
+    ClipboardList, ChevronDown, ChevronUp, CheckCircle, XCircle,
+    AlertCircle, Download, Pencil, Sparkles, X, Save, RotateCcw,
+    BadgeCheck, User
+} from "lucide-react";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 // ── Status helpers ────────────────────────────────────────────────────────────
 const STATUS = {
@@ -12,26 +17,301 @@ const STATUS = {
     missing: { color: "bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700", icon: <AlertCircle size={14} className="text-slate-400" />, pill: "bg-slate-100 text-slate-500" },
 };
 
-const pctColor = (p) =>
-    p >= 70 ? "text-green-600 dark:text-green-400"
-        : p >= 50 ? "text-yellow-600 dark:text-yellow-400"
-            : "text-red-600 dark:text-red-400";
+const STATUSES = ["correct", "partial", "incorrect", "no_memo"];
 
-const pctBg = (p) =>
-    p >= 70 ? "from-green-500 to-emerald-600"
-        : p >= 50 ? "from-yellow-500 to-orange-500"
-            : "from-red-500 to-rose-600";
+const pctColor = (p) => p >= 70 ? "text-green-600 dark:text-green-400" : p >= 50 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400";
+const pctBg = (p) => p >= 70 ? "from-green-500 to-emerald-600" : p >= 50 ? "from-yellow-500 to-orange-500" : "from-red-500 to-rose-600";
+
+// ── Remark Modal ──────────────────────────────────────────────────────────────
+function RemarkModal({ attempt, onClose, onSave }) {
+    const [step, setStep] = useState("choose"); // "choose" | "ai-loading" | "edit"
+    const [mode, setMode] = useState(null);     // "ai" | "manual"
+    const [rows, setRows] = useState(() =>
+        JSON.parse(JSON.stringify(attempt.markedResults || []))
+    );
+    const [teacherNote, setTeacherNote] = useState(attempt.teacherNote || "");
+    const [aiError, setAiError] = useState(null);
+    const [saving, setSaving] = useState(false);
+
+    // Live computed totals
+    const newScore = rows.reduce((s, r) => s + Math.min(parseFloat(r.earned) || 0, r.marks || 0), 0);
+    const newPct = attempt.total > 0 ? Math.round((newScore / attempt.total) * 100) : 0;
+
+    // ── AI re-mark ────────────────────────────────────────────────────────────
+    const runAiRemark = async () => {
+        setStep("ai-loading");
+        setAiError(null);
+        try {
+            const functions = getFunctions();
+            const remarkWithAI = httpsCallable(functions, "remarkWithAI");
+
+            const { data } = await remarkWithAI({ markedResults: rows });
+            const parsed = data.results; // [{ idx, earned, status, feedback }]
+
+            setRows(prev => prev.map((r, i) => {
+                const update = parsed.find(p => p.idx === i) ?? parsed[i];
+                if (!update) return r;
+                return { ...r, earned: update.earned, status: update.status, feedback: update.feedback };
+            }));
+
+            setMode("ai");
+            setStep("edit");
+        } catch (err) {
+            console.error("AI remark error:", err);
+            setAiError("AI re-marking failed. You can review manually below.");
+            setMode("ai");
+            setStep("edit");
+        }
+    };
+
+    // ── Field updaters ────────────────────────────────────────────────────────
+    const updateRow = (i, field, value) =>
+        setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r));
+
+    // ── Save to Firestore ─────────────────────────────────────────────────────
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            await onSave({
+                markedResults: rows,
+                score: newScore,
+                percentage: newPct,
+                teacherNote: teacherNote.trim(),
+                remarkedAt: new Date(),
+                remarkedBy: mode === "ai" ? "ai+teacher" : "teacher",
+            });
+            onClose();
+        } catch (err) {
+            console.error("Save failed:", err);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // ── Render ────────────────────────────────────────────────────────────────
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-slate-200 dark:border-slate-700 overflow-hidden">
+
+                {/* Modal header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
+                    <div>
+                        <h3 className="font-black text-lg">Remark Attempt</h3>
+                        <p className="text-xs text-slate-400 mt-0.5 truncate max-w-xs">
+                            {attempt.resolvedTitle || attempt.examTitle || "Exam"} — {attempt.studentId || "Student"}
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                        <X size={18} className="text-slate-500" />
+                    </button>
+                </div>
+
+                {/* ── STEP 1: Choose mode ── */}
+                {step === "choose" && (
+                    <div className="p-8 flex flex-col gap-4">
+                        <p className="text-sm text-slate-500 text-center mb-2">
+                            How would you like to remark this submission?
+                        </p>
+                        <button
+                            onClick={runAiRemark}
+                            className="flex items-center gap-4 p-5 rounded-2xl border-2 border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 hover:border-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all text-left group"
+                        >
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-md">
+                                <Sparkles size={22} className="text-white" />
+                            </div>
+                            <div>
+                                <p className="font-bold text-indigo-700 dark:text-indigo-300">AI Re-Mark</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                    Claude re-reads all questions & answers and applies fresh marks. You can review and adjust before saving.
+                                </p>
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={() => { setMode("manual"); setStep("edit"); }}
+                            className="flex items-center gap-4 p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-left"
+                        >
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-500 to-slate-700 flex items-center justify-center flex-shrink-0 shadow-md">
+                                <Pencil size={22} className="text-white" />
+                            </div>
+                            <div>
+                                <p className="font-bold text-slate-700 dark:text-slate-200">Manual Adjust</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                    Edit marks, status, and feedback per question yourself. Changes save immediately.
+                                </p>
+                            </div>
+                        </button>
+                    </div>
+                )}
+
+                {/* ── STEP 2: AI loading ── */}
+                {step === "ai-loading" && (
+                    <div className="flex-1 flex flex-col items-center justify-center gap-4 p-12">
+                        <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg animate-pulse">
+                            <Sparkles size={30} className="text-white" />
+                        </div>
+                        <p className="font-bold text-slate-700 dark:text-slate-200">Claude is re-marking…</p>
+                        <p className="text-xs text-slate-400 text-center max-w-xs">
+                            Reading each question, the correct answer, and the student's response to apply fair marks.
+                        </p>
+                    </div>
+                )}
+
+                {/* ── STEP 3: Edit & review ── */}
+                {step === "edit" && (
+                    <>
+                        {/* Scrollable question list */}
+                        <div className="flex-1 overflow-y-auto p-5 space-y-3">
+
+                            {aiError && (
+                                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 text-xs text-red-600 dark:text-red-300 mb-2">
+                                    ⚠️ {aiError}
+                                </div>
+                            )}
+
+                            {mode === "ai" && !aiError && (
+                                <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl p-3 text-xs text-indigo-700 dark:text-indigo-300 flex items-center gap-2 mb-2">
+                                    <Sparkles size={13} />
+                                    AI marks applied — review and adjust anything before saving.
+                                </div>
+                            )}
+
+                            {rows.map((r, i) => {
+                                const st = STATUS[r.status] || STATUS.missing;
+                                const maxMarks = r.marks || 0;
+                                return (
+                                    <div key={i} className={`border rounded-2xl p-4 ${st.color}`}>
+                                        {/* Question text */}
+                                        <div className="flex items-start gap-2 mb-3">
+                                            {st.icon}
+                                            <div className="flex-1 min-w-0">
+                                                <span className="font-bold text-xs text-slate-500 mr-1">{r.question_number || `Q${i + 1}`}</span>
+                                                <span className="text-sm text-slate-700 dark:text-slate-200">{r.question}</span>
+                                            </div>
+                                            <span className="text-xs text-slate-400 flex-shrink-0">/ {maxMarks} mk{maxMarks !== 1 ? "s" : ""}</span>
+                                        </div>
+
+                                        {/* Student answer (read-only) */}
+                                        <div className="pl-5 mb-3 text-xs text-slate-500 dark:text-slate-400 italic">
+                                            <span className="not-italic font-semibold text-slate-600 dark:text-slate-300">Student: </span>
+                                            {r.student_answer || "No answer"}
+                                        </div>
+
+                                        {/* Editable controls */}
+                                        <div className="pl-5 grid grid-cols-2 gap-3">
+                                            {/* Earned marks */}
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">
+                                                    Marks Earned
+                                                </label>
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        max={maxMarks}
+                                                        step={0.5}
+                                                        value={r.earned ?? 0}
+                                                        onChange={e => updateRow(i, "earned", parseFloat(e.target.value) || 0)}
+                                                        className="w-20 text-sm font-black px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-400"
+                                                    />
+                                                    <span className="text-xs text-slate-400">/ {maxMarks}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Status */}
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">
+                                                    Status
+                                                </label>
+                                                <select
+                                                    value={r.status || "incorrect"}
+                                                    onChange={e => updateRow(i, "status", e.target.value)}
+                                                    className="text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-400 w-full"
+                                                >
+                                                    {STATUSES.map(s => (
+                                                        <option key={s} value={s}>{s}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            {/* Feedback */}
+                                            <div className="col-span-2">
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">
+                                                    Feedback (optional)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={r.feedback || ""}
+                                                    onChange={e => updateRow(i, "feedback", e.target.value)}
+                                                    placeholder="Add feedback for the student…"
+                                                    className="w-full text-xs px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 placeholder-slate-300 outline-none focus:ring-2 focus:ring-indigo-400"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
+                            {/* Teacher note */}
+                            <div className="mt-2">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">
+                                    Overall Teacher Note (shown to student)
+                                </label>
+                                <textarea
+                                    rows={2}
+                                    value={teacherNote}
+                                    onChange={e => setTeacherNote(e.target.value)}
+                                    placeholder="e.g. Re-marked after moderation. Marks adjusted on Q3."
+                                    className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 placeholder-slate-300 outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Sticky footer */}
+                        <div className="flex-shrink-0 border-t border-slate-100 dark:border-slate-800 px-6 py-4 flex items-center justify-between gap-4 bg-white dark:bg-slate-900">
+                            {/* New score preview */}
+                            <div className="flex items-center gap-3">
+                                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${pctBg(newPct)} flex flex-col items-center justify-center`}>
+                                    <span className="text-white font-black text-base leading-none">{newPct}%</span>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-slate-700 dark:text-slate-200">New Score</p>
+                                    <p className={`text-sm font-black ${pctColor(newPct)}`}>{newScore} / {attempt.total}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setStep("choose")}
+                                    className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center gap-1.5"
+                                >
+                                    <RotateCcw size={14} /> Back
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                    className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-bold shadow-sm transition-all flex items-center gap-1.5"
+                                >
+                                    {saving ? "Saving…" : <><Save size={14} /> Save Remark</>}
+                                </button>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
 
 // ── Single attempt card ───────────────────────────────────────────────────────
-function AttemptCard({ attempt, teacherMode }) {
+function AttemptCard({ attempt, teacherMode, onRemark }) {
     const [expanded, setExpanded] = useState(false);
     const pct = attempt.percentage ?? 0;
     const date = attempt.completedAt?.toDate?.()?.toLocaleDateString("en-ZA", {
         day: "numeric", month: "short", year: "numeric",
     }) ?? "—";
-
-    // resolvedTitle is injected by ResultsTab via the exams collection lookup
     const title = attempt.resolvedTitle || attempt.examTitle || attempt.exam || "Exam";
+    const isRemarked = !!attempt.remarkedAt;
 
     return (
         <div className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden mb-4">
@@ -43,6 +323,14 @@ function AttemptCard({ attempt, teacherMode }) {
                         {attempt.studentId[0]?.toUpperCase()}
                     </div>
                     <span className="text-xs font-bold text-indigo-600 dark:text-indigo-300">{attempt.studentId}</span>
+
+                    {/* Remarked badge */}
+                    {isRemarked && (
+                        <span className="ml-auto flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                            <BadgeCheck size={10} />
+                            {attempt.remarkedBy === "ai+teacher" ? "AI Re-marked" : "Teacher Re-marked"}
+                        </span>
+                    )}
                 </div>
             )}
 
@@ -51,7 +339,6 @@ function AttemptCard({ attempt, teacherMode }) {
                 className="flex items-center gap-4 p-5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                 onClick={() => setExpanded(v => !v)}
             >
-                {/* Score circle */}
                 <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${pctBg(pct)} flex flex-col items-center justify-center flex-shrink-0`}>
                     <span className="text-white font-black text-lg leading-none">{pct}%</span>
                 </div>
@@ -74,26 +361,35 @@ function AttemptCard({ attempt, teacherMode }) {
                     </div>
                 </div>
 
-                {/* Progress bar */}
                 <div className="hidden sm:block w-28">
                     <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                        <div
-                            className={`h-full rounded-full bg-gradient-to-r ${pctBg(pct)}`}
-                            style={{ width: `${pct}%` }}
-                        />
+                        <div className={`h-full rounded-full bg-gradient-to-r ${pctBg(pct)}`} style={{ width: `${pct}%` }} />
                     </div>
                     <p className="text-xs text-slate-400 mt-1 text-right">{pct}%</p>
                 </div>
 
-                {expanded
-                    ? <ChevronUp size={18} className="text-slate-400 flex-shrink-0" />
-                    : <ChevronDown size={18} className="text-slate-400 flex-shrink-0" />
-                }
+                {expanded ? <ChevronUp size={18} className="text-slate-400 flex-shrink-0" /> : <ChevronDown size={18} className="text-slate-400 flex-shrink-0" />}
             </div>
 
             {/* Expanded detail */}
             {expanded && (
                 <div className="border-t border-slate-100 dark:border-slate-700 p-5 space-y-4">
+
+                    {/* Teacher note (shown to both views) */}
+                    {attempt.teacherNote && (
+                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-200 leading-relaxed flex items-start gap-2">
+                            <User size={14} className="mt-0.5 flex-shrink-0 text-amber-500" />
+                            <div>
+                                <span className="font-bold">Teacher Note:</span> {attempt.teacherNote}
+                                {attempt.remarkedAt && (
+                                    <span className="block text-[10px] text-amber-400 mt-1">
+                                        Re-marked {attempt.remarkedAt?.toDate?.()?.toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" }) ?? ""}
+                                        {attempt.remarkedBy === "ai+teacher" ? " · AI + Teacher" : " · Teacher"}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {/* AI Feedback */}
                     {attempt.aiFeedback && (
@@ -114,21 +410,15 @@ function AttemptCard({ attempt, teacherMode }) {
                                             <span className="font-bold text-xs text-slate-500 flex-shrink-0">{r.question_number}</span>
                                             <span className="text-sm text-slate-700 dark:text-slate-200 truncate">{r.question}</span>
                                         </div>
-                                        <span className="text-xs font-black text-slate-600 dark:text-slate-300 flex-shrink-0">
-                                            {r.earned}/{r.marks}
-                                        </span>
+                                        <span className="text-xs font-black text-slate-600 dark:text-slate-300 flex-shrink-0">{r.earned}/{r.marks}</span>
                                     </div>
-
                                     <div className="mt-2 pl-6 space-y-1 text-xs text-slate-600 dark:text-slate-300">
                                         <p><span className="font-semibold">Your answer:</span> {r.student_answer || "No answer"}</p>
                                         {r.correct_answer && r.correct_answer !== "Not available" && (
                                             <p><span className="font-semibold">Correct:</span> {r.correct_answer}</p>
                                         )}
-                                        {r.feedback && (
-                                            <p className="italic text-slate-500 dark:text-slate-400">{r.feedback}</p>
-                                        )}
+                                        {r.feedback && <p className="italic text-slate-500 dark:text-slate-400">{r.feedback}</p>}
                                     </div>
-
                                     <div className="mt-2 pl-6 flex gap-2">
                                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${st.pill}`}>{r.status}</span>
                                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500">{r.type}</span>
@@ -144,26 +434,20 @@ function AttemptCard({ attempt, teacherMode }) {
 }
 
 // ── Main results tab ──────────────────────────────────────────────────────────
-// Props:
-//   studentId   {string}  — student's name/id for student mode
-//   teacherMode {boolean} — if true, loads ALL students' attempts (teacher view)
 export function ResultsTab({ studentId, teacherMode = false }) {
     const [attempts, setAttempts] = useState([]);
-    const [examTitles, setExamTitles] = useState({}); // { examId → "Human readable title" }
+    const [examTitles, setExamTitles] = useState({});
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [remarkTarget, setRemarkTarget] = useState(null); // attempt being remarked
 
     // ── 1. Live exam title map ────────────────────────────────────────────────
-    // Subscribes to the exams collection and builds an id→title lookup map.
-    // Stays live so a newly uploaded exam's title appears without a page refresh.
     useEffect(() => {
         const unsub = onSnapshot(
             collection(db, "exams"),
             (snap) => {
                 const map = {};
-                snap.docs.forEach(d => {
-                    map[d.id] = d.data().title || d.id;
-                });
+                snap.docs.forEach(d => { map[d.id] = d.data().title || d.id; });
                 setExamTitles(map);
             },
             (err) => console.error("ResultsTab [examTitles]:", err)
@@ -173,39 +457,21 @@ export function ResultsTab({ studentId, teacherMode = false }) {
 
     // ── 2. Live attempts query ────────────────────────────────────────────────
     useEffect(() => {
-        if (!teacherMode && !studentId) {
-            setLoading(false);
-            return;
-        }
+        if (!teacherMode && !studentId) { setLoading(false); return; }
 
         const q = teacherMode
-            ? query(
-                collection(db, "exam_attempts"),
-                orderBy("completedAt", "desc")
-            )
-            : query(
-                collection(db, "exam_attempts"),
-                where("studentId", "==", studentId),
-                orderBy("completedAt", "desc")
-            );
+            ? query(collection(db, "exam_attempts"), orderBy("completedAt", "desc"))
+            : query(collection(db, "exam_attempts"), where("studentId", "==", studentId), orderBy("completedAt", "desc"));
 
         const unsub = onSnapshot(
             q,
-            (snap) => {
-                setAttempts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-                setLoading(false);
-            },
-            (err) => {
-                console.error("ResultsTab [attempts]:", err);
-                setLoading(false);
-            }
+            (snap) => { setAttempts(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setLoading(false); },
+            (err) => { console.error("ResultsTab [attempts]:", err); setLoading(false); }
         );
-
         return () => unsub();
     }, [studentId, teacherMode]);
 
-    // ── 3. Enrich with resolved human-readable title ──────────────────────────
-    // attempt.exam holds the raw Firestore exam ID — look it up in examTitles
+    // ── 3. Enrich with resolved title ─────────────────────────────────────────
     const enriched = attempts.map(a => ({
         ...a,
         resolvedTitle: examTitles[a.exam] || a.examTitle || a.exam || "Exam",
@@ -215,85 +481,191 @@ export function ResultsTab({ studentId, teacherMode = false }) {
     const filtered = enriched.filter(a => {
         if (!searchTerm.trim()) return true;
         const t = searchTerm.toLowerCase();
-        return (
-            a.resolvedTitle.toLowerCase().includes(t) ||
-            (teacherMode && a.studentId?.toLowerCase().includes(t))
-        );
+        return a.resolvedTitle.toLowerCase().includes(t) ||
+            (teacherMode && a.studentId?.toLowerCase().includes(t));
     });
 
-    // ── 5. Summary stats (always from filtered so search updates counts) ──────
-    const avgPct = filtered.length
-        ? Math.round(filtered.reduce((s, a) => s + (a.percentage ?? 0), 0) / filtered.length)
-        : 0;
+    // ── 5. Summary stats ─────────────────────────────────────────────────────
+    const avgPct = filtered.length ? Math.round(filtered.reduce((s, a) => s + (a.percentage ?? 0), 0) / filtered.length) : 0;
     const best = filtered.length ? Math.max(...filtered.map(a => a.percentage ?? 0)) : 0;
     const passing = filtered.filter(a => (a.percentage ?? 0) >= 50).length;
 
+    // ── 6. Save remark to Firestore ───────────────────────────────────────────
+    const handleSaveRemark = async (attemptId, updates) => {
+        await updateDoc(doc(db, "exam_attempts", attemptId), {
+            ...updates,
+            // Firestore Timestamp-safe date
+            remarkedAt: updates.remarkedAt,
+        });
+        // onSnapshot above will broadcast the change to all listeners
+        // (teacher dashboard + student dashboard) automatically.
+    };
+
+    // ── 7. PDF export ─────────────────────────────────────────────────────────
+    const handleDownload = (attempt) => {
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) return;
+        const date = attempt.completedAt?.toDate?.()?.toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" }) ?? "N/A";
+
+        printWindow.document.write(`
+<html>
+  <head>
+    <title>Exam Record</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 40px; color: #0f172a; background: #fff; }
+      .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+      .title { font-size: 28px; font-weight: 800; }
+      .subtitle { color: #64748b; margin-top: 6px; }
+      .meta { margin-bottom: 10px; font-size: 15px; }
+      .score-box { margin-top: 24px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; }
+      .score { font-size: 52px; font-weight: 900; color: #4f46e5; }
+      .section { margin-top: 32px; }
+      .section-title { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin-bottom: 12px; font-weight: 700; }
+      .question { border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; margin-bottom: 18px; page-break-inside: avoid; }
+      .label { font-weight: 700; margin-bottom: 6px; }
+      .answer-box { margin-top: 14px; padding: 14px; border-radius: 12px; background: #f8fafc; }
+      .footer { margin-top: 50px; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 18px; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="title">Academic Examination Record</div>
+      <div class="subtitle">Official AI-Marked Assessment Report${attempt.remarkedAt ? " · Re-marked" : ""}</div>
+    </div>
+    <div class="meta"><strong>Student:</strong> ${attempt.studentId || "N/A"}</div>
+    <div class="meta"><strong>Exam:</strong> ${attempt.resolvedTitle || attempt.examTitle || "Untitled"}</div>
+    <div class="meta"><strong>Date:</strong> ${date}</div>
+    ${attempt.remarkedAt ? `<div class="meta"><strong>Re-marked by:</strong> ${attempt.remarkedBy === "ai+teacher" ? "AI + Teacher" : "Teacher"}</div>` : ""}
+    <div class="score-box">
+      <div class="section-title">Final Performance</div>
+      <div class="score">${attempt.score ?? 0} / ${attempt.total ?? 0} &nbsp;<span style="font-size:28px;color:#64748b">(${attempt.percentage ?? 0}%)</span></div>
+    </div>
+    ${attempt.teacherNote ? `<div class="score-box" style="margin-top:16px;border-color:#fde68a;background:#fffbeb"><div class="section-title">Teacher Note</div><p style="margin:0;color:#92400e">${attempt.teacherNote}</p></div>` : ""}
+    ${attempt.aiFeedback ? `<div class="score-box" style="margin-top:16px;border-color:#c7d2fe;background:#eef2ff"><div class="section-title">AI Feedback</div><p style="margin:0;color:#3730a3">${attempt.aiFeedback}</p></div>` : ""}
+    <div class="section">
+      <div class="section-title">Question Breakdown</div>
+      ${Array.isArray(attempt.markedResults) && attempt.markedResults.length > 0
+                ? attempt.markedResults.map((r, idx) => `
+        <div class="question">
+          <div class="label">${r.question_number || `Q${idx + 1}`}</div>
+          <div>${r.question || ""}</div>
+          <div class="answer-box"><div class="label">Student Answer</div><div>${r.student_answer || "No answer provided"}</div></div>
+          ${r.correct_answer && r.correct_answer !== "Not available" ? `<div class="answer-box"><div class="label">Correct Answer</div><div>${r.correct_answer}</div></div>` : ""}
+          <div class="answer-box"><div class="label">Result</div><div>${r.earned ?? 0} / ${r.marks ?? 0} marks &nbsp;<span style="text-transform:capitalize;font-weight:bold">(${r.status || "unknown"})</span></div>${r.feedback ? `<div style="margin-top:8px;color:#64748b;font-style:italic">${r.feedback}</div>` : ""}</div>
+        </div>`).join("")
+                : `<div class="question">No question records available.</div>`}
+    </div>
+    <div class="footer">Generated by Academic Performance Hub • Audit Ready Report</div>
+  </body>
+</html>`);
+        printWindow.document.close();
+        setTimeout(() => { printWindow.print(); }, 500);
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────
     if (loading) return (
         <div className="p-20 text-center text-slate-400 text-sm animate-pulse">Loading results…</div>
     );
 
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm p-8 border border-slate-200 dark:border-slate-800 animate-in fade-in">
+        <>
+            {/* Remark modal — portal-style, conditionally rendered */}
+            {teacherMode && remarkTarget && (
+                <RemarkModal
+                    attempt={remarkTarget}
+                    onClose={() => setRemarkTarget(null)}
+                    onSave={(updates) => handleSaveRemark(remarkTarget.id, updates)}
+                />
+            )}
 
-            {/* Header */}
-            <div className="flex items-start justify-between gap-4 mb-1 flex-wrap">
-                <div>
-                    <h2 className="text-2xl font-black">
-                        {teacherMode ? "Student Performance Overview" : "Academic Performance Hub"}
-                    </h2>
-                    <p className="text-slate-500 text-sm mt-1">
-                        {teacherMode
-                            ? `${attempts.length} submission${attempts.length !== 1 ? "s" : ""} across all students`
-                            : "Your exam history and AI-marked results."}
-                    </p>
-                </div>
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm p-8 border border-slate-200 dark:border-slate-800 animate-in fade-in">
 
-                {/* Search bar — visible whenever there is data */}
-                {attempts.length > 0 && (
-                    <input
-                        type="text"
-                        placeholder={teacherMode ? "Search student or exam…" : "Search exam…"}
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                        className="text-sm px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-400 w-56"
-                    />
-                )}
-            </div>
-
-            {filtered.length === 0 ? (
-                <div className="p-20 border-4 border-dashed border-slate-100 dark:border-slate-800 rounded-[2.5rem] text-center mt-8">
-                    <ClipboardList className="text-slate-200 dark:text-slate-700 mx-auto mb-3" size={40} />
-                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">
-                        {searchTerm
-                            ? "No results match your search"
-                            : teacherMode ? "No student submissions yet" : "No exams submitted yet"}
-                    </p>
-                </div>
-            ) : (
-                <>
-                    {/* Stats strip */}
-                    <div className={`grid gap-4 mb-8 mt-6 ${teacherMode ? "grid-cols-2 md:grid-cols-4" : "grid-cols-3"}`}>
-                        {[
-                            { label: teacherMode ? "Total Submissions" : "Exams Taken", value: filtered.length, suffix: "" },
-                            { label: "Average Score", value: avgPct, suffix: "%" },
-                            { label: "Best Score", value: best, suffix: "%" },
-                            ...(teacherMode ? [{ label: "Passing (≥50%)", value: passing, suffix: "" }] : []),
-                        ].map(({ label, value, suffix }) => (
-                            <div key={label} className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 text-center">
-                                <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
-                                    {value}{suffix}
-                                </p>
-                                <p className="text-xs text-slate-400 font-semibold mt-1">{label}</p>
-                            </div>
-                        ))}
+                {/* Header */}
+                <div className="flex items-start justify-between gap-4 mb-1 flex-wrap">
+                    <div>
+                        <h2 className="text-2xl font-black">
+                            {teacherMode ? "Student Performance Overview" : "Academic Performance Hub"}
+                        </h2>
+                        <p className="text-slate-500 text-sm mt-1">
+                            {teacherMode
+                                ? `${attempts.length} submission${attempts.length !== 1 ? "s" : ""} across all students`
+                                : "Your exam history and AI-marked results."}
+                        </p>
                     </div>
 
-                    {/* Attempt cards */}
-                    {filtered.map(a => (
-                        <AttemptCard key={a.id} attempt={a} teacherMode={teacherMode} />
-                    ))}
-                </>
-            )}
-        </div>
+                    <button
+                        onClick={() => window.print()}
+                        className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-sm transition-all"
+                    >
+                        <Download size={18} />
+                        Download Report
+                    </button>
+
+                    {attempts.length > 0 && (
+                        <input
+                            type="text"
+                            placeholder={teacherMode ? "Search student or exam…" : "Search exam…"}
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="text-sm px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-400 w-56"
+                        />
+                    )}
+                </div>
+
+                {filtered.length === 0 ? (
+                    <div className="p-20 border-4 border-dashed border-slate-100 dark:border-slate-800 rounded-[2.5rem] text-center mt-8">
+                        <ClipboardList className="text-slate-200 dark:text-slate-700 mx-auto mb-3" size={40} />
+                        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">
+                            {searchTerm ? "No results match your search" : teacherMode ? "No student submissions yet" : "No exams submitted yet"}
+                        </p>
+                    </div>
+                ) : (
+                    <>
+                        {/* Stats strip */}
+                        <div className={`grid gap-4 mb-8 mt-6 ${teacherMode ? "grid-cols-2 md:grid-cols-4" : "grid-cols-3"}`}>
+                            {[
+                                { label: teacherMode ? "Total Submissions" : "Exams Taken", value: filtered.length, suffix: "" },
+                                { label: "Average Score", value: avgPct, suffix: "%" },
+                                { label: "Best Score", value: best, suffix: "%" },
+                                ...(teacherMode ? [{ label: "Passing (≥50%)", value: passing, suffix: "" }] : []),
+                            ].map(({ label, value, suffix }) => (
+                                <div key={label} className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 text-center">
+                                    <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">{value}{suffix}</p>
+                                    <p className="text-xs text-slate-400 font-semibold mt-1">{label}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Attempt cards */}
+                        {filtered.map(a => (
+                            <div key={a.id} className="space-y-3 mb-6">
+                                <AttemptCard attempt={a} teacherMode={teacherMode} />
+
+                                <div className="flex items-center gap-2">
+                                    {/* Teacher-only: Remark button */}
+                                    {teacherMode && (
+                                        <button
+                                            onClick={() => setRemarkTarget(a)}
+                                            className="px-4 py-2 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 text-sm font-semibold flex items-center gap-2 transition-all"
+                                        >
+                                            <Pencil size={14} />
+                                            {a.remarkedAt ? "Re-remark" : "Remark"}
+                                        </button>
+                                    )}
+
+                                    <button
+                                        onClick={() => handleDownload(a)}
+                                        className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-semibold flex items-center gap-2 transition-all"
+                                    >
+                                        <Download size={16} />
+                                        Export PDF
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </>
+                )}
+            </div>
+        </>
     );
 }

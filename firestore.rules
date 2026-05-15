@@ -1,0 +1,199 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ────────────────────────────────────────────
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+ function isTeacher() {
+  return isSignedIn() &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "teacher";
+}
+
+    function isAdmin() {
+      return isSignedIn()
+        && request.auth.token.email != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+    }
+
+    function isStaff() {
+      return isTeacher() || isAdmin();
+    }
+    
+      function isOwner(studentId) {
+      return request.auth != null && request.auth.uid == studentId;
+    }
+
+    function profileDisplayName(uid) {
+      return exists(/databases/$(database)/documents/students/$(uid))
+        ? get(/databases/$(database)/documents/students/$(uid)).data.name
+        : null;
+    }
+
+    function ownsResultByProfileOrUid(data, docId) {
+      return isSignedIn() && (
+        (data.studentUid != null && data.studentUid == request.auth.uid)
+        ||
+        (
+          profileDisplayName(request.auth.uid) != null
+          &&
+          (
+            (data.name != null && profileDisplayName(request.auth.uid) == data.name)
+            ||
+            (profileDisplayName(request.auth.uid) == docId)
+          )
+        )
+      );
+    }
+
+    function canAccessResult(data) {
+      return isSignedIn() && (
+        request.auth.uid == data.studentUid ||
+        request.auth.token.email == data.email ||
+        data.name == request.auth.token.name
+      );
+    }
+
+    // ── /admins ─────────────────────────────────────────────────────
+
+    match /admins/{adminEmail} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.token.email == adminEmail);
+      allow write: if isAdmin();
+    }
+
+    // ── /students ───────────────────────────────────────────────────
+
+    match /students/{studentId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == studentId;
+
+      match /pointLogs/{logId} {
+        allow read: if isAdmin() || isTeacher() || (isSignedIn() && request.auth.uid == studentId);
+        allow create: if isAdmin() || isTeacher() || (isSignedIn() && request.auth.uid == studentId);
+        allow update, delete: if isStaff();
+      }
+    }
+
+    // ── /leaderboard ────────────────────────────────────────────────
+
+    match /leaderboard/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isStaff();
+    }
+
+    // ── /studentResults ─────────────────────────────────────────────
+
+    match /studentResults/{docId} {
+      allow read: if isStaff() || ownsResultByProfileOrUid(resource.data, docId);
+      allow create, update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // ── /prelimResults ──────────────────────────────────────────────
+
+    match /prelimResults/{docId} {
+      allow read: if isStaff() || ownsResultByProfileOrUid(resource.data, docId);
+      allow create, update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // ── /examResults ────────────────────────────────────────────────
+
+    match /examResults/{docId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    // ── /exam_attempts ──────────────────────────────────────────────
+
+    // match /exam_attempts/{docId} {
+    //   allow read: if isSignedIn();
+    //   allow create: if isSignedIn();
+    //   allow delete: if isAdmin();
+    //     allow update: if isTeacher() &&
+    // }
+    
+    match /exam_attempts/{docId} {
+      // Students can read their own attempts; teachers can read all
+      allow read: if isOwner(resource.data.studentId) || isTeacher();
+
+      // Students create their own attempts
+      allow create: if request.auth != null &&
+                       request.resource.data.studentId == request.auth.uid;
+
+      // Students cannot update after submission; only teachers can remark
+      allow update: if isTeacher() &&
+                       // Prevent teachers from changing core identity fields
+                       request.resource.data.studentId == resource.data.studentId &&
+                       request.resource.data.exam      == resource.data.exam;
+
+      allow delete: if isTeacher();
+    }
+
+    // ── /exams ──────────────────────────────────────────────────────
+
+    match /exams/{examId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && request.resource.data.uploadedBy == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.uploadedBy == request.auth.uid;
+    }
+
+    // ── /teacherExamUploads ─────────────────────────────────────────
+
+    match /teacherExamUploads/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ── /userDriveConfig ────────────────────────────────────────────
+
+    match /userDriveConfig/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ── /teachers ───────────────────────────────────────────────────
+
+    match /teachers/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ── /principals ─────────────────────────────────────────────────
+
+    match /principals/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ── /users ──────────────────────────────────────────────────────
+    match /users/{uid} {
+  allow read:  if isSignedIn();   // ← change from uid-only to any signed-in user
+  allow write: if isSignedIn() && request.auth.uid == uid;
+}
+
+    // ── /studentExamHistory ─────────────────────────────────────────
+
+    match /studentExamHistory/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ── Result collections (wildcard — lowest priority) ─────────────
+
+    match /{collectionName}/{docId} {
+      allow read: if collectionName in [
+        'examResults', 'prelimResults', 'studentResults',
+        'midYearResults', 'novemberResults'
+      ] && isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // ── Deny everything else ────────────────────────────────────────
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+  }
+}

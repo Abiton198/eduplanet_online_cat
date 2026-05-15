@@ -375,17 +375,30 @@ export default function AuthPage({ setStudentInfo }) {
           <Zap className="w-3 h-3 fill-current" /> Agentic AI v3.0 Live
         </div>
         <h1 className="text-6xl md:text-8xl font-black mb-8 leading-[1.1]">
-          The Future of <br />
+          Know where every student<br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-500 to-rose-500">
-            Self-Directed Learning.
+            stands, before the exam.
           </span>
         </h1>
-        <p className="text-xl md:text-2xl opacity-70 max-w-3xl mb-16 leading-relaxed font-medium mx-auto">
-          Bridge the gap between curriculum and capability.
-          <span className="text-indigo-600 dark:text-indigo-400 font-bold"> Eduket OS </span>
-          empowers learners to master CAPS & IEB standards through an intelligent,
-          agentic ecosystem designed for the modern South African classroom.
+        <p className="text-xl md:text-2xl opacity-70 max-w-3xl mb-10 leading-relaxed font-medium mx-auto">
+          <span className="text-indigo-600 dark:text-indigo-400 font-bold">Eduket OS</span>{" "}
+          tracks every answer, predicts outcomes, and adapts to each learner.
+          Upload any exam or study material — PDF or Word — and get instant
+          auto-marking, memo extraction, and a live performance map across CAPS &amp; IEB.
         </p>
+        <div className="flex flex-wrap justify-center gap-3 mb-16 text-sm">
+          {[
+            "Upload PDF or Word",
+            "Auto-mark with memo",
+            "Predictive outcome tracking",
+            "Agentic study planner",
+            "CAPS & IEB aligned",
+          ].map((tag) => (
+            <span key={tag} className="px-4 py-2 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 bg-indigo-500/5 font-medium">
+              {tag}
+            </span>
+          ))}
+        </div>
       </main>
 
       {/* ── AUTH MODAL ──────────────────────────────────────────────────────── */}
