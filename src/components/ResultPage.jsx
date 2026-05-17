@@ -36,8 +36,8 @@ export default function ResultPage({ studentInfo }) {
       const sorted = Array.from(resultsMap.values()).sort((a, b) => {
         return new Date(b.completedTime || 0) - new Date(a.completedTime || 0);
       });
-      
-      
+
+
       setGeneralResults(sorted);
       setLoading(false);
       console.log("Docs:", snap.docs.map(d => d.data()));
@@ -49,21 +49,21 @@ export default function ResultPage({ studentInfo }) {
     // QUERY A: By studentUid (The most reliable for Grade 10)
     if (user?.uid) {
       listeners.push(
-        onSnapshot(query(collection(db, "examResults"), where("studentUid", "==", user.uid)), 
-        (s) => updateState(s, "UID"))
+        onSnapshot(query(collection(db, "examResults"), where("studentUid", "==", user.uid)),
+          (s) => updateState(s, "UID"))
       );
     }
 
     // QUERY B: By exact name (The "Abiton_11" or "Hayley" case)
     listeners.push(
-      onSnapshot(query(collection(db, "examResults"), where("name", "==", tidyName)), 
-      (s) => updateState(s, "Exact Name"))
+      onSnapshot(query(collection(db, "examResults"), where("name", "==", tidyName)),
+        (s) => updateState(s, "Exact Name"))
     );
 
     // QUERY C: By lower-case name (If your saving logic used .toLowerCase())
     listeners.push(
-      onSnapshot(query(collection(db, "examResults"), where("nameLower", "==", lowerName)), 
-      (s) => updateState(s, "Lower Name"))
+      onSnapshot(query(collection(db, "examResults"), where("nameLower", "==", lowerName)),
+        (s) => updateState(s, "Lower Name"))
     );
 
     // If after 2 seconds nothing is found, stop the loading spinner
@@ -94,8 +94,8 @@ export default function ResultPage({ studentInfo }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {generalResults.map((res) => (
-            <div 
-              key={res.id} 
+            <div
+              key={res.id}
               onClick={() => setSelectedResult(res)}
               className="p-5 border rounded-xl cursor-pointer hover:border-blue-500 hover:shadow-md transition-all group relative overflow-hidden"
             >
@@ -108,7 +108,7 @@ export default function ResultPage({ studentInfo }) {
                     Grade {res.grade}
                   </span>
                 </div>
-                
+
                 <div className="mt-4 flex items-center justify-between">
                   <div>
                     <p className="text-2xl font-black text-gray-900">{res.percentage}%</p>
@@ -130,7 +130,7 @@ export default function ResultPage({ studentInfo }) {
       {selectedResult && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-8 relative shadow-2xl">
-            <button 
+            <button
               onClick={() => setSelectedResult(null)}
               className="absolute top-6 right-6 hover:rotate-90 transition-transform bg-gray-100 p-2 rounded-full"
             >✕</button>

@@ -35,7 +35,7 @@ function toDateString(v) {
       return d.toISOString().slice(0, 10);
     }
     if (v instanceof Date) return v.toISOString().slice(0, 10);
-  } catch (_) {}
+  } catch (_) { }
   return "-";
 }
 function pickCompletedDate(obj = {}) {
@@ -353,8 +353,8 @@ export default function AllResults() {
     if (!sortField) return filteredMain;
     const key =
       sortField === "theory" ? "theoryPercent" :
-      sortField === "practical" ? "practicalPercent" :
-      "grand";
+        sortField === "practical" ? "practicalPercent" :
+          "grand";
     const dir = sortDir === "asc" ? 1 : -1;
     return [...filteredMain].sort((a, b) => {
       const av = Number(a[key] ?? -Infinity);

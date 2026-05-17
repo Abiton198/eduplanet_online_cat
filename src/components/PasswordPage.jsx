@@ -1,3 +1,10 @@
+// ─── AuthPage.jsx (Updated) ───────────────────────────────────────────────────
+// Full registration flow:
+//   Principal → creates account → SchoolRegistration wizard → /principal-dashboard
+//   Teacher   → creates account → picks school from list → /teacher-dashboard
+//   Student   → creates account → picks school from list → /exam
+// All existing users retain their data. schoolId field links users to schools.
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -10,9 +17,10 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../utils/firebase';
 import {
   X, Zap, BrainCircuit, UserCheck, ArrowRight,
-  Sun, Moon, CheckCircle2, HardDrive, Loader2,
+  Sun, Moon, CheckCircle2, HardDrive, Loader2, School,
 } from 'lucide-react';
 import { ensureUserFirestoreDocs, ensureAppFolders, hasDrivePermission } from '../utils/driveManager';
+import { listSchools } from '../utils/firestoreHelpers';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -37,7 +45,6 @@ const STANDARD_DBE_SUBJECTS = [
 // ─── DRIVE BADGE ─────────────────────────────────────────────────────────────
 
 function DriveBadge({ status }) {
-  // status: 'idle' | 'linking' | 'linked' | 'failed'
   if (status === 'idle') return null;
   if (status === 'linking') return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800">
@@ -71,7 +78,7 @@ export default function AuthPage({ setStudentInfo }) {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [driveStatus, setDriveStatus] = useState('idle'); // 'idle'|'linking'|'linked'|'failed'
+  const [driveStatus, setDriveStatus] = useState('idle');
   const [error, setError] = useState('');
 
   // Auth
@@ -86,11 +93,16 @@ export default function AuthPage({ setStudentInfo }) {
   const [title, setTitle] = useState('Mr');
   const [province, setProvince] = useState('Gauteng');
   const [district, setDistrict] = useState('');
-  const [school, setSchool] = useState('');
+  const [school, setSchool] = useState(''); // for principal (manual entry)
   const [curriculum, setCurriculum] = useState('CAPS');
   const [grade, setGrade] = useState('');
   const [teachingPhase, setTeachingPhase] = useState('FET');
   const [subjects, setSubjects] = useState([]);
+
+  // School selection (teacher/student pick from registered schools)
+  const [schoolList, setSchoolList] = useState([]);
+  const [selectedSchoolId, setSelectedSchoolId] = useState('');
+  const [schoolsLoading, setSchoolsLoading] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('eduplanet-theme');
@@ -106,46 +118,34 @@ export default function AuthPage({ setStudentInfo }) {
     document.documentElement.classList.toggle('dark', next);
   };
 
+  // Load school list when teacher/student registration opens
+  useEffect(() => {
+    if (showProfileSetup && (userRole === 'teacher' || userRole === 'student')) {
+      setSchoolsLoading(true);
+      listSchools().then((list) => {
+        setSchoolList(list);
+        if (list.length > 0 && !selectedSchoolId) setSelectedSchoolId(list[0].id);
+        setSchoolsLoading(false);
+      }).catch(() => setSchoolsLoading(false));
+    }
+  }, [showProfileSetup, userRole]);
+
   // ─── DRIVE SETUP ─────────────────────────────────────────────────────────
-  /**
-   * Silently sets up Google Drive for the user.
-   * - Uses the token already in sessionStorage if present (Google login path).
-   * - Checks Firestore first — if already linked, skips entirely.
-   * - Never blocks navigation; failures are non-fatal.
-   *
-   * @param {string} uid
-   * @param {string|null} freshToken  token from the current sign-in result, if available
-   */
   const silentlyLinkDrive = useCallback(async (uid, freshToken = null) => {
     try {
-      // 1. Already linked in Firestore? Skip entirely — show tick immediately.
       const alreadyLinked = await hasDrivePermission(uid);
-      if (alreadyLinked) {
-        setDriveStatus('linked');
-        return;
-      }
+      if (alreadyLinked) { setDriveStatus('linked'); return; }
 
-      // 2. Get a token — use the fresh one first, then fall back to session.
       const token =
         freshToken ||
         (sessionStorage.getItem('drive_token_expiry') > Date.now()
           ? sessionStorage.getItem('drive_access_token')
           : null);
 
-      if (!token) {
-        // No token available (email/password user who hasn't granted Drive yet).
-        // Don't pop a new window unprompted — mark as pending, link on next
-        // Google sign-in or when they visit the upload page.
-        setDriveStatus('idle');
-        return;
-      }
+      if (!token) { setDriveStatus('idle'); return; }
 
       setDriveStatus('linking');
-
-      // 3. Create/verify Drive folders.
       const folderIds = await ensureAppFolders(token);
-
-      // 4. Persist to Firestore.
       await setDoc(
         doc(db, 'userDriveConfig', uid),
         {
@@ -157,7 +157,6 @@ export default function AuthPage({ setStudentInfo }) {
         },
         { merge: true }
       );
-
       setDriveStatus('linked');
     } catch (err) {
       console.warn('[Drive] Silent link failed:', err.message);
@@ -165,15 +164,9 @@ export default function AuthPage({ setStudentInfo }) {
     }
   }, []);
 
-  // ─── NAVIGATE AFTER LOGIN ─────────────────────────────────────────────────
-  /**
-   * After any successful login, ensure Firestore docs exist,
-   * attempt Drive link silently, then navigate.
-   */
+  // ─── POST LOGIN ───────────────────────────────────────────────────────────
   const postLogin = useCallback(async ({ uid, role, data, token = null }) => {
     await ensureUserFirestoreDocs(uid, role, data);
-
-    // Fire Drive setup in background — don't await, don't block navigation.
     silentlyLinkDrive(uid, token);
 
     if (role === 'student') {
@@ -192,13 +185,11 @@ export default function AuthPage({ setStudentInfo }) {
     try {
       const driveProvider = new GoogleAuthProvider();
       driveProvider.addScope(DRIVE_SCOPE);
-
       const result = await signInWithPopup(auth, driveProvider);
       const user = result.user;
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const token = credential?.accessToken ?? null;
 
-      // Store token so postLogin / silentlyLinkDrive can use it
       if (token) {
         sessionStorage.setItem('drive_access_token', token);
         sessionStorage.setItem('drive_token_expiry', String(Date.now() + 55 * 60 * 1000));
@@ -217,7 +208,6 @@ export default function AuthPage({ setStudentInfo }) {
       } else if (sSnap.exists()) {
         await postLogin({ uid: user.uid, role: 'student', data: sSnap.data(), token });
       } else {
-        // New Google user — show profile setup
         setTempUser({ uid: user.uid, email: user.email, driveToken: token });
         setName(user.displayName?.split(' ')[0] || '');
         setSurname(user.displayName?.split(' ').slice(1).join(' ') || '');
@@ -257,7 +247,6 @@ export default function AuthPage({ setStudentInfo }) {
         } else if (sSnap.exists()) {
           await postLogin({ uid, role: 'student', data: sSnap.data() });
         } else {
-          // Has auth account but no profile — go to wizard
           setTempUser({ uid, email, driveToken: null });
           setIsModalOpen(false);
           setShowProfileSetup(true);
@@ -271,13 +260,21 @@ export default function AuthPage({ setStudentInfo }) {
     }
   };
 
-  // ─── FINALIZE PROFILE (new users only) ───────────────────────────────────
+  // ─── FINALIZE PROFILE ─────────────────────────────────────────────────────
   const finalizeProfile = async (e) => {
     if (e) e.preventDefault();
-    if (!school.trim() || !name.trim()) {
-      setError('Please complete all required fields.');
-      return;
+
+    // Validation
+    if (!name.trim()) { setError('First name is required.'); return; }
+    if (userRole === 'principal' && !school.trim()) { setError('School name is required.'); return; }
+    if ((userRole === 'teacher' || userRole === 'student') && !selectedSchoolId) {
+      setError('Please select your school.'); return;
     }
+    if (userRole === 'student' && !grade) { setError('Please select your grade.'); return; }
+    if (userRole === 'student' && subjects.length < 2) {
+      setError('Please select at least 2 subjects.'); return;
+    }
+
     setIsSubmitting(true);
     setError('');
 
@@ -285,16 +282,24 @@ export default function AuthPage({ setStudentInfo }) {
     const finalEmail = tempUser?.email || email;
     const driveToken = tempUser?.driveToken || sessionStorage.getItem('drive_access_token');
 
+    // Resolve schoolId: principals own their school (uid = schoolId)
+    // teachers/students join an existing school
+    const resolvedSchoolId = userRole === 'principal' ? uid : selectedSchoolId;
+    const resolvedSchool = userRole === 'principal'
+      ? school.trim()
+      : schoolList.find((s) => s.id === selectedSchoolId)?.name || '';
+
     const baseProfile = {
       uid,
       name: name.trim(),
       surname: surname.trim(),
       email: finalEmail,
-      school: school.trim(),
+      school: resolvedSchool,
+      schoolId: resolvedSchoolId,
       province,
       district: district.trim(),
       role: userRole,
-      curriculum,
+      curriculum: userRole === 'principal' ? curriculum : (schoolList.find((s) => s.id === selectedSchoolId)?.curricula?.[0] || curriculum),
       createdAt: serverTimestamp(),
       updatedAt: new Date().toISOString(),
     };
@@ -302,7 +307,7 @@ export default function AuthPage({ setStudentInfo }) {
     const roleData =
       userRole === 'principal' ? { title, department: 'Administration' } :
         userRole === 'teacher' ? { title, teachingPhase, subjects } :
-      /* student */              { grade, subjects };
+          { grade, subjects };
 
     const fullProfile = { ...baseProfile, ...roleData };
     const collectionName =
@@ -310,26 +315,25 @@ export default function AuthPage({ setStudentInfo }) {
         userRole === 'teacher' ? 'teachers' : 'students';
 
     try {
-      // Save profile document
       await setDoc(doc(db, collectionName, uid), fullProfile);
-
-      // Cross-reference in /users for quick role lookups
-      await setDoc(doc(db, 'users', uid), { uid, email: finalEmail, role: userRole }, { merge: true });
-
-      // Ensure all required Firestore sub-documents exist
+      await setDoc(doc(db, 'users', uid), {
+        uid, email: finalEmail, role: userRole, schoolId: resolvedSchoolId,
+      }, { merge: true });
       await ensureUserFirestoreDocs(uid, userRole, fullProfile);
 
-      // Start Drive linking in background — non-blocking
       if (driveToken) {
         setDriveStatus('linking');
-        silentlyLinkDrive(uid, driveToken); // intentionally not awaited
+        silentlyLinkDrive(uid, driveToken);
       }
 
       if (userRole === 'student') setStudentInfo(fullProfile);
-      navigate(
-        userRole === 'principal' ? '/principal-dashboard' :
-          userRole === 'teacher' ? '/teacher-dashboard' : '/exam'
-      );
+
+      // Principals go to school registration wizard first
+      if (userRole === 'principal') {
+        navigate('/school-registration');
+      } else {
+        navigate(userRole === 'teacher' ? '/teacher-dashboard' : '/exam');
+      }
     } catch (err) {
       console.error(err);
       setError('Initialization failed. Please try again.');
@@ -345,7 +349,10 @@ export default function AuthPage({ setStudentInfo }) {
     );
   };
 
-  // ─── UI ───────────────────────────────────────────────────────────────────
+  // Subjects offered by selected school (if available)
+  const schoolSubjects = STANDARD_DBE_SUBJECTS; // could filter by school curriculum
+
+  // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
     <div className={`min-h-screen transition-all duration-700 relative overflow-hidden ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
 
@@ -387,13 +394,7 @@ export default function AuthPage({ setStudentInfo }) {
           auto-marking, memo extraction, and a live performance map across CAPS &amp; IEB.
         </p>
         <div className="flex flex-wrap justify-center gap-3 mb-16 text-sm">
-          {[
-            "Upload PDF or Word",
-            "Auto-mark with memo",
-            "Predictive outcome tracking",
-            "Agentic study planner",
-            "CAPS & IEB aligned",
-          ].map((tag) => (
+          {["Upload PDF or Word", "Auto-mark with memo", "Predictive outcome tracking", "Agentic study planner", "CAPS & IEB aligned"].map((tag) => (
             <span key={tag} className="px-4 py-2 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 bg-indigo-500/5 font-medium">
               {tag}
             </span>
@@ -401,10 +402,10 @@ export default function AuthPage({ setStudentInfo }) {
         </div>
       </main>
 
-      {/* ── AUTH MODAL ──────────────────────────────────────────────────────── */}
+      {/* ── AUTH MODAL ── */}
       {isModalOpen && !showProfileSetup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl relative border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl relative border border-slate-200 dark:border-slate-800">
             <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-6 text-slate-400 hover:text-rose-500">
               <X size={24} />
             </button>
@@ -424,10 +425,10 @@ export default function AuthPage({ setStudentInfo }) {
 
             <form onSubmit={handlePasswordAuth} className="space-y-4">
               <input type="email" placeholder="Email Address" required
-                className="w-full p-4 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 ring-indigo-500/20"
+                className="w-full p-4 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 ring-indigo-500/20 dark:text-white"
                 onChange={(e) => setEmail(e.target.value)} />
               <input type="password" placeholder="Password" required
-                className="w-full p-4 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 ring-indigo-500/20"
+                className="w-full p-4 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 ring-indigo-500/20 dark:text-white"
                 onChange={(e) => setPassword(e.target.value)} />
               <button type="submit"
                 className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20 uppercase tracking-widest text-xs">
@@ -436,22 +437,18 @@ export default function AuthPage({ setStudentInfo }) {
             </form>
 
             <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t dark:border-slate-800" />
-              </div>
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t dark:border-slate-800" /></div>
               <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest">
                 <span className="bg-white dark:bg-slate-900 px-4 text-slate-400">or</span>
               </div>
             </div>
 
-            {/* Google — requests Drive scope automatically */}
             <button onClick={handleGoogleLogin}
               className="w-full py-4 border-2 border-slate-100 dark:border-slate-800 rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-bold text-sm">
               <img src="https://www.gstatic.com/images/branding/product/1x/gsa_64dp.png" className="w-5 h-5" alt="G" />
               Continue with Google
             </button>
 
-            {/* Tiny Drive notice */}
             <p className="text-center mt-4 text-[10px] text-slate-400 leading-relaxed">
               🔒 Google sign-in automatically links your Drive for secure file storage.
             </p>
@@ -467,12 +464,11 @@ export default function AuthPage({ setStudentInfo }) {
         </div>
       )}
 
-      {/* ── PROFILE SETUP MODAL ─────────────────────────────────────────────── */}
+      {/* ── PROFILE SETUP MODAL ── */}
       {showProfileSetup && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-indigo-600/95 backdrop-blur-2xl overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[3rem] p-10 shadow-2xl my-8">
 
-            {/* Header */}
             <div className="flex items-start justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="bg-indigo-100 dark:bg-indigo-900/40 p-2 rounded-xl">
@@ -485,8 +481,6 @@ export default function AuthPage({ setStudentInfo }) {
                   </p>
                 </div>
               </div>
-
-              {/* Drive status badge — shown once linking starts */}
               <DriveBadge status={driveStatus} />
             </div>
 
@@ -500,27 +494,32 @@ export default function AuthPage({ setStudentInfo }) {
 
               {/* Role selector */}
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">I am a...</p>
+                <p className="label-xs">I am a...</p>
                 <div className="grid grid-cols-3 gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
                   {['student', 'teacher', 'principal'].map((role) => (
                     <button key={role} type="button" onClick={() => setUserRole(role)}
-                      className={`py-3 rounded-xl text-[10px] font-black uppercase transition-all ${userRole === role ? 'bg-white dark:bg-slate-700 shadow-md text-indigo-600' : 'opacity-40'
-                        }`}>
+                      className={`py-3 rounded-xl text-[10px] font-black uppercase transition-all ${userRole === role ? 'bg-white dark:bg-slate-700 shadow-md text-indigo-600' : 'opacity-40'}`}>
                       {role === 'student' ? '🎓 Student' : role === 'teacher' ? '📚 Teacher' : '🏫 Principal'}
                     </button>
                   ))}
                 </div>
+                {userRole === 'principal' && (
+                  <p className="mt-2 text-[10px] text-indigo-500 font-bold">
+                    ℹ️ As a principal, you'll register your school in the next step.
+                  </p>
+                )}
               </div>
 
               {/* Title (staff only) */}
               {(userRole === 'teacher' || userRole === 'principal') && (
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Title</p>
+                  <p className="label-xs">Title</p>
                   <div className="flex gap-2 flex-wrap">
                     {['Mr', 'Mrs', 'Ms', 'Miss', 'Dr', 'Prof'].map((t) => (
                       <button key={t} type="button" onClick={() => setTitle(t)}
-                        className={`px-4 py-2 rounded-xl text-xs font-black border transition-all ${title === t ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-indigo-400'
-                          }`}>{t}</button>
+                        className={`px-4 py-2 rounded-xl text-xs font-black border transition-all ${title === t ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-indigo-400'}`}>
+                        {t}
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -529,61 +528,71 @@ export default function AuthPage({ setStudentInfo }) {
               {/* Name */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">First Name *</label>
+                  <label className="label-xs block">First Name *</label>
                   <input type="text" value={name} placeholder="e.g. Thabo" required
-                    className="w-full p-4 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none focus:border-indigo-500 transition-colors"
+                    className="input-f"
                     onChange={(e) => setName(e.target.value)} />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Surname *</label>
+                  <label className="label-xs block">Surname *</label>
                   <input type="text" value={surname} placeholder="e.g. Nkosi" required
-                    className="w-full p-4 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none focus:border-indigo-500 transition-colors"
+                    className="input-f"
                     onChange={(e) => setSurname(e.target.value)} />
                 </div>
               </div>
 
-              {/* Province + District */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Province *</label>
-                  <select value={province} onChange={(e) => setProvince(e.target.value)}
-                    className="w-full p-4 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 dark:text-white font-bold outline-none focus:border-indigo-500">
-                    {SA_PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
-                  </select>
+              {/* Province + District (principal only — teachers/students get it from school) */}
+              {userRole === 'principal' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label-xs block">Province *</label>
+                    <select value={province} onChange={(e) => setProvince(e.target.value)} className="input-f">
+                      {SA_PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-xs block">District *</label>
+                    <input type="text" value={district} placeholder="e.g. Johannesburg East" required className="input-f" onChange={(e) => setDistrict(e.target.value)} />
+                  </div>
                 </div>
+              )}
+
+              {/* School (principals enter name; teachers & students pick from list) */}
+              {userRole === 'principal' ? (
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">District *</label>
-                  <input type="text" value={district} placeholder="e.g. Johannesburg East" required
-                    className="w-full p-4 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none focus:border-indigo-500 transition-colors"
-                    onChange={(e) => setDistrict(e.target.value)} />
+                  <label className="label-xs block">Your School Name *</label>
+                  <input type="text" value={school} placeholder="e.g. Hoërskool Randburg" required className="input-f" onChange={(e) => setSchool(e.target.value)} />
                 </div>
-              </div>
-
-              {/* School */}
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">School Name *</label>
-                <input type="text" value={school} placeholder="e.g. Hoërskool Randburg" required
-                  className="w-full p-4 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none focus:border-indigo-500 transition-colors"
-                  onChange={(e) => setSchool(e.target.value)} />
-              </div>
-
-              {/* Curriculum */}
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Curriculum</label>
-                <select value={curriculum} onChange={(e) => setCurriculum(e.target.value)}
-                  className="w-full p-4 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 dark:text-white font-bold text-indigo-600 outline-none focus:border-indigo-500">
-                  {['CAPS', 'IEB', 'SACAI', 'Cambridge'].map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
+              ) : (
+                <div>
+                  <label className="label-xs block">Select Your School *</label>
+                  {schoolsLoading ? (
+                    <div className="input-f flex items-center gap-2 text-slate-400">
+                      <Loader2 size={14} className="animate-spin" /> Loading schools...
+                    </div>
+                  ) : schoolList.length === 0 ? (
+                    <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50 text-amber-700 text-xs font-bold">
+                      No schools registered yet. Ask your principal to register the school first.
+                    </div>
+                  ) : (
+                    <select value={selectedSchoolId} onChange={(e) => setSelectedSchoolId(e.target.value)} className="input-f">
+                      {schoolList.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name} — {s.province}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
 
               {/* Grade (students) */}
               {userRole === 'student' && (
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Grade *</label>
-                  <select value={grade} onChange={(e) => setGrade(e.target.value)} required
-                    className="w-full p-4 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 dark:text-white font-bold outline-none focus:border-indigo-500">
+                  <label className="label-xs block">Grade *</label>
+                  <select value={grade} onChange={(e) => setGrade(e.target.value)} required className="input-f">
                     <option value="" disabled>Select your grade</option>
-                    {['Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'].map((g) => <option key={g} value={g}>{g}</option>)}
+                    {['Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'].map((g) => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
                   </select>
                 </div>
               )}
@@ -591,7 +600,7 @@ export default function AuthPage({ setStudentInfo }) {
               {/* Teaching Phase (teachers) */}
               {userRole === 'teacher' && (
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">DBE Teaching Phase *</label>
+                  <label className="label-xs block">DBE Teaching Phase *</label>
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { value: 'Foundation', label: 'Foundation Phase', grades: 'Grades R–3' },
@@ -600,10 +609,7 @@ export default function AuthPage({ setStudentInfo }) {
                       { value: 'FET', label: 'FET Phase', grades: 'Grades 10–12' },
                     ].map((ph) => (
                       <button key={ph.value} type="button" onClick={() => setTeachingPhase(ph.value)}
-                        className={`p-3 rounded-2xl border-2 text-left transition-all ${teachingPhase === ph.value
-                          ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
-                          : 'border-slate-100 dark:border-slate-700 hover:border-indigo-300'
-                          }`}>
+                        className={`p-3 rounded-2xl border-2 text-left transition-all ${teachingPhase === ph.value ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-100 dark:border-slate-700 hover:border-indigo-300'}`}>
                         <p className="font-black text-xs text-slate-800 dark:text-white leading-tight">{ph.label}</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">{ph.grades}</p>
                       </button>
@@ -616,25 +622,19 @@ export default function AuthPage({ setStudentInfo }) {
               {(userRole === 'student' || userRole === 'teacher') && (
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <label className="label-xs">
                       {userRole === 'student' ? 'My Subjects *' : 'Subjects I Teach *'}
                     </label>
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${subjects.length >= (userRole === 'student' ? 5 : 1)
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-amber-100 text-amber-700'
-                      }`}>
-                      {subjects.length} selected{userRole === 'student' ? ' / min 5' : ''}
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${subjects.length >= (userRole === 'student' ? 2 : 1) ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {subjects.length} selected{userRole === 'student' ? ' / min 2' : ''}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2 max-h-44 overflow-y-auto p-1">
-                    {STANDARD_DBE_SUBJECTS.map((s) => {
+                    {schoolSubjects.map((s) => {
                       const active = subjects.includes(s);
                       return (
                         <button key={s} type="button" onClick={() => toggleSubject(s)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${active
-                            ? 'bg-indigo-600 text-white border-indigo-600'
-                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-indigo-400'
-                            }`}>
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-indigo-400'}`}>
                           {active && '✓ '}{s}
                         </button>
                       );
@@ -643,26 +643,50 @@ export default function AuthPage({ setStudentInfo }) {
                 </div>
               )}
 
-              {/* Drive status inside form (only shows when active) */}
               {driveStatus !== 'idle' && (
-                <div className="pt-1">
-                  <DriveBadge status={driveStatus} />
-                </div>
+                <div className="pt-1"><DriveBadge status={driveStatus} /></div>
               )}
 
-              {/* Submit */}
               <button type="submit" disabled={isSubmitting}
                 className="w-full py-5 bg-indigo-600 text-white rounded-[2rem] font-black text-xl shadow-xl flex items-center justify-center gap-3 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed">
                 {isSubmitting ? (
                   <><Loader2 size={20} className="animate-spin" /> Setting up dashboard...</>
                 ) : (
-                  <>START DASHBOARD <ArrowRight /></>
+                  <>{userRole === 'principal' ? 'CONTINUE TO SCHOOL SETUP' : 'START DASHBOARD'} <ArrowRight /></>
                 )}
               </button>
             </form>
           </div>
         </div>
       )}
+
+      <style>{`
+        .label-xs {
+          font-size: 10px;
+          font-weight: 900;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          margin-bottom: 6px;
+        }
+        .input-f {
+          width: 100%;
+          padding: 14px 16px;
+          border-radius: 1rem;
+          border: 1px solid #e2e8f0;
+          background: white;
+          font-size: 14px;
+          outline: none;
+          color: #0f172a;
+          transition: border-color 0.2s;
+        }
+        .dark .input-f {
+          background: #1e293b;
+          border-color: #334155;
+          color: white;
+        }
+        .input-f:focus { border-color: #4f46e5; }
+      `}</style>
     </div>
   );
 }

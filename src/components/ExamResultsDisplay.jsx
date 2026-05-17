@@ -844,8 +844,8 @@ export default function ExamResultsDisplay() {
             key={t.id}
             onClick={() => setActiveTab(t.id)}
             className={`px-4 py-2 rounded-xl text-xs font-black transition-all border ${activeTab === t.id
-                ? 'bg-slate-800 text-white border-slate-800'
-                : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300'
+              ? 'bg-slate-800 text-white border-slate-800'
+              : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300'
               }`}
           >
             {t.label}

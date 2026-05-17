@@ -1,25 +1,28 @@
 // Import Firebase functions
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore"; // ✅ Import Firestore
-import { getAuth, signInAnonymously, GoogleAuthProvider } from "firebase/auth"; // ✅ Import Auth
+import { getFirestore } from "firebase/firestore"; // Firestore
+import { getAuth, signInAnonymously, GoogleAuthProvider } from "firebase/auth"; // Auth
 import { getAnalytics } from "firebase/analytics";
+import { getStorage } from "firebase/storage";
 
-// Your Firebase configuration
+// Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyDbyj2wfkXKxLZyFDaBzgFwBJASOQ9tlvw",
-    authDomain: "eduplanet-exam-results.firebaseapp.com",
-    projectId: "eduplanet-exam-results",
-    storageBucket: "eduplanet-exam-results.firebasestorage.app",
-    messagingSenderId: "364922806641",
-    appId: "1:364922806641:web:fe9271a8c8fa20dd9b96d0"
+    apiKey: "AIzaSyBqpQWCNBtL_DK6wNl6LSyCw63JvNMCEAc",
+    authDomain: "eduket.firebaseapp.com",
+    projectId: "eduket",
+    storageBucket: "eduket.firebasestorage.app",
+    messagingSenderId: "754323738367",
+    appId: "1:754323738367:web:b1b09aaf820fb1a3ab86ca",
+    measurementId: "G-698QRCW2RJ"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app); // ✅ Correctly initialize Firestore
-const auth = getAuth(app); // ✅ Correctly initialize Auth
+const db = getFirestore(app);
+const auth = getAuth(app);
+const storage = getStorage(app);
 const analytics = getAnalytics(app);
 const provider = new GoogleAuthProvider();
 
 // Export Firestore & Auth
-export { db, auth , signInAnonymously, provider};
+export { db, auth, signInAnonymously, provider, storage };

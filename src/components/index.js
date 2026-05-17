@@ -11,4 +11,7 @@ export { default as TeacherDashboard } from "./TeacherDashboard";
 export { default as AdminGoogleLogin } from "./AdminGoogleLogin";
 export { default as StudentGoogleLogin } from "./StudentGoogleLogin";
 export { default as LeaderboardCard } from "./LeaderboardCard";
-export { default as AnalysisComponent } from "./AnalysisComponent";
+// export { default as AnalysisComponent } from "./AnalysisComponent";
+export { default as ResultsTab } from "./ResultsTab";
+export { default as PrincipalDashboard } from "./PrincipalDashboard";
+export { default as SchoolRegistration } from "./SchoolRegistration";

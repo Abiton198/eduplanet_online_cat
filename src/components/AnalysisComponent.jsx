@@ -99,7 +99,7 @@ export default function AnalysisComponent() {
         setMainExamData(obj);
       });
       unsubs.push(unsubMain);
-    } catch (e) {}
+    } catch (e) { }
 
     // prelimResults (NEW)
     try {
@@ -110,7 +110,7 @@ export default function AnalysisComponent() {
         setPrelimData(obj);
       });
       unsubs.push(unsubPre);
-    } catch (e) {}
+    } catch (e) { }
 
     // examResults (general attempts)
     try {
@@ -124,7 +124,7 @@ export default function AnalysisComponent() {
       } else {
         unsubs.push(onSnapshot(query(collection(db, "examResults"), where("studentUid", "==", user.uid)), (snap) => upsert(snap.docs)));
       }
-    } catch (e) {}
+    } catch (e) { }
 
     unsubsRef.current = unsubs;
     return () => unsubs.forEach((fn) => fn && fn());
@@ -322,7 +322,7 @@ export default function AnalysisComponent() {
         <div>
           <label className="font-medium mr-2">Grade:</label>
           <select value={selectedGrade} onChange={(e) => setSelectedGrade(e.target.value)} className="border rounded px-3 py-1">
-            { ["All Grades","Grade 10","Grade 11","Grade 12","12A","12B"].map((g) => (<option key={g}>{g}</option>)) }
+            {["All Grades", "Grade 10", "Grade 11", "Grade 12", "12A", "12B"].map((g) => (<option key={g}>{g}</option>))}
           </select>
         </div>
 
@@ -387,8 +387,8 @@ export default function AnalysisComponent() {
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
-                    <YAxis domain={[0, 100]} tickFormatter={(v)=>`${v}%`} />
-                    <Tooltip formatter={(v)=>`${Number(v).toFixed(1)}%`} />
+                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                    <Tooltip formatter={(v) => `${Number(v).toFixed(1)}%`} />
                     <Legend />
                     <Line type="monotone" dataKey="Prelim" stroke="#8884d8" dot />
                     <Line type="monotone" dataKey="June" stroke="#00C49F" dot />
@@ -397,8 +397,8 @@ export default function AnalysisComponent() {
                   <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
-                    <YAxis domain={[0, 100]} tickFormatter={(v)=>`${v}%`} />
-                    <Tooltip formatter={(v)=>`${Number(v).toFixed(1)}%`} />
+                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                    <Tooltip formatter={(v) => `${Number(v).toFixed(1)}%`} />
                     <Legend />
                     <Bar dataKey="Prelim" fill="#8884d8" />
                     <Bar dataKey="June" fill="#00C49F" />
