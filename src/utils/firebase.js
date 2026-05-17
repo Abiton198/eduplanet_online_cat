@@ -7,14 +7,15 @@ import { getStorage } from "firebase/storage";
 
 // Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyBqpQWCNBtL_DK6wNl6LSyCw63JvNMCEAc",
-    authDomain: "eduket.firebaseapp.com",
-    projectId: "eduket",
-    storageBucket: "eduket.firebasestorage.app",
-    messagingSenderId: "754323738367",
-    appId: "1:754323738367:web:b1b09aaf820fb1a3ab86ca",
-    measurementId: "G-698QRCW2RJ"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

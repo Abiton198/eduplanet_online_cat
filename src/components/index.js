@@ -15,3 +15,6 @@ export { default as LeaderboardCard } from "./LeaderboardCard";
 export { default as ResultsTab } from "./ResultsTab";
 export { default as PrincipalDashboard } from "./PrincipalDashboard";
 export { default as SchoolRegistration } from "./SchoolRegistration";
+export { default as PaymentManager } from "./PaymentManager";
+export { default as TierSelection } from "./TierSelection";
+
