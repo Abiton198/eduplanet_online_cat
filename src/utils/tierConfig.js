@@ -1,335 +1,229 @@
 // ─── tierConfig.js ────────────────────────────────────────────────────────────
-// Single source of truth for all subscription tiers.
-// Import this everywhere — never hardcode limits or feature access inline.
+// Single source of truth for tier definitions, limits, and feature flags.
+// Imported by: PrincipalDashboard, PaymentManager, TierSelection, tierEnforcer.
+//
+// Exports:
+//   TIERS            — array of tier definition objects
+//   getTierConfig    — (tierId) → tier object | null
+//   isFeatureAllowed — (tierId, featureKey) → boolean
+//   isAtLimit        — (tierId, limitKey, currentCount) → boolean
+//   getUsagePercent  — (tierId, limitKey, currentCount) → 0–100 | null
+// ─────────────────────────────────────────────────────────────────────────────
 
-export const TIERS = {
-    free: {
+// ─── TIER DEFINITIONS ────────────────────────────────────────────────────────
+// limits:   null = unlimited
+// features: boolean flags checked by isFeatureAllowed()
+
+export const TIERS = [
+    {
         id: 'free',
-        name: 'Starter',
-        tagline: 'Get started at no cost',
+        name: 'Free',
         price: 0,
-        priceLabel: 'Free forever',
-        currency: 'ZAR',
-        billingCycle: null,
-        color: '#64748b',
-        badge: '🆓',
-
+        period: null,
+        tagline: 'Get started at no cost',
         limits: {
+            students: 30,
             teachers: 3,
-            students: 50,
-            exams: 5, // renamed from examUploads
-            storageGB: 0.5,
-            aiMarksPerMonth: 20,
-            subjectsPerTeacher: 2,
+            exams: 10,
         },
-
-        features: [
-            '3 teacher accounts',
-            '50 student accounts',
-            '5 exam uploads / month',
-            '500 MB storage',
-            '20 AI auto-marks / month',
-            'Basic result reports',
-            'Manual marking support',
-        ],
-
-        unavailable: [
-            'Advanced analytics',
-            'Google Drive integration',
-            'PDF export',
-            'Audit log',
-            'Priority support',
-            'Custom branding',
-        ],
-
-        recommended: false,
-        ctaLabel: 'Start Free',
+        features: {
+            auditLog: false,
+            advancedAnalytics: false,
+            customBranding: false,
+            prioritySupport: false,
+            multiSchool: false,
+            aiMarking: true,
+            basicAnalytics: true,
+            pdfExport: true,
+        },
     },
-
-    basic: {
-        id: 'basic',
-        name: 'Basic',
+    {
+        id: 'starter',
+        name: 'Starter',
+        price: 499,
+        period: 'month',
         tagline: 'Perfect for small schools',
-        price: 299,
-        priceLabel: 'R299 / month',
-        currency: 'ZAR',
-        billingCycle: 'monthly',
-        color: '#0ea5e9',
-        badge: '⚡',
-
         limits: {
+            students: 150,
             teachers: 10,
-            students: 200,
-            exams: 30,
-            storageGB: 5,
-            aiMarksPerMonth: 200,
-            subjectsPerTeacher: 10,
+            exams: 50,
         },
-
-        features: [
-            '10 teacher accounts',
-            '200 student accounts',
-            '30 exam uploads / month',
-            '5 GB storage',
-            '200 AI auto-marks / month',
-            'Full result reports',
-            'Google Drive integration',
-            'Basic analytics dashboard',
-            'PDF export',
-        ],
-
-        unavailable: [
-            'Advanced predictive analytics',
-            'Priority support',
-            'Custom branding',
-            'Audit log',
-        ],
-
-        recommended: false,
-        ctaLabel: 'Upgrade to Basic',
+        features: {
+            auditLog: true,
+            advancedAnalytics: false,
+            customBranding: false,
+            prioritySupport: false,
+            multiSchool: false,
+            aiMarking: true,
+            basicAnalytics: true,
+            pdfExport: true,
+        },
     },
-
-    professional: {
+    {
         id: 'professional',
         name: 'Professional',
-        tagline: 'The complete teaching OS',
-        price: 799,
-        priceLabel: 'R799 / month',
-        currency: 'ZAR',
-        billingCycle: 'monthly',
-        color: '#8b5cf6',
-        badge: '🚀',
-
+        price: 1299,
+        period: 'month',
+        tagline: 'Full power for growing schools',
+        popular: true,
         limits: {
-            teachers: 40,
-            students: 800,
-            exams: 150,
-            storageGB: 25,
-            aiMarksPerMonth: 2000,
-            subjectsPerTeacher: 999,
+            students: 500,
+            teachers: 30,
+            exams: null,       // unlimited
         },
-
-        features: [
-            '40 teacher accounts',
-            '800 student accounts',
-            '150 exam uploads / month',
-            '25 GB storage',
-            '2 000 AI auto-marks / month',
-            'Advanced predictive analytics',
-            'Full audit log',
-            'Priority email support',
-            'Custom school branding',
-            'Google Drive integration',
-            'PDF export & print',
-            'Agentic study planner',
-        ],
-
-        unavailable: [
-            'Dedicated account manager',
-            'On-site training',
-        ],
-
-        recommended: true,
-        ctaLabel: 'Go Professional',
+        features: {
+            auditLog: true,
+            advancedAnalytics: true,
+            customBranding: true,
+            prioritySupport: true,
+            multiSchool: false,
+            aiMarking: true,
+            basicAnalytics: true,
+            pdfExport: true,
+        },
     },
-
-    enterprise: {
+    {
+        id: 'platinum',
+        name: 'Platinum',
+        price: 2499,
+        period: 'month',
+        tagline: 'Premium plan for ultimate flexibility',
+        popular: true,
+        limits: {
+            students: 1000,
+            teachers: 100,
+            exams: null,       // unlimited
+        },
+        features: {
+            auditLog: true,
+            advancedAnalytics: true,
+            customBranding: true,
+            prioritySupport: true,
+            multiSchool: false,
+            aiMarking: true,
+            basicAnalytics: true,
+            pdfExport: true,
+        },
+    },
+    {
         id: 'enterprise',
         name: 'Enterprise',
-        tagline: 'For large schools & circuits',
-        price: 1999,
-        priceLabel: 'R1 999 / month',
-        currency: 'ZAR',
-        billingCycle: 'monthly',
-        color: '#f59e0b',
-        badge: '🏆',
-
+        price: null,           // custom / contact sales
+        period: null,
+        tagline: 'Tailored for districts & groups',
         limits: {
-            teachers: 9999,
-            students: 9999,
-            exams: 9999,
-            storageGB: 200,
-            aiMarksPerMonth: 9999,
-            subjectsPerTeacher: 999,
+            students: null,    // unlimited
+            teachers: null,
+            exams: null,
         },
-
-        features: [
-            'Unlimited teacher accounts',
-            'Unlimited student accounts',
-            'Unlimited exam uploads',
-            '200 GB storage',
-            'Unlimited AI auto-marks',
-            'All Professional features',
-            'Dedicated account manager',
-            'On-site training & onboarding',
-            'SLA uptime guarantee',
-            'Multi-campus support',
-            'Circuit / district reporting',
-            'API access',
-        ],
-
-        unavailable: [],
-
-        recommended: false,
-        ctaLabel: 'Contact Sales',
+        features: {
+            auditLog: true,
+            advancedAnalytics: true,
+            customBranding: true,
+            prioritySupport: true,
+            multiSchool: true,
+            aiMarking: true,
+            basicAnalytics: true,
+            pdfExport: true,
+        },
     },
-};
-
-// ─── ORDER ────────────────────────────────────────────────────────────────────
-
-export const TIER_ORDER = [
-    'free',
-    'basic',
-    'professional',
-    'enterprise',
 ];
 
-// ─── FEATURE ACCESS MATRIX ────────────────────────────────────────────────────
+// ─── TIER ORDER ───────────────────────────────────────────────────────────────
+// Ordered from lowest to highest — use for upgrade/downgrade comparisons.
+export const TIER_ORDER = ['free', 'starter', 'professional', 'platinum', 'enterprise'];
 
-export const FEATURE_ACCESS = {
-    auditLog: ['basic', 'professional', 'enterprise'],
-    pdfExport: ['basic', 'professional', 'enterprise'],
-    advancedAnalytics: ['professional', 'enterprise'],
-    aiPredictions: ['professional', 'enterprise'],
-    customBranding: ['professional', 'enterprise'],
-    prioritySupport: ['professional', 'enterprise'],
-    apiAccess: ['enterprise'],
-    multiCampus: ['enterprise'],
-    districtReporting: ['enterprise'],
-};
+// ─── LOOKUP ───────────────────────────────────────────────────────────────────
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
-
-/** Get full tier object */
-export function getTier(tierId = 'free') {
-    return TIERS[tierId] || TIERS.free;
+/**
+ * Returns the full tier config object for a given tier id.
+ * Falls back to 'free' if the id is unrecognised.
+ *
+ * @param {string} tierId  e.g. 'free' | 'starter' | 'professional' | 'enterprise'
+ * @returns {object}
+ */
+export function getTierConfig(tierId) {
+    return TIERS.find((t) => t.id === tierId) ?? TIERS[0];
 }
 
-/** Compare upgrade hierarchy */
-export function isUpgrade(fromTier, toTier) {
-    return TIER_ORDER.indexOf(toTier) > TIER_ORDER.indexOf(fromTier);
+/** Alias for getTierConfig — use either name interchangeably. */
+export const getTier = getTierConfig;
+
+/**
+ * Returns true if newTier is a higher plan than currentTier.
+ * @param {string} currentTier
+ * @param {string} newTier
+ * @returns {boolean}
+ *
+ * @example
+ * isUpgrade('free', 'starter')       // true
+ * isUpgrade('professional', 'free')  // false
+ */
+export function isUpgrade(currentTier, newTier) {
+    return TIER_ORDER.indexOf(newTier) > TIER_ORDER.indexOf(currentTier);
 }
 
-/** Check whether a feature is available */
+// ─── FEATURE GATE ─────────────────────────────────────────────────────────────
+
+/**
+ * Returns true if the given feature is enabled on this tier.
+ *
+ * @param {string} tierId       e.g. 'starter'
+ * @param {string} featureKey   e.g. 'auditLog' | 'advancedAnalytics' | 'customBranding'
+ * @returns {boolean}
+ *
+ * @example
+ * isFeatureAllowed('free', 'auditLog')        // false
+ * isFeatureAllowed('starter', 'auditLog')     // true
+ * isFeatureAllowed('professional', 'multiSchool') // false
+ */
 export function isFeatureAllowed(tierId, featureKey) {
-    const allowedTiers = FEATURE_ACCESS[featureKey];
-
-    // if feature not registered, default allow
-    if (!allowedTiers) return true;
-
-    return allowedTiers.includes(tierId);
+    const tier = getTierConfig(tierId);
+    return tier.features[featureKey] === true;
 }
 
-/** Generic limit checker */
-export function checkLimit(tierId, limitKey, currentCount = 0) {
-    const tier = getTier(tierId);
+// ─── LIMIT CHECK ──────────────────────────────────────────────────────────────
 
-    const limit = tier?.limits?.[limitKey];
-
-    // if limit undefined treat as unlimited
-    if (limit == null) {
-        return {
-            allowed: true,
-            unlimited: true,
-            limit: null,
-            current: currentCount,
-            message: null,
-        };
-    }
-
-    const unlimited = limit >= 9999;
-    const allowed = unlimited || currentCount < limit;
-
-    return {
-        allowed,
-        unlimited,
-        limit,
-        current: currentCount,
-        remaining: unlimited ? Infinity : Math.max(limit - currentCount, 0),
-
-        message: allowed
-            ? null
-            : `Your ${tier.name} plan allows only ${limit} ${limitKey}. Upgrade to continue.`,
-    };
+/**
+ * Returns true if the school has hit (or exceeded) the limit for a resource.
+ * Always returns false when the limit is null (unlimited).
+ *
+ * @param {string} tierId       e.g. 'free'
+ * @param {string} limitKey     e.g. 'students' | 'teachers' | 'exams'
+ * @param {number} currentCount actual count from Firestore
+ * @returns {boolean}
+ *
+ * @example
+ * isAtLimit('free', 'students', 30)  // true  (free cap = 30)
+ * isAtLimit('free', 'students', 29)  // false
+ * isAtLimit('professional', 'exams', 999) // false (unlimited)
+ */
+export function isAtLimit(tierId, limitKey, currentCount) {
+    const tier = getTierConfig(tierId);
+    const limit = tier.limits[limitKey];
+    if (limit === null || limit === undefined) return false;
+    return currentCount >= limit;
 }
 
-/** Returns true when usage reached limit */
-export function isAtLimit(tierId, limitKey, currentCount = 0) {
-    const result = checkLimit(tierId, limitKey, currentCount);
+// ─── USAGE PERCENT ────────────────────────────────────────────────────────────
 
-    if (result.unlimited) return false;
-
-    return currentCount >= result.limit;
-}
-
-/** Returns percentage usage */
-export function limitUsagePct(tierId, limitKey, currentCount = 0) {
-    const tier = getTier(tierId);
-
-    const limit = tier?.limits?.[limitKey];
-
-    if (!limit || limit >= 9999) return 0;
-
-    return Math.min(
-        100,
-        Math.round((currentCount / limit) * 100)
-    );
-}
-
-/** Remaining units before hitting limit */
-export function remainingLimit(tierId, limitKey, currentCount = 0) {
-    const tier = getTier(tierId);
-
-    const limit = tier?.limits?.[limitKey];
-
-    if (!limit || limit >= 9999) return Infinity;
-
-    return Math.max(limit - currentCount, 0);
-}
-
-/** Human-readable storage formatting */
-export function formatStorage(gb) {
-    if (gb < 1) {
-        return `${Math.round(gb * 1024)} MB`;
-    }
-
-    return `${gb} GB`;
-}
-
-/** Get next upgrade tier */
-export function getNextTier(currentTier) {
-    const currentIndex = TIER_ORDER.indexOf(currentTier);
-
-    if (currentIndex === -1) return null;
-
-    return TIER_ORDER[currentIndex + 1] || null;
-}
-
-/** Get upgrade config */
-export function getUpgradeTier(currentTier) {
-    const nextTierId = getNextTier(currentTier);
-
-    if (!nextTierId) return null;
-
-    return getTier(nextTierId);
-}
-
-/** Get tier badge color */
-export function getTierColor(tierId) {
-    return getTier(tierId)?.color || '#64748b';
-}
-
-/** Get tier badge emoji */
-export function getTierBadge(tierId) {
-    return getTier(tierId)?.badge || '🆓';
-}
-
-/** Get tier display label */
-export function getTierLabel(tierId) {
-    return getTier(tierId)?.name || 'Starter';
-}
-
-/** Get all tiers as array */
-export function getAllTiers() {
-    return TIER_ORDER.map((id) => TIERS[id]);
+/**
+ * Returns how full a resource slot is as a 0–100 percentage.
+ * Returns null when the limit is null (unlimited) — callers should hide the meter.
+ *
+ * @param {string} tierId
+ * @param {string} limitKey
+ * @param {number} currentCount
+ * @returns {number|null}
+ *
+ * @example
+ * getUsagePercent('free', 'students', 15)   // 50
+ * getUsagePercent('free', 'students', 30)   // 100
+ * getUsagePercent('professional', 'exams', 999) // null
+ */
+export function getUsagePercent(tierId, limitKey, currentCount) {
+    const tier = getTierConfig(tierId);
+    const limit = tier.limits[limitKey];
+    if (limit === null || limit === undefined) return null;
+    return Math.min(Math.round((currentCount / limit) * 100), 100);
 }

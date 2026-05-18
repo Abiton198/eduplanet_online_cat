@@ -180,7 +180,7 @@ function App() {
               </div>
               <div className="hidden md:block text-left">
                 <h1 className="text-2xl font-bold text-gray-800 dark:text-white tracking-tight leading-none">
-                  Technology Oasis
+                  Eduket
                 </h1>
                 <p className="text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 font-bold">
                   Smart Learning

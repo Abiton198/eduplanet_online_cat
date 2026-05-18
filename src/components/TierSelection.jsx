@@ -1,152 +1,179 @@
 // ─── TierSelection.jsx ────────────────────────────────────────────────────────
-// Shown as Step 4 in SchoolRegistration.
-// Also used standalone inside PaymentManager for upgrades.
-
-import React, { useState } from 'react';
-import { Check, X, Zap, Star, Crown, Gift } from 'lucide-react';
-import { TIERS, TIER_ORDER } from '../utils/tierConfig';
+import React from 'react';
+import { Check, Zap, Star, Sparkles, Crown, ArrowRight, Lock } from 'lucide-react';
+import { TIERS } from '../utils/tierConfig';
 
 const TIER_ICONS = {
-    free: <Gift size={22} />,
-    basic: <Zap size={22} />,
-    professional: <Star size={22} />,
-    enterprise: <Crown size={22} />,
+    free: Star, starter: Zap, professional: Sparkles, platinum: Crown, enterprise: Crown,
 };
+const TIER_GRADIENTS = {
+    free: 'from-slate-400 to-slate-500',
+    starter: 'from-blue-500 to-cyan-500',
+    professional: 'from-violet-500 to-purple-600',
+    platinum: 'from-yellow-400 to-amber-500',   // gold
+    enterprise: 'from-amber-400 to-orange-500',
+};
+const TIER_ACCENTS = {
+    free: '#64748b',
+    starter: '#3b82f6',
+    professional: '#7c3aed',
+    platinum: '#d97706',                         // gold
+    enterprise: '#f59e0b',
+};
+const TIER_RINGS = {
+    free: 'ring-slate-300',
+    starter: 'ring-blue-400',
+    professional: 'ring-violet-400',
+    platinum: 'ring-yellow-400',                 // gold ring
+    enterprise: 'ring-amber-400',
+};
+const TIER_FEATURES = {
+    free: ['30 students', '3 teachers', '10 exams', 'AI auto-marking', 'Basic analytics'],
+    starter: ['150 students', '10 teachers', '50 exams', 'AI auto-marking', 'Audit log', 'Standard analytics', 'Email support'],
+    professional: ['500 students', '30 teachers', 'Unlimited exams', 'AI auto-marking', 'Full audit log', 'Advanced analytics', 'Custom branding', 'Priority support'],
+    platinum: ['1000 students', '100 teachers', 'Unlimited exams', 'AI auto-marking', 'Full audit log', 'Advanced analytics', 'Custom branding', 'Priority support'],
+    enterprise: ['Unlimited everything', 'Multi-school management', 'Full audit log', 'Advanced analytics', 'Custom branding', 'SLA support', 'Dedicated account manager'],
+};
+const TIER_MISSING = {
+    free: ['Audit log', 'Advanced analytics', 'Priority support'],
+    starter: ['Advanced analytics', 'Priority support', 'Custom branding'],
+    professional: ['Multi-school management'],
+    platinum: ['Multi-school management'],
+    enterprise: [],
+};
+const TIER_ORDER_LIST = ['free', 'starter', 'professional', 'platinum', 'enterprise'];
 
-// ── Individual card ────────────────────────────────────────────────────────────
-function TierCard({ tier, selected, current, onSelect, compact = false }) {
+function TierCard({ tier, selected, current, onSelect, compact }) {
+    if (!tier || !tier.id) return null;
+
+    const Icon = TIER_ICONS[tier.id] || Star;
+    const gradient = TIER_GRADIENTS[tier.id] || 'from-slate-400 to-slate-500';
+    const accent = TIER_ACCENTS[tier.id] || '#64748b';
+    const ring = TIER_RINGS[tier.id] || 'ring-slate-300';
+    const features = TIER_FEATURES[tier.id] || [];
+    const missing = TIER_MISSING[tier.id] || [];
+
     const isSelected = selected === tier.id;
     const isCurrent = current === tier.id;
-    const isDowngrade = TIER_ORDER.indexOf(tier.id) < TIER_ORDER.indexOf(current);
+    const isDowngrade = current
+        ? TIER_ORDER_LIST.indexOf(tier.id) < TIER_ORDER_LIST.indexOf(current)
+        : false;
+
+    // "Most Popular" only shows on non-platinum tiers that have popular: true
+    const showPopularBadge = tier.popular && tier.id !== 'platinum' && !compact;
+
+    const handleClick = () => { if (!isCurrent && !isDowngrade) onSelect(tier.id); };
 
     return (
         <div
-            onClick={() => !isDowngrade && onSelect(tier.id)}
+            onClick={handleClick}
             className={`
-        relative rounded-3xl border-2 transition-all duration-300 flex flex-col
-        ${compact ? 'p-5' : 'p-7'}
-        ${isSelected
-                    ? 'border-transparent shadow-2xl scale-[1.02]'
-                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'}
-        ${isDowngrade ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
-      `}
-            style={isSelected ? {
-                background: `linear-gradient(135deg, ${tier.color}18 0%, ${tier.color}08 100%)`,
-                borderColor: tier.color,
-                boxShadow: `0 20px 60px ${tier.color}25`,
-            } : {}}
+                relative flex flex-col rounded-3xl border-2 transition-all duration-200 overflow-hidden
+                ${compact ? 'p-4' : 'p-6'}
+                ${isSelected
+                    ? `border-transparent ring-2 ${ring} shadow-xl scale-[1.02]`
+                    : isCurrent
+                        ? 'border-transparent ring-2 ring-emerald-400 shadow-md'
+                        : isDowngrade
+                            ? 'border-slate-100 dark:border-slate-800 opacity-50 cursor-not-allowed'
+                            : 'border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-lg cursor-pointer'}
+                bg-white dark:bg-slate-800
+            `}
         >
-            {/* Recommended badge */}
-            {tier.recommended && (
-                <div
-                    className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
-                    style={{ backgroundColor: tier.color }}
-                >
-                    ⭐ Most Popular
+            {/* Most Popular badge — never on platinum */}
+            {showPopularBadge && (
+                <div className="absolute top-0 right-0">
+                    <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white text-[9px] font-black px-3 py-1 rounded-bl-xl rounded-tr-3xl tracking-wider uppercase">
+                        Most Popular
+                    </div>
                 </div>
             )}
 
-            {/* Current plan badge */}
+            {/* Current badge */}
             {isCurrent && (
-                <div className="absolute -top-3 right-5 px-3 py-1 rounded-full bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest">
-                    Current
+                <div className="absolute top-3 left-3">
+                    <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">
+                        <Check size={9} /> Current
+                    </span>
                 </div>
             )}
 
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-4">
-                <div
-                    className="w-11 h-11 rounded-2xl flex items-center justify-center text-white flex-shrink-0"
-                    style={{ backgroundColor: tier.color }}
-                >
-                    {TIER_ICONS[tier.id]}
+            {/* Icon + name */}
+            <div className={`flex items-center gap-3 ${isCurrent ? 'mt-5' : ''} ${compact ? 'mb-3' : 'mb-4'}`}>
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br ${gradient} shadow-lg flex-shrink-0`}>
+                    <Icon size={18} className="text-white" />
                 </div>
                 <div>
-                    <p className="font-black text-slate-800 dark:text-white text-lg leading-tight">{tier.name}</p>
-                    <p className="text-xs text-slate-500">{tier.tagline}</p>
+                    <p className="font-black text-slate-800 dark:text-white text-sm">{tier.name}</p>
+                    {!compact && <p className="text-[10px] text-slate-400 font-medium">{tier.tagline}</p>}
                 </div>
-                {isSelected && (
-                    <div className="ml-auto w-6 h-6 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: tier.color }}>
-                        <Check size={14} />
-                    </div>
-                )}
             </div>
 
             {/* Price */}
-            <div className="mb-5">
+            <div className={compact ? 'mb-3' : 'mb-5'}>
                 {tier.price === 0 ? (
-                    <p className="text-3xl font-black text-slate-800 dark:text-white">Free</p>
+                    <p className="text-2xl font-black text-slate-800 dark:text-white">Free</p>
+                ) : tier.price === null ? (
+                    <p className="text-lg font-black text-slate-800 dark:text-white">Custom</p>
                 ) : (
-                    <div className="flex items-end gap-1">
-                        <p className="text-3xl font-black text-slate-800 dark:text-white">R{tier.price.toLocaleString()}</p>
-                        <p className="text-slate-400 text-sm mb-1">/month</p>
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-xs font-bold text-slate-400">R</span>
+                        <span className="text-2xl font-black text-slate-800 dark:text-white">{tier.price.toLocaleString()}</span>
+                        <span className="text-xs text-slate-400 font-medium">/{tier.period}</span>
                     </div>
                 )}
-            </div>
-
-            {/* Limits */}
-            <div className="grid grid-cols-2 gap-2 mb-5">
-                {[
-                    ['Teachers', tier.limits.teachers >= 9999 ? '∞' : tier.limits.teachers],
-                    ['Students', tier.limits.students >= 9999 ? '∞' : tier.limits.students],
-                    ['Exams/mo', tier.limits.examUploads >= 9999 ? '∞' : tier.limits.examUploads],
-                    ['AI Marks', tier.limits.aiMarksPerMonth >= 9999 ? '∞' : tier.limits.aiMarksPerMonth],
-                ].map(([label, val]) => (
-                    <div key={label} className="bg-slate-50 dark:bg-slate-800/60 rounded-xl px-3 py-2">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{label}</p>
-                        <p className="font-black text-slate-800 dark:text-white text-sm">{val}</p>
-                    </div>
-                ))}
             </div>
 
             {/* Features */}
             {!compact && (
-                <div className="space-y-1.5 flex-1">
-                    {tier.features.map((f) => (
-                        <div key={f} className="flex items-start gap-2 text-xs">
-                            <Check size={12} className="mt-0.5 flex-shrink-0" style={{ color: tier.color }} />
-                            <span className="text-slate-600 dark:text-slate-300">{f}</span>
-                        </div>
+                <ul className="space-y-1.5 flex-1 mb-5">
+                    {features.map((f) => (
+                        <li key={f} className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-300">
+                            <Check size={12} className="flex-shrink-0 mt-0.5" style={{ color: accent }} />
+                            {f}
+                        </li>
                     ))}
-                    {tier.unavailable.slice(0, 3).map((f) => (
-                        <div key={f} className="flex items-start gap-2 text-xs opacity-40">
-                            <X size={12} className="mt-0.5 flex-shrink-0 text-slate-400" />
-                            <span className="text-slate-400 line-through">{f}</span>
-                        </div>
+                    {missing.map((f) => (
+                        <li key={f} className="flex items-start gap-2 text-xs text-slate-300 dark:text-slate-600 line-through">
+                            <Lock size={11} className="flex-shrink-0 mt-0.5" />
+                            {f}
+                        </li>
                     ))}
-                </div>
+                </ul>
             )}
 
             {/* CTA */}
             <button
                 type="button"
-                disabled={isDowngrade || isCurrent}
-                onClick={(e) => { e.stopPropagation(); !isDowngrade && onSelect(tier.id); }}
-                className="mt-5 w-full py-3 rounded-2xl font-black text-sm transition-all disabled:opacity-40"
-                style={isSelected
-                    ? { backgroundColor: tier.color, color: 'white' }
-                    : { backgroundColor: tier.color + '15', color: tier.color }
-                }
+                disabled={isCurrent || isDowngrade}
+                onClick={(e) => { e.stopPropagation(); handleClick(); }}
+                className={`
+                    w-full py-2.5 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-1.5
+                    ${isCurrent ? 'bg-emerald-50 text-emerald-700 cursor-default'
+                        : isSelected ? 'text-white shadow-lg'
+                            : isDowngrade ? 'bg-slate-50 text-slate-300 cursor-not-allowed'
+                                : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:opacity-90'}
+                `}
+                style={isSelected && !isCurrent ? { background: `linear-gradient(135deg, ${accent}, ${accent}cc)` } : {}}
             >
-                {isCurrent ? '✓ Current Plan' : isDowngrade ? 'Cannot Downgrade' : tier.ctaLabel}
+                {isCurrent ? <><Check size={12} /> Active</>
+                    : isDowngrade ? 'Not available'
+                        : tier.price === null ? <>Contact Sales <ArrowRight size={11} /></>
+                            : tier.price === 0 ? <>Select Free <ArrowRight size={11} /></>
+                                : <>Select {tier.name} <ArrowRight size={11} /></>}
             </button>
         </div>
     );
 }
 
-// ── Main export ────────────────────────────────────────────────────────────────
-export default function TierSelection({
-    selected,
-    current = null,   // currently active tier (for upgrade mode)
-    onSelect,
-    compact = false,  // compact mode for upgrade modal
-}) {
+export default function TierSelection({ selected, current, onSelect, compact = false }) {
+    const tiers = Array.isArray(TIERS) ? TIERS.filter(Boolean) : [];
     return (
-        <div className={`grid gap-4 ${compact ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4'}`}>
-            {TIER_ORDER.map((id) => (
+        <div className={`grid gap-4 ${compact ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-5'}`}>
+            {tiers.map((tier) => (
                 <TierCard
-                    key={id}
-                    tier={TIERS[id]}
+                    key={tier.id}
+                    tier={tier}
                     selected={selected}
                     current={current}
                     onSelect={onSelect}
@@ -154,20 +181,5 @@ export default function TierSelection({
                 />
             ))}
         </div>
-    );
-}
-
-// ── Compact inline tier badge (for sidebar / navbar) ──────────────────────────
-export function TierBadge({ tierId, onClick }) {
-    const tier = TIERS[tierId] || TIERS.free;
-    return (
-        <button
-            onClick={onClick}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all hover:opacity-80"
-            style={{ borderColor: tier.color + '50', backgroundColor: tier.color + '15' }}
-        >
-            <span className="text-sm">{tier.badge}</span>
-            <span className="text-xs font-black" style={{ color: tier.color }}>{tier.name}</span>
-        </button>
     );
 }
