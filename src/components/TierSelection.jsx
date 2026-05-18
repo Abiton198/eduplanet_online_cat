@@ -1,7 +1,7 @@
 // ─── TierSelection.jsx ────────────────────────────────────────────────────────
 import React from 'react';
-import { Check, Zap, Star, Sparkles, Crown, ArrowRight, Lock } from 'lucide-react';
-import { TIERS } from '../utils/tierConfig';
+import { Check, Zap, Star, Sparkles, Crown, ArrowRight, Lock, RefreshCw } from 'lucide-react';
+import { TIERS, TIER_ORDER, getTierPrice } from '../utils/tierConfig';
 
 const TIER_ICONS = {
     free: Star, starter: Zap, professional: Sparkles, platinum: Crown, enterprise: Crown,
@@ -41,9 +41,8 @@ const TIER_MISSING = {
     platinum: ['Multi-school management'],
     enterprise: [],
 };
-const TIER_ORDER_LIST = ['free', 'starter', 'professional', 'platinum', 'enterprise'];
 
-function TierCard({ tier, selected, current, onSelect, compact }) {
+function TierCard({ tier, selected, current, billingCycle, onSelect, compact }) {
     if (!tier || !tier.id) return null;
 
     const Icon = TIER_ICONS[tier.id] || Star;
@@ -55,14 +54,20 @@ function TierCard({ tier, selected, current, onSelect, compact }) {
 
     const isSelected = selected === tier.id;
     const isCurrent = current === tier.id;
-    const isDowngrade = current
-        ? TIER_ORDER_LIST.indexOf(tier.id) < TIER_ORDER_LIST.indexOf(current)
+
+    // Calculate if shifting to this card is a downgrade
+    const isDowngrade = current && TIER_ORDER
+        ? TIER_ORDER.indexOf(tier.id) < TIER_ORDER.indexOf(current)
         : false;
 
-    // "Most Popular" only shows on non-platinum tiers that have popular: true
+    // Use our utility formula to calculate the actual dynamic cost to present
+    const computedPrice = getTierPrice(tier, billingCycle);
+
     const showPopularBadge = tier.popular && tier.id !== 'platinum' && !compact;
 
-    const handleClick = () => { if (!isCurrent && !isDowngrade) onSelect(tier.id); };
+    const handleClick = () => {
+        if (!isCurrent) onSelect(tier.id);
+    };
 
     return (
         <div
@@ -74,13 +79,11 @@ function TierCard({ tier, selected, current, onSelect, compact }) {
                     ? `border-transparent ring-2 ${ring} shadow-xl scale-[1.02]`
                     : isCurrent
                         ? 'border-transparent ring-2 ring-emerald-400 shadow-md'
-                        : isDowngrade
-                            ? 'border-slate-100 dark:border-slate-800 opacity-50 cursor-not-allowed'
-                            : 'border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-lg cursor-pointer'}
+                        : 'border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-lg cursor-pointer'}
                 bg-white dark:bg-slate-800
             `}
         >
-            {/* Most Popular badge — never on platinum */}
+            {/* Most Popular badge */}
             {showPopularBadge && (
                 <div className="absolute top-0 right-0">
                     <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white text-[9px] font-black px-3 py-1 rounded-bl-xl rounded-tr-3xl tracking-wider uppercase">
@@ -89,17 +92,26 @@ function TierCard({ tier, selected, current, onSelect, compact }) {
                 </div>
             )}
 
-            {/* Current badge */}
+            {/* Current status badge */}
             {isCurrent && (
                 <div className="absolute top-3 left-3">
                     <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">
-                        <Check size={9} /> Current
+                        <Check size={9} /> Current Plan
+                    </span>
+                </div>
+            )}
+
+            {/* Downgrade alert layout indicator */}
+            {!isCurrent && isDowngrade && !compact && (
+                <div className="absolute top-3 left-3">
+                    <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+                        <RefreshCw size={9} className="animate-spin-slow" /> Downgrade
                     </span>
                 </div>
             )}
 
             {/* Icon + name */}
-            <div className={`flex items-center gap-3 ${isCurrent ? 'mt-5' : ''} ${compact ? 'mb-3' : 'mb-4'}`}>
+            <div className={`flex items-center gap-3 ${isCurrent || (isDowngrade && !compact) ? 'mt-5' : ''} ${compact ? 'mb-3' : 'mb-4'}`}>
                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br ${gradient} shadow-lg flex-shrink-0`}>
                     <Icon size={18} className="text-white" />
                 </div>
@@ -109,22 +121,26 @@ function TierCard({ tier, selected, current, onSelect, compact }) {
                 </div>
             </div>
 
-            {/* Price */}
+            {/* Price Calculations output interface */}
             <div className={compact ? 'mb-3' : 'mb-5'}>
-                {tier.price === 0 ? (
+                {computedPrice === 0 ? (
                     <p className="text-2xl font-black text-slate-800 dark:text-white">Free</p>
-                ) : tier.price === null ? (
+                ) : computedPrice === null ? (
                     <p className="text-lg font-black text-slate-800 dark:text-white">Custom</p>
                 ) : (
                     <div className="flex items-baseline gap-1">
                         <span className="text-xs font-bold text-slate-400">R</span>
-                        <span className="text-2xl font-black text-slate-800 dark:text-white">{tier.price.toLocaleString()}</span>
-                        <span className="text-xs text-slate-400 font-medium">/{tier.period}</span>
+                        <span className="text-2xl font-black text-slate-800 dark:text-white">
+                            {computedPrice.toLocaleString()}
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">
+                            {billingCycle === 'yearly' ? '/year' : '/month'}
+                        </span>
                     </div>
                 )}
             </div>
 
-            {/* Features */}
+            {/* Features layout checklist list item fields */}
             {!compact && (
                 <ul className="space-y-1.5 flex-1 mb-5">
                     {features.map((f) => (
@@ -142,32 +158,39 @@ function TierCard({ tier, selected, current, onSelect, compact }) {
                 </ul>
             )}
 
-            {/* CTA */}
+            {/* Dynamic CTA Selection Buttons */}
             <button
                 type="button"
-                disabled={isCurrent || isDowngrade}
+                disabled={isCurrent}
                 onClick={(e) => { e.stopPropagation(); handleClick(); }}
                 className={`
                     w-full py-2.5 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-1.5
-                    ${isCurrent ? 'bg-emerald-50 text-emerald-700 cursor-default'
-                        : isSelected ? 'text-white shadow-lg'
-                            : isDowngrade ? 'bg-slate-50 text-slate-300 cursor-not-allowed'
-                                : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:opacity-90'}
+                    ${isCurrent
+                        ? 'bg-emerald-50 text-emerald-700 cursor-default'
+                        : isSelected
+                            ? 'text-white shadow-lg'
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:opacity-90'
+                    }
                 `}
                 style={isSelected && !isCurrent ? { background: `linear-gradient(135deg, ${accent}, ${accent}cc)` } : {}}
             >
-                {isCurrent ? <><Check size={12} /> Active</>
-                    : isDowngrade ? 'Not available'
-                        : tier.price === null ? <>Contact Sales <ArrowRight size={11} /></>
-                            : tier.price === 0 ? <>Select Free <ArrowRight size={11} /></>
-                                : <>Select {tier.name} <ArrowRight size={11} /></>}
+                {isCurrent ? (
+                    <><Check size={12} /> Active</>
+                ) : tier.price === null ? (
+                    <>Contact Sales <ArrowRight size={11} /></>
+                ) : isDowngrade ? (
+                    <>Downgrade to {tier.name} <ArrowRight size={11} /></>
+                ) : (
+                    <>Select {tier.name} <ArrowRight size={11} /></>
+                )}
             </button>
         </div>
     );
 }
 
-export default function TierSelection({ selected, current, onSelect, compact = false }) {
+export default function TierSelection({ selected, current, billingCycle = 'monthly', onSelect, compact = false }) {
     const tiers = Array.isArray(TIERS) ? TIERS.filter(Boolean) : [];
+
     return (
         <div className={`grid gap-4 ${compact ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-5'}`}>
             {tiers.map((tier) => (
@@ -176,6 +199,7 @@ export default function TierSelection({ selected, current, onSelect, compact = f
                     tier={tier}
                     selected={selected}
                     current={current}
+                    billingCycle={billingCycle}
                     onSelect={onSelect}
                     compact={compact}
                 />

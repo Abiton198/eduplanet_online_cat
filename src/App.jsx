@@ -16,13 +16,15 @@ import ReviewPage from './components/ReviewPage';
 import AllResults from './components/AllResults';
 import TeacherDashboard from './components/TeacherDashboard';
 import GroupWeakStudents from './utils/GroupWeakStudents';
+import PaymentSuccess from './pages/PaymentSuccess';
+import PaymentCancel from './pages/PaymentCancel';
 
 // ── New school-scoped components ──────────────────────────────────────────────
 import SchoolRegistration from './components/SchoolRegistration';
 import PrincipalDashboard from './components/PrincipalDashboard';
 import { SchoolProvider } from './utils/schoolContext';
 
-import logo from './img/logo_home.png';
+import logo from './img/eduket.png';
 import Swal from 'sweetalert2';
 
 // ─── Auth guard ────────────────────────────────────────────────────────────────
@@ -173,8 +175,8 @@ function App() {
             <Link to="/" className="flex items-center gap-4 group">
               <div className="relative">
                 <img
-                  src={logo} alt="EduCat"
-                  className="h-12 w-12 rounded-xl shadow-lg ring-4 ring-white/50 dark:ring-gray-800/50 group-hover:scale-110 transition-transform duration-300"
+                  src={logo} alt="Eduket"
+                  className="h-12 w-12 rounded-xl shadow-lg ring-4 ring-white/50 dark:ring-gray-800/50 group-hover:scale-110 transition-transform duration-300 dark:invert dark:hue-rotate-180"
                 />
                 <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 opacity-30 blur-xl group-hover:opacity-60 transition" />
               </div>
@@ -316,6 +318,8 @@ function App() {
             <Route path="/exam-rules" element={<ExamRules />} />
             <Route path="/all-results" element={<AllResults />} />
             <Route path="/group-weak-students" element={<GroupWeakStudents />} />
+            <Route path="/payment/success" element={<PaymentSuccess />} />
+            <Route path="/payment/cancel" element={<PaymentCancel />} />
 
             {/* Teacher Dashboard */}
             <Route
