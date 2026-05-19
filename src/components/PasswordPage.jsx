@@ -42,7 +42,7 @@ import { listSchools } from '../utils/firestoreHelpers';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive';
 
 const SA_PROVINCES = [
   'Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal',
@@ -255,111 +255,30 @@ export default function AuthPage({ setStudentInfo }) {
     setError('');
 
     try {
-      const driveProvider = new GoogleAuthProvider();
+      const provider = new GoogleAuthProvider();
 
-      // Basic scopes
-      driveProvider.addScope('profile');
-      driveProvider.addScope('email');
+      provider.addScope('profile');
+      provider.addScope('email');
 
-      // Google Drive access
-      driveProvider.addScope('https://www.googleapis.com/auth/drive.file');
-
-      // Force Google consent screen
-      driveProvider.setCustomParameters({
-        prompt: 'consent',
-        access_type: 'offline',
-      });
-
-      const result = await signInWithPopup(auth, driveProvider);
+      const result = await signInWithPopup(auth, provider);
 
       const user = result.user;
 
-      const credential =
-        GoogleAuthProvider.credentialFromResult(result);
-
-      const token = credential?.accessToken ?? null;
-
-      console.log('GOOGLE DRIVE TOKEN:', token);
-
-      if (token) {
-        // Use localStorage instead of sessionStorage
-        localStorage.setItem('drive_access_token', token);
-
-        localStorage.setItem(
-          'drive_token_expiry',
-          String(Date.now() + 55 * 60 * 1000)
-        );
-
-        // TEST DRIVE ACCESS IMMEDIATELY
-        const testRes = await fetch(
-          'https://www.googleapis.com/drive/v3/about?fields=user',
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        const testData = await testRes.json();
-
-        console.log('Drive API Test:', testData);
-
-        if (!testRes.ok) {
-          throw new Error(
-            testData?.error?.message ||
-            'Google Drive permission failed.'
-          );
-        }
-      }
-
-      // Resolve existing role
       const found = await resolveUserRole(user.uid);
 
-      if (found) {
-        await postLogin({
-          uid: user.uid,
-          role: found.role,
-          data: found.data,
-          token,
-        });
-      } else {
-        // New user setup
-        const parts = (user.displayName || '')
-          .trim()
-          .split(/\s+/);
-
-        const autoName = parts[0] || '';
-        const autoSurname = parts.slice(1).join(' ') || '';
-
-        setName(autoName);
-        setSurname(autoSurname);
-
-        const autoFields = [];
-
-        if (autoName) autoFields.push('name');
-        if (autoSurname) autoFields.push('surname');
-
-        if (autoFields.length) {
-          markAuto(autoFields);
-        }
-
-        setTempUser({
-          uid: user.uid,
-          email: user.email,
-          driveToken: token,
-        });
-
-        setIsModalOpen(false);
-        setShowProfileSetup(true);
+      if (!found) {
+        throw new Error('User role not found');
       }
 
-    } catch (err) {
-      console.error('Google Login Error:', err);
+      await postLogin({
+        uid: user.uid,
+        role: found.role,
+        data: found.data,
+      });
 
-      setError(
-        err?.message ||
-        'Authentication failed. Please try again.'
-      );
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
     }
   };
 

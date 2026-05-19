@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, getDoc } from 'firebase/firestore';
 import { getAuth, signOut } from 'firebase/auth';
 import { db } from '../utils/firebase';
 import {
@@ -152,9 +152,14 @@ function EditExamModal({ exam, onSave, onClose }) {
 }
 
 // ─── AUDIT ROW ────────────────────────────────────────────────────────────────
+// ─── AUDIT ROW ────────────────────────────────────────────────────────────────
+// Drop-in replacement for the existing AuditRow component.
+// Adds examDuration to the row summary chip and the expanded detail panel,
+// matching the structure of the upload wizard.
 
 function AuditRow({ exam, onEdit, onDelete, expanded, onToggle }) {
   const statusCfg = STATUS_CONFIG[exam.status] || { label: exam.status || 'Processing', cls: 'bg-slate-100 text-slate-500' };
+
   const uploadDate = exam.uploadedAt
     ? new Date(exam.uploadedAt).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })
     : '—';
@@ -162,18 +167,27 @@ function AuditRow({ exam, onEdit, onDelete, expanded, onToggle }) {
     ? new Date(exam.uploadedAt).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
     : '';
 
+  // Format duration exactly as the upload wizard labels it
+  const formatDuration = (mins) => {
+    if (!mins) return null;
+    const m = Number(mins);
+    if (m < 60) return `${m} min`;
+    return `${m / 60} hr${m >= 120 ? 's' : ''}`;
+  };
+  const durationLabel = formatDuration(exam.examDuration);
+
   return (
     <div className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden hover:border-indigo-200 dark:hover:border-indigo-800 transition-all">
 
-      {/* Row summary — always visible */}
+      {/* ── Row summary — always visible ────────────────────────────────── */}
       <div
         className="flex items-center gap-4 p-5 cursor-pointer hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
         onClick={onToggle}
       >
         {/* Status dot */}
         <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${exam.status === 'ready' ? 'bg-green-500' :
-          exam.status === 'pending_extraction' ? 'bg-amber-400 animate-pulse' :
-            exam.status === 'indexed' ? 'bg-purple-500' : 'bg-blue-500'
+            exam.status === 'pending_extraction' ? 'bg-amber-400 animate-pulse' :
+              exam.status === 'indexed' ? 'bg-purple-500' : 'bg-blue-500'
           }`} />
 
         {/* Main info */}
@@ -190,6 +204,12 @@ function AuditRow({ exam, onEdit, onDelete, expanded, onToggle }) {
               <CalendarDays size={9} /> {exam.year || '—'}
             </span>
             <span className="text-[10px] font-bold text-slate-400">{exam.curriculum}</span>
+            {/* Duration chip — shown inline when present */}
+            {durationLabel && (
+              <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded-lg">
+                <Clock size={9} /> {durationLabel}
+              </span>
+            )}
           </div>
         </div>
 
@@ -224,39 +244,68 @@ function AuditRow({ exam, onEdit, onDelete, expanded, onToggle }) {
         </div>
       </div>
 
-      {/* Expanded detail row */}
+      {/* ── Expanded detail panel ────────────────────────────────────────── */}
       {expanded && (
-        <div className="border-t border-slate-100 dark:border-slate-800 p-5 bg-slate-50/50 dark:bg-slate-800/20 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="border-t border-slate-100 dark:border-slate-800 p-5 bg-slate-50/50 dark:bg-slate-800/20 space-y-4">
 
-          {/* Exam paper link */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">📄 Question Paper</p>
-            {exam.examDriveLink ? (
-              <a href={exam.examDriveLink} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2 text-xs font-bold text-indigo-600 hover:underline truncate">
-                <ExternalLink size={12} /> {exam.examFileName || 'Open in Drive'}
-              </a>
-            ) : (
-              <p className="text-xs text-slate-400 font-bold">{exam.examFileName || 'No file linked'}</p>
-            )}
+          {/* File links row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Question paper */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">📄 Question Paper</p>
+              {exam.examDriveLink ? (
+                <a href={exam.examDriveLink} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-xs font-bold text-indigo-600 hover:underline truncate">
+                  <ExternalLink size={12} /> {exam.examFileName || 'Open in Drive'}
+                </a>
+              ) : (
+                <p className="text-xs text-slate-400 font-bold">{exam.examFileName || 'No file linked'}</p>
+              )}
+              {exam.examFileType && (
+                <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">{exam.examFileType}</p>
+              )}
+            </div>
+
+            {/* Marking memo */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">✅ Marking Memo</p>
+              {exam.memoDriveLink ? (
+                <a href={exam.memoDriveLink} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-xs font-bold text-green-600 hover:underline truncate">
+                  <ExternalLink size={12} /> {exam.memoFileName || 'Open in Drive'}
+                </a>
+              ) : (
+                <p className="text-xs text-slate-400 font-bold">{exam.memoFileName || 'No file linked'}</p>
+              )}
+              {exam.memoFileType && (
+                <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">{exam.memoFileType}</p>
+              )}
+            </div>
           </div>
 
-          {/* Memo link */}
+          {/* Metadata summary — mirrors the upload wizard's "Ready to upload" summary */}
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">✅ Marking Memo</p>
-            {exam.memoDriveLink ? (
-              <a href={exam.memoDriveLink} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2 text-xs font-bold text-green-600 hover:underline truncate">
-                <ExternalLink size={12} /> {exam.memoFileName || 'Open in Drive'}
-              </a>
-            ) : (
-              <p className="text-xs text-slate-400 font-bold">{exam.memoFileName || 'No file linked'}</p>
-            )}
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">📋 Exam Details</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2">
+              <DetailItem label="Title" value={exam.title} />
+              <DetailItem label="Subject" value={exam.subject} />
+              <DetailItem label="Grade" value={exam.grade ? `Grade ${exam.grade}` : null} />
+              <DetailItem label="Year" value={exam.year} />
+              <DetailItem label="Curriculum" value={exam.curriculum} />
+              {/* ── Exam Duration — new field ── */}
+              <DetailItem
+                label="Time Allocation"
+                value={durationLabel}
+                highlight={!!durationLabel}
+              />
+            </div>
           </div>
 
-          {/* Extra metadata */}
-          <div className="sm:col-span-2 flex flex-wrap gap-4 text-[10px] font-bold text-slate-400">
-            {exam.examId && <span>ID: <span className="font-black text-slate-500 dark:text-slate-300">{exam.examId}</span></span>}
+          {/* Footer metadata */}
+          <div className="flex flex-wrap gap-4 text-[10px] font-bold text-slate-400">
+            {exam.examId && (
+              <span>ID: <span className="font-black text-slate-500 dark:text-slate-300">{exam.examId}</span></span>
+            )}
             {exam.updatedAt && (
               <span>Last edited: <span className="font-black text-slate-500 dark:text-slate-300">
                 {new Date(exam.updatedAt).toLocaleString('en-ZA')}
@@ -269,6 +318,21 @@ function AuditRow({ exam, onEdit, onDelete, expanded, onToggle }) {
     </div>
   );
 }
+
+// ─── DETAIL ITEM — used inside the expanded panel ─────────────────────────────
+function DetailItem({ label, value, highlight = false }) {
+  if (!value) return null;
+  return (
+    <div className="py-1 border-b border-slate-100 dark:border-slate-700 last:border-0">
+      <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">{label}</p>
+      <p className={`text-xs font-black mt-0.5 ${highlight ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-800 dark:text-white'}`}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
@@ -307,6 +371,7 @@ export default function TeacherDashboard() {
   const [filterStatus, setFilterStatus] = useState('');
   const [sortDir, setSortDir] = useState('desc'); // newest first
   const [user, setUser] = useState(auth.currentUser);
+  const [examDuration, setExamDuration] = useState(60); // default 60 minutes
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(setUser);
@@ -422,20 +487,27 @@ export default function TeacherDashboard() {
       setUploadProgress(`Uploading marking memo (${getFileTypeLabel(memoFile)})...`);
       const memoDriveFile = await uploadFileToDrive(memoFile, folderIds.uploadedId, token);
 
-      setUploadProgress('Saving to EduCAT AI...');
+      setUploadProgress('Saving to Eduket AI...');
+      const userDocSnap = await getDoc(doc(db, "users", user.uid));
+      const userData = userDocSnap.exists() ? userDocSnap.data() : {};
+
       const examId = await saveExamMetadata({
         uid: user.uid,
         teacherName: `${teacherProfile?.title || ''} ${teacherProfile?.surname || 'Teacher'}`.trim(),
+        schoolId: userData.schoolId ?? teacherProfile?.schoolId ?? null,
+
+
         title: paperTitle.trim(),
         year: paperYear,
         subject: paperSubject,
         curriculum,
         grade: paperGrade,
-        examDriveFile,
-        memoDriveFile,
-        // Store file types so downstream services know what they're processing
         examFileType: getFileTypeLabel(examFile),
         memoFileType: getFileTypeLabel(memoFile),
+        examDuration,
+
+        examDriveFile,
+        memoDriveFile,
       });
 
       setUploadProgress('Queuing AI extraction...');
@@ -733,10 +805,38 @@ export default function TeacherDashboard() {
                       <SummaryRow label="Curriculum" value={curriculum} />
                       <SummaryRow label="Paper" value={examFile.name} />
                       <SummaryRow label="Memo" value={memoFile.name} />
+                      <SummaryRow label="Exam Duration" value={examDuration} />
                     </div>
                   )}
 
                   <div className="flex gap-4">
+                    {/* Exam Duration Selector */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                        Exam Time Allocation
+                      </label>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {[30, 60, 90, 120, 180, 240].map((mins) => (
+                          <button
+                            key={mins}
+                            onClick={() => setExamDuration(mins)}
+                            className={`p-4 rounded-2xl border-2 transition-all font-black text-sm ${examDuration === mins
+                              ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-500/20"
+                              : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-400"
+                              }`}
+                          >
+                            {mins < 60 ? `${mins} min` : `${mins / 60} hr${mins >= 120 ? "s" : ""}`}
+                          </button>
+                        ))}
+                      </div>
+
+                      <p className="text-xs text-slate-400 dark:text-slate-500">
+                        Selected: <span className="font-bold text-indigo-500">{examDuration} minutes</span>
+                      </p>
+                    </div>
+
+
                     <button onClick={() => setUploadStep(2)} disabled={isUploading}
                       className="flex-1 bg-slate-100 dark:bg-slate-800 p-5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 disabled:opacity-50">
                       <ArrowLeft size={16} /> Back
