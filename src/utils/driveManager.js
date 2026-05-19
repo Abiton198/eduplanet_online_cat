@@ -1,21 +1,45 @@
 /**
  * driveManager.js
  *
- * Handles everything Google Drive:
- *  - Storing / refreshing the OAuth access token
- *  - Ensuring the AI Exam Agent folder tree exists
- *  - Uploading files to the correct Drive folder
- *  - Requesting Drive permission mid-session (existing users)
+ * Google Drive Manager
+ * ------------------------------------------------------------
+ * Handles:
+ *  - Google Drive token storage
+ *  - Drive API validation
+ *  - AI Exam Agent folder creation
+ *  - File uploads to Google Drive
+ *  - Firestore metadata storage
+ *
+ * IMPORTANT:
+ * ------------------------------------------------------------
+ * Drive permission MUST be requested during INITIAL GOOGLE LOGIN.
+ *
+ * Example:
+ *
+ * const provider = new GoogleAuthProvider();
+ * provider.addScope("https://www.googleapis.com/auth/drive.file");
+ *
+ * const result = await signInWithPopup(auth, provider);
+ *
+ * const credential =
+ *   GoogleAuthProvider.credentialFromResult(result);
+ *
+ * const token = credential?.accessToken;
+ *
+ * await initializeDriveForUser(user.uid, token);
  */
 
-import { GoogleAuthProvider, signInWithPopup, getAuth } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import { db, auth, provider } from "./firebase";
+import { db, auth } from "./firebase";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
-const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
-// drive.file = only files YOUR app created — safest, least intrusive scope
+// ─────────────────────────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────────────────────────
+
+export const DRIVE_SCOPE =
+    "https://www.googleapis.com/auth/drive.file";
 
 const FOLDER_NAMES = {
     root: "AI Exam Agent",
@@ -24,233 +48,460 @@ const FOLDER_NAMES = {
     feedback: "Feedback Reports",
 };
 
-// ─── TOKEN MANAGEMENT ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// TOKEN MANAGEMENT
+// ─────────────────────────────────────────────────────────────
 
-/**
- * Returns the stored Drive access token for the current user.
- * Tokens expire after 1 hour — we store the expiry time to detect staleness.
- */
+// ─────────────────────────────────────────────────────────────
+// TOKEN MANAGEMENT
+// ─────────────────────────────────────────────────────────────
+
 export function getStoredToken() {
-    const token = sessionStorage.getItem("drive_access_token");
-    const expiry = sessionStorage.getItem("drive_token_expiry");
-    if (!token || !expiry) return null;
-    if (Date.now() > parseInt(expiry)) {
-        sessionStorage.removeItem("drive_access_token");
-        sessionStorage.removeItem("drive_token_expiry");
+    try {
+        const token = localStorage.getItem("drive_access_token");
+        const expiry = localStorage.getItem("drive_token_expiry");
+
+        if (!token || !expiry) return null;
+
+        const expiryNum = Number(expiry);
+
+        if (Number.isNaN(expiryNum) || Date.now() > expiryNum) {
+            localStorage.removeItem("drive_access_token");
+            localStorage.removeItem("drive_token_expiry");
+            return null;
+        }
+
+        return token;
+    } catch (err) {
+        console.warn("[Drive] Failed reading stored token:", err);
         return null;
     }
-    return token;
 }
 
-function storeToken(accessToken) {
-    sessionStorage.setItem("drive_access_token", accessToken);
-    // Google tokens last 1 hour; store expiry 5 min early to be safe
-    sessionStorage.setItem("drive_token_expiry", String(Date.now() + 55 * 60 * 1000));
-}
-
-/**
- * Returns true if the current user has previously granted Drive permission.
- * We store a flag in Firestore so we know without re-prompting every session.
- */
-export async function hasDrivePermission(uid) {
-    const snap = await getDoc(doc(db, "userDriveConfig", uid));
-    return snap.exists() && snap.data()?.drivePermissionGranted === true;
-}
-
-// ─── REQUEST DRIVE PERMISSION ─────────────────────────────────────────────────
-
-/**
- * Re-opens the Google popup specifically to add the Drive scope.
- * Called either at first sign-up OR when an existing user tries to upload
- * without having granted permission yet.
- *
- * Returns the access token string on success, null on failure/cancel.
- */
-export async function requestDrivePermission() {
+export function storeToken(accessToken) {
     try {
-        const driveProvider = new GoogleAuthProvider();
-        driveProvider.addScope(DRIVE_SCOPE);
-        // Force account chooser so user can confirm they're granting Drive access
-        driveProvider.setCustomParameters({ prompt: "consent" });
+        localStorage.setItem("drive_access_token", accessToken);
 
-        const result = await signInWithPopup(auth, driveProvider);
+        localStorage.setItem(
+            "drive_token_expiry",
+            String(Date.now() + 55 * 60 * 1000)
+        );
+    } catch (err) {
+        console.warn("[Drive] Failed storing token:", err);
+    }
+}
+
+export function clearStoredToken() {
+    try {
+        localStorage.removeItem(
+            "drive_access_token"
+        );
+
+        localStorage.removeItem(
+            "drive_token_expiry"
+        );
+    } catch { }
+}
+
+// ─────────────────────────────────────────────────────────────
+// DRIVE PERMISSION CHECK
+// ─────────────────────────────────────────────────────────────
+export async function requestDrivePermission(uid) {
+    try {
+        const provider = new GoogleAuthProvider();
+        provider.addScope(DRIVE_SCOPE);
+
+        const result = await signInWithPopup(auth, provider);
         const credential = GoogleAuthProvider.credentialFromResult(result);
-        const token = credential?.accessToken;
 
-        if (!token) throw new Error("No access token returned");
+        if (!credential?.accessToken) {
+            throw new Error("No access token received.");
+        }
 
-        storeToken(token);
+        return credential.accessToken;
+    } catch (err) {
+        console.error("[Drive] Permission request failed:", err);
+        throw err;
+    }
+}
 
-        const uid = result.user.uid;
 
-        // Create Drive folders — throws with a clear message if any ID is missing
-        const folderIds = await ensureAppFolders(token);
+export async function hasDrivePermission(uid) {
+    try {
+        if (!uid) return false;
 
-        // Only write to Firestore once we have all valid folder IDs
+        const snap = await getDoc(doc(db, "userDriveConfig", uid));
+
+        if (!snap.exists()) return false;
+
+        return snap.data()?.drivePermissionGranted === true;
+    } catch (err) {
+        console.warn("[Drive] hasDrivePermission failed:", err);
+        return false;
+    }
+}
+
+
+export async function isDriveApiAvailable(
+    accessToken
+) {
+    try {
+        const res = await fetch(
+            "https://www.googleapis.com/drive/v3/about?fields=user",
+            {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                },
+            }
+        );
+
+        if (!res.ok) {
+            const err = await res
+                .json()
+                .catch(() => ({}));
+
+            console.warn(
+                "[Drive] API check failed:",
+                err?.error?.message || res.statusText
+            );
+
+            return false;
+        }
+
+        return true;
+    } catch (err) {
+        console.warn(
+            "[Drive] API unavailable:",
+            err.message
+        );
+
+        return false;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// INITIALIZE DRIVE
+// ─────────────────────────────────────────────────────────────
+
+export async function initializeDriveForUser(
+    uid,
+    accessToken
+) {
+    try {
+        if (!uid || !accessToken) {
+            console.warn(
+                "[Drive] Missing uid or access token."
+            );
+
+            return null;
+        }
+
+        storeToken(accessToken);
+
+        const available =
+            await isDriveApiAvailable(accessToken);
+
+        if (!available) {
+            console.warn(
+                "[Drive] Google Drive API unavailable."
+            );
+
+            return null;
+        }
+
+        const folderIds =
+            await ensureAppFolders(accessToken);
+
         await setDoc(
             doc(db, "userDriveConfig", uid),
             {
+                uid,
                 drivePermissionGranted: true,
+                driveApiEnabled: true,
                 driveScope: DRIVE_SCOPE,
-                folderIds,                          // all four IDs validated before reaching here
-                permissionGrantedAt: new Date().toISOString(),
+                folderIds,
+                initializedAt: new Date().toISOString(),
             },
             { merge: true }
         );
 
-        return token;
+        return folderIds;
     } catch (err) {
-        console.error("Drive permission request failed:", err);
+        console.warn(
+            "[Drive] Initialization failed:",
+            err.message
+        );
+
         return null;
     }
 }
 
-/**
- * Gets a valid token — uses stored token if still fresh,
- * otherwise triggers the permission popup again.
- */
-export async function getValidDriveToken(uid) {
-    const stored = getStoredToken();
-    if (stored) return stored;
+// ─────────────────────────────────────────────────────────────
+// VALID TOKEN RESOLUTION
+// ─────────────────────────────────────────────────────────────
 
-    // Token expired — re-request silently if already granted
-    const hasPermission = await hasDrivePermission(uid);
-    if (hasPermission) {
-        return await requestDrivePermission();
+export async function getValidDriveToken(uid) {
+    try {
+        // Try stored token first
+        const stored = getStoredToken();
+
+        if (stored) {
+            return stored;
+        }
+
+        // Check whether user already granted Drive permission
+        const hasPermission = await hasDrivePermission(uid);
+
+        if (!hasPermission) {
+            console.warn("[Drive] User has not granted Drive permission.");
+            return null;
+        }
+
+        // Re-request permission silently
+        const freshToken = await requestDrivePermission(uid);
+
+
+        if (!freshToken) {
+            console.warn("[Drive] Could not refresh Drive token.");
+            return null;
+        }
+
+        return freshToken;
+
+    } catch (err) {
+        console.warn("[Drive] getValidDriveToken failed:", err);
+        return null;
     }
-    return null;
 }
 
-// ─── FOLDER MANAGEMENT ────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// FOLDER MANAGEMENT
+// ─────────────────────────────────────────────────────────────
 
-/**
- * Creates the AI Exam Agent folder tree in the user's Drive if it doesn't exist.
- * Safe to call multiple times — checks before creating.
- *
- * Returns: { rootId, papersId, uploadedId, feedbackId }
- */
-export async function ensureAppFolders(accessToken) {
-    const authHeader = { Authorization: `Bearer ${accessToken}` };
-    const jsonHeaders = { ...authHeader, "Content-Type": "application/json" };
+export async function ensureAppFolders(
+    accessToken
+) {
+    const authHeader = {
+        Authorization: `Bearer ${accessToken}`,
+    };
 
-    const createOrGet = async (name, parentId = null) => {
-        // Build query — use encodeURIComponent to avoid quote issues in URL
-        const nameEscaped = name.replace(/'/g, "\\'");
-        const parentClause = parentId ? ` and '${parentId}' in parents` : "";
-        const q = `name='${nameEscaped}' and mimeType='application/vnd.google-apps.folder'${parentClause} and trashed=false`;
+    const jsonHeaders = {
+        ...authHeader,
+        "Content-Type": "application/json",
+    };
+
+    const createOrGet = async (
+        name,
+        parentId = null
+    ) => {
+        const escaped = name.replace(/'/g, "\\'");
+
+        const parentClause = parentId
+            ? ` and '${parentId}' in parents`
+            : "";
+
+        const q =
+            `name='${escaped}' ` +
+            `and mimeType='application/vnd.google-apps.folder' ` +
+            `${parentClause} and trashed=false`;
 
         const searchRes = await fetch(
-            `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`,
-            { headers: authHeader }
+            `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
+                q
+            )}&fields=files(id,name)`,
+            {
+                headers: authHeader,
+            }
         );
 
         if (!searchRes.ok) {
-            const errBody = await searchRes.json().catch(() => ({}));
-            throw new Error(`Drive search failed (${searchRes.status}): ${errBody?.error?.message || searchRes.statusText}`);
+            const err = await searchRes
+                .json()
+                .catch(() => ({}));
+
+            throw new Error(
+                err?.error?.message ||
+                "Drive folder search failed"
+            );
         }
 
-        const { files } = await searchRes.json();
-        if (files?.length > 0) return files[0].id;
+        const data = await searchRes.json();
 
-        // Folder not found — create it
+        if (data?.files?.length > 0) {
+            return data.files[0].id;
+        }
+
         const body = {
             name,
-            mimeType: "application/vnd.google-apps.folder",
-            ...(parentId ? { parents: [parentId] } : {}),
+            mimeType:
+                "application/vnd.google-apps.folder",
+            ...(parentId
+                ? { parents: [parentId] }
+                : {}),
         };
 
         const createRes = await fetch(
             "https://www.googleapis.com/drive/v3/files?fields=id",
-            { method: "POST", headers: jsonHeaders, body: JSON.stringify(body) }
+            {
+                method: "POST",
+                headers: jsonHeaders,
+                body: JSON.stringify(body),
+            }
         );
 
         if (!createRes.ok) {
-            const errBody = await createRes.json().catch(() => ({}));
-            throw new Error(`Drive folder creation failed (${createRes.status}): ${errBody?.error?.message || createRes.statusText}`);
+            const err = await createRes
+                .json()
+                .catch(() => ({}));
+
+            throw new Error(
+                err?.error?.message ||
+                "Drive folder creation failed"
+            );
         }
 
         const folder = await createRes.json();
 
-        if (!folder.id) {
-            throw new Error(`Drive returned no folder ID for "${name}". Response: ${JSON.stringify(folder)}`);
+        if (!folder?.id) {
+            throw new Error(
+                `Folder ID missing for ${name}`
+            );
         }
 
         return folder.id;
     };
 
-    const rootId = await createOrGet(FOLDER_NAMES.root);
-    const papersId = await createOrGet(FOLDER_NAMES.papers, rootId);
-    const uploadedId = await createOrGet(FOLDER_NAMES.uploaded, rootId);
-    const feedbackId = await createOrGet(FOLDER_NAMES.feedback, rootId);
+    const rootId = await createOrGet(
+        FOLDER_NAMES.root
+    );
 
-    // Validate all IDs before returning — prevents undefined from reaching Firestore
-    const ids = { rootId, papersId, uploadedId, feedbackId };
-    for (const [key, val] of Object.entries(ids)) {
-        if (!val) throw new Error(`Folder ID missing for "${key}" — Drive API may have failed silently.`);
-    }
+    const papersId = await createOrGet(
+        FOLDER_NAMES.papers,
+        rootId
+    );
 
-    return ids;
-}
+    const uploadedId = await createOrGet(
+        FOLDER_NAMES.uploaded,
+        rootId
+    );
 
-/**
- * Gets the stored folder IDs from Firestore (set during permission grant).
- * Falls back to re-creating them if missing.
- */
-export async function getFolderIds(uid, accessToken) {
-    const snap = await getDoc(doc(db, "userDriveConfig", uid));
-    if (snap.exists() && snap.data()?.folderIds?.rootId) {
-        return snap.data().folderIds;
-    }
-    // Rebuild if missing
-    const folderIds = await ensureAppFolders(accessToken);
-    await updateDoc(doc(db, "userDriveConfig", uid), { folderIds });
-    return folderIds;
-}
+    const feedbackId = await createOrGet(
+        FOLDER_NAMES.feedback,
+        rootId
+    );
 
-// ─── FILE UPLOAD ──────────────────────────────────────────────────────────────
-
-/**
- * Uploads a file to a specific Google Drive folder.
- * Uses multipart upload for files under 5MB (typical PDF).
- *
- * Returns: { id, name, webViewLink } or throws on failure.
- */
-export async function uploadFileToDrive(file, folderId, accessToken) {
-    const metadata = {
-        name: file.name,
-        parents: [folderId],
+    return {
+        rootId,
+        papersId,
+        uploadedId,
+        feedbackId,
     };
-
-    const form = new FormData();
-    form.append(
-        "metadata",
-        new Blob([JSON.stringify(metadata)], { type: "application/json" })
-    );
-    form.append("file", file);
-
-    const res = await fetch(
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,size",
-        {
-            method: "POST",
-            headers: { Authorization: `Bearer ${accessToken}` },
-            body: form,
-        }
-    );
-
-    if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err?.error?.message || "Drive upload failed");
-    }
-
-    return res.json(); // { id, name, webViewLink, size }
 }
 
-// ─── FIRESTORE EXAM RECORD ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// GET FOLDER IDS
+// ─────────────────────────────────────────────────────────────
 
-/**
- * Creates or updates the exam metadata record in Firestore after upload.
- * This is the single source of truth for the backend extraction pipeline.
- */
+export async function getFolderIds(
+    uid,
+    accessToken
+) {
+    try {
+        const snap = await getDoc(
+            doc(db, "userDriveConfig", uid)
+        );
+
+        const existing =
+            snap.data()?.folderIds;
+
+        if (existing?.rootId) {
+            return existing;
+        }
+
+        const folderIds =
+            await ensureAppFolders(accessToken);
+
+        await updateDoc(
+            doc(db, "userDriveConfig", uid),
+            {
+                folderIds,
+            }
+        );
+
+        return folderIds;
+    } catch (err) {
+        console.warn(
+            "[Drive] Failed to get folders:",
+            err.message
+        );
+
+        return null;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// FILE UPLOAD
+// ─────────────────────────────────────────────────────────────
+
+export async function uploadFileToDrive(
+    file,
+    folderId,
+    accessToken
+) {
+    try {
+        const metadata = {
+            name: file.name,
+            parents: [folderId],
+        };
+
+        const form = new FormData();
+
+        form.append(
+            "metadata",
+            new Blob([JSON.stringify(metadata)], {
+                type: "application/json",
+            })
+        );
+
+        form.append("file", file);
+
+        const res = await fetch(
+            "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,size",
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                },
+                body: form,
+            }
+        );
+
+        if (!res.ok) {
+            const err = await res
+                .json()
+                .catch(() => ({}));
+
+            throw new Error(
+                err?.error?.message ||
+                "Drive upload failed"
+            );
+        }
+
+        return await res.json();
+    } catch (err) {
+        console.warn(
+            "[Drive Upload Failed]:",
+            err.message
+        );
+
+        throw err;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// SAVE EXAM METADATA
+// ─────────────────────────────────────────────────────────────
+
 export async function saveExamMetadata({
     uid,
     teacherName,
@@ -259,8 +510,8 @@ export async function saveExamMetadata({
     subject,
     curriculum,
     grade,
-    examDriveFile,   // { id, name, webViewLink }
-    memoDriveFile,   // { id, name, webViewLink }
+    examDriveFile,
+    memoDriveFile,
 }) {
     const examId = `${uid}_${Date.now()}`;
 
@@ -273,134 +524,240 @@ export async function saveExamMetadata({
         subject,
         curriculum,
         grade,
-        // Drive references — backend uses these IDs to fetch files
+
         examDriveFileId: examDriveFile.id,
-        examDriveLink: examDriveFile.webViewLink,
-        examFileName: examDriveFile.name,
+        examDriveLink:
+            examDriveFile.webViewLink,
+        examFileName:
+            examDriveFile.name,
+
         memoDriveFileId: memoDriveFile.id,
-        memoDriveLink: memoDriveFile.webViewLink,
-        memoFileName: memoDriveFile.name,
-        // Pipeline status
-        status: "pending_extraction",  // → extracted → indexed → ready
-        uploadedAt: new Date().toISOString(),
+        memoDriveLink:
+            memoDriveFile.webViewLink,
+        memoFileName:
+            memoDriveFile.name,
+
+        status: "pending_extraction",
+
+        uploadedAt:
+            new Date().toISOString(),
+
         extractedAt: null,
         indexedAt: null,
     };
 
-    // Primary exam record
-    await setDoc(doc(db, "exams", examId), record);
+    await setDoc(
+        doc(db, "exams", examId),
+        record
+    );
 
-    // Also update teacher's upload audit trail
-    const auditRef = doc(db, "teacherExamUploads", uid);
-    const auditSnap = await getDoc(auditRef);
-    const existing = auditSnap.exists() ? auditSnap.data().uploads || [] : [];
+    const auditRef = doc(
+        db,
+        "teacherExamUploads",
+        uid
+    );
+
+    const auditSnap =
+        await getDoc(auditRef);
+
+    const existing =
+        auditSnap.exists()
+            ? auditSnap.data().uploads || []
+            : [];
+
     await setDoc(
         auditRef,
-        { teacher: uid, uploads: [{ ...record, id: examId }, ...existing] },
+        {
+            teacher: uid,
+            uploads: [
+                { ...record, id: examId },
+                ...existing,
+            ],
+        },
         { merge: true }
     );
 
     return examId;
 }
 
-// ─── ENSURE USER FIRESTORE DOCS EXIST ────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// ENSURE FIRESTORE DOCS
+// ─────────────────────────────────────────────────────────────
 
-/**
- * Called right after login / profile setup.
- * Creates any missing Firestore documents for the user so the dashboard
- * never hits undefined state.
- */
-export async function ensureUserFirestoreDocs(uid, role, profileData = {}) {
-    const batch = [];
+export async function ensureUserFirestoreDocs(
+    uid,
+    role,
+    profileData = {}
+) {
+    try {
+        const batch = [];
 
-    // userDriveConfig — always needed
-    const driveRef = doc(db, "userDriveConfig", uid);
-    const driveSnap = await getDoc(driveRef);
-    if (!driveSnap.exists()) {
-        batch.push(
-            setDoc(driveRef, {
-                uid,
-                drivePermissionGranted: false,
-                folderIds: null,
-                createdAt: new Date().toISOString(),
-            })
+        const driveRef = doc(
+            db,
+            "userDriveConfig",
+            uid
+        );
+
+        const driveSnap =
+            await getDoc(driveRef);
+
+        if (!driveSnap.exists()) {
+            batch.push(
+                setDoc(driveRef, {
+                    uid,
+                    drivePermissionGranted: false,
+                    driveApiEnabled: false,
+                    folderIds: null,
+                    createdAt:
+                        new Date().toISOString(),
+                })
+            );
+        }
+
+        const collectionName =
+            role === "principal"
+                ? "principals"
+                : role === "teacher"
+                    ? "teachers"
+                    : "students";
+
+        const roleRef = doc(
+            db,
+            collectionName,
+            uid
+        );
+
+        const roleSnap =
+            await getDoc(roleRef);
+
+        if (!roleSnap.exists()) {
+            batch.push(
+                setDoc(
+                    roleRef,
+                    {
+                        uid,
+                        ...profileData,
+                        createdAt:
+                            new Date().toISOString(),
+                    },
+                    { merge: true }
+                )
+            );
+        }
+
+        if (role === "student") {
+            const histRef = doc(
+                db,
+                "studentExamHistory",
+                uid
+            );
+
+            const histSnap =
+                await getDoc(histRef);
+
+            if (!histSnap.exists()) {
+                batch.push(
+                    setDoc(histRef, {
+                        uid,
+                        exams: [],
+                        totalPoints: 0,
+                        createdAt:
+                            new Date().toISOString(),
+                    })
+                );
+            }
+        }
+
+        await Promise.all(batch);
+    } catch (err) {
+        console.warn(
+            "[ensureUserFirestoreDocs]",
+            err.message
         );
     }
-
-    // Role-specific collection doc
-    const collectionName =
-        role === "principal" ? "principals" :
-            role === "teacher" ? "teachers" : "users";
-
-    const roleRef = doc(db, collectionName, uid);
-    const roleSnap = await getDoc(roleRef);
-    if (!roleSnap.exists()) {
-        batch.push(setDoc(roleRef, { uid, ...profileData, createdAt: new Date().toISOString() }, { merge: true }));
-    }
-
-    // Student exam history stub (students only)
-    if (role === "student") {
-        const histRef = doc(db, "studentExamHistory", uid);
-        const histSnap = await getDoc(histRef);
-        if (!histSnap.exists()) {
-            batch.push(setDoc(histRef, { uid, exams: [], totalPoints: 0, createdAt: new Date().toISOString() }));
-        }
-    }
-
-    await Promise.all(batch);
 }
 
-// ─── AUDIT TRAIL OPERATIONS ───────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// AUDIT TRAIL OPERATIONS
+// ─────────────────────────────────────────────────────────────
 
-/**
- * Deletes an exam from both /exams collection and the teacher's audit trail.
- * Does NOT delete the Drive files (user keeps those in their own Drive).
- */
 export async function deleteExamFromAudit(uid, examId) {
-    const { deleteDoc } = await import("firebase/firestore");
-
-    // Remove from primary exams collection
     try {
-        await deleteDoc(doc(db, "exams", examId));
-    } catch (e) {
-        console.warn("Could not delete from /exams:", e.message);
-    }
+        const { deleteDoc } = await import("firebase/firestore");
 
-    // Remove from teacher's audit trail array
-    const auditRef = doc(db, "teacherExamUploads", uid);
-    const auditSnap = await getDoc(auditRef);
-    if (!auditSnap.exists()) return;
+        // Remove from exams collection
+        try {
+            await deleteDoc(doc(db, "exams", examId));
+        } catch (err) {
+            console.warn("[Drive] Could not delete /exams doc:", err);
+        }
 
-    const updated = (auditSnap.data().uploads || []).filter(
-        (u) => u.examId !== examId && u.id !== examId
-    );
-    await updateDoc(auditRef, { uploads: updated });
-}
+        // Remove from teacher audit trail
+        const auditRef = doc(db, "teacherExamUploads", uid);
 
-/**
- * Updates editable metadata for an exam in both /exams and the audit trail.
- * Editable fields: title, subject, grade, year, curriculum.
- */
-export async function updateExamInAudit(uid, examId, changes) {
-    // Update primary record
-    try {
-        await updateDoc(doc(db, "exams", examId), {
-            ...changes,
+        const auditSnap = await getDoc(auditRef);
+
+        if (!auditSnap.exists()) return;
+
+        const uploads = auditSnap.data()?.uploads || [];
+
+        const updated = uploads.filter(
+            (u) => u.examId !== examId && u.id !== examId
+        );
+
+        await updateDoc(auditRef, {
+            uploads: updated,
             updatedAt: new Date().toISOString(),
         });
-    } catch (e) {
-        console.warn("Could not update /exams:", e.message);
+
+        return true;
+    } catch (err) {
+        console.warn("[Drive] deleteExamFromAudit failed:", err);
+        return false;
     }
+}
 
-    // Update inside audit trail array
-    const auditRef = doc(db, "teacherExamUploads", uid);
-    const auditSnap = await getDoc(auditRef);
-    if (!auditSnap.exists()) return;
+export async function updateExamInAudit(uid, examId, changes = {}) {
+    try {
+        // Update master exam record
+        try {
+            await updateDoc(doc(db, "exams", examId), {
+                ...changes,
+                updatedAt: new Date().toISOString(),
+            });
+        } catch (err) {
+            console.warn("[Drive] Could not update /exams doc:", err);
+        }
 
-    const updated = (auditSnap.data().uploads || []).map((u) =>
-        (u.examId === examId || u.id === examId)
-            ? { ...u, ...changes, updatedAt: new Date().toISOString() }
-            : u
-    );
-    await updateDoc(auditRef, { uploads: updated });
+        // Update teacher audit record
+        const auditRef = doc(db, "teacherExamUploads", uid);
+
+        const auditSnap = await getDoc(auditRef);
+
+        if (!auditSnap.exists()) return false;
+
+        const uploads = auditSnap.data()?.uploads || [];
+
+        const updated = uploads.map((u) => {
+            if (u.examId === examId || u.id === examId) {
+                return {
+                    ...u,
+                    ...changes,
+                    updatedAt: new Date().toISOString(),
+                };
+            }
+
+            return u;
+        });
+
+        await updateDoc(auditRef, {
+            uploads: updated,
+            updatedAt: new Date().toISOString(),
+        });
+
+        return true;
+    } catch (err) {
+        console.warn("[Drive] updateExamInAudit failed:", err);
+        return false;
+    }
 }

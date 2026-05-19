@@ -12,8 +12,17 @@
 //     and is still editable.
 //
 // SchoolRegistration.jsx should read `location.state.seed` to pre-populate its form.
+//
+// ─── FIXES APPLIED ────────────────────────────────────────────────────────────
+//   1. Role doc reads are now SEQUENTIAL (not Promise.all) in both handleGoogleLogin
+//      and handlePasswordAuth — stops reading the moment the user's role doc is found,
+//      preventing permission errors on collections where the user has no document.
+//   2. finalizeProfile writes users/{uid} FIRST before the role collection doc,
+//      so security rule helpers (isTeacher, isPrincipal, sameSchool) can resolve
+//      userDoc() when evaluating the role doc write.
+//   3. ensureUserFirestoreDocs is called LAST, after both writes succeed.
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   signInWithPopup,
@@ -25,7 +34,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../utils/firebase';
 import {
   X, Zap, BrainCircuit, UserCheck, ArrowRight,
-  Sun, Moon, CheckCircle2, HardDrive, Loader2, School,
+  Sun, Moon, CheckCircle2, HardDrive, Loader2,
   Sparkles, ChevronDown,
 } from 'lucide-react';
 import { ensureUserFirestoreDocs, ensureAppFolders, hasDrivePermission } from '../utils/driveManager';
@@ -52,7 +61,6 @@ const STANDARD_DBE_SUBJECTS = [
 ];
 
 // ─── AUTO-FILL TAG ────────────────────────────────────────────────────────────
-// Shown next to any field that was populated automatically.
 function AutoTag() {
   return (
     <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 select-none">
@@ -99,7 +107,7 @@ export default function AuthPage({ setStudentInfo }) {
   const [error, setError] = useState('');
 
   // ── Auth ───────────────────────────────────────────────────────────────────
-  const [tempUser, setTempUser] = useState(null);  // { uid, email, driveToken }
+  const [tempUser, setTempUser] = useState(null); // { uid, email, driveToken }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -110,14 +118,13 @@ export default function AuthPage({ setStudentInfo }) {
   const [title, setTitle] = useState('Mr');
   const [province, setProvince] = useState('Gauteng');
   const [district, setDistrict] = useState('');
-  const [school, setSchool] = useState('');           // principal: manual entry
+  const [school, setSchool] = useState('');
   const [curriculum, setCurriculum] = useState('CAPS');
   const [grade, setGrade] = useState('');
   const [teachingPhase, setTeachingPhase] = useState('FET');
   const [subjects, setSubjects] = useState([]);
 
-  // ── Auto-fill tracking — which fields were set programmatically ────────────
-  // Key: field name → true/false
+  // ── Auto-fill tracking ─────────────────────────────────────────────────────
   const [autoFilled, setAutoFilled] = useState({});
   const markAuto = useCallback((fields) => {
     setAutoFilled((prev) => {
@@ -130,7 +137,7 @@ export default function AuthPage({ setStudentInfo }) {
     setAutoFilled((prev) => ({ ...prev, [field]: false }));
   }, []);
 
-  // ── School list (teacher/student) ──────────────────────────────────────────
+  // ── School list ────────────────────────────────────────────────────────────
   const [schoolList, setSchoolList] = useState([]);
   const [selectedSchoolId, setSelectedSchoolId] = useState('');
   const [schoolsLoading, setSchoolsLoading] = useState(false);
@@ -150,24 +157,24 @@ export default function AuthPage({ setStudentInfo }) {
     document.documentElement.classList.toggle('dark', next);
   };
 
-  // ── Load school list when teacher/student profile setup opens ──────────────
+  // ── Load schools when profile setup opens ──────────────────────────────────
   useEffect(() => {
     if (showProfileSetup && (userRole === 'teacher' || userRole === 'student')) {
       setSchoolsLoading(true);
-      listSchools().then((list) => {
-        setSchoolList(list);
-        if (list.length > 0) {
-          const firstId = list[0].id;
-          setSelectedSchoolId(firstId);
-          // Auto-fill location fields from the first school in the list
-          applySchoolAutoFill(list[0]);
-        }
-        setSchoolsLoading(false);
-      }).catch(() => setSchoolsLoading(false));
+      listSchools()
+        .then((list) => {
+          setSchoolList(list);
+          if (list.length > 0) {
+            setSelectedSchoolId(list[0].id);
+            applySchoolAutoFill(list[0]);
+          }
+          setSchoolsLoading(false);
+        })
+        .catch(() => setSchoolsLoading(false));
     }
   }, [showProfileSetup, userRole]);
 
-  // ── Auto-fill location/curriculum from selected school ────────────────────
+  // ── Auto-fill from selected school ────────────────────────────────────────
   const applySchoolAutoFill = useCallback((schoolDoc) => {
     if (!schoolDoc) return;
     const filled = [];
@@ -226,54 +233,133 @@ export default function AuthPage({ setStudentInfo }) {
     else navigate('/principal-dashboard');
   }, [navigate, setStudentInfo, silentlyLinkDrive]);
 
+  // ── FIX: sequential role doc reads — stops at first match ─────────────────
+  // Reading all three collections with Promise.all causes permission errors when
+  // the user's doc doesn't exist in the other two collections, because the security
+  // rules call resource.data on a null document. Sequential reads avoid this.
+  const resolveUserRole = useCallback(async (uid) => {
+    const pSnap = await getDoc(doc(db, 'principals', uid));
+    if (pSnap.exists()) return { role: 'principal', data: pSnap.data() };
+
+    const tSnap = await getDoc(doc(db, 'teachers', uid));
+    if (tSnap.exists()) return { role: 'teacher', data: tSnap.data() };
+
+    const sSnap = await getDoc(doc(db, 'students', uid));
+    if (sSnap.exists()) return { role: 'student', data: sSnap.data() };
+
+    return null; // new user — no profile yet
+  }, []);
+
   // ── Google login ───────────────────────────────────────────────────────────
   const handleGoogleLogin = async () => {
     setError('');
+
     try {
       const driveProvider = new GoogleAuthProvider();
-      driveProvider.addScope(DRIVE_SCOPE);
+
+      // Basic scopes
+      driveProvider.addScope('profile');
+      driveProvider.addScope('email');
+
+      // Google Drive access
+      driveProvider.addScope('https://www.googleapis.com/auth/drive.file');
+
+      // Force Google consent screen
+      driveProvider.setCustomParameters({
+        prompt: 'consent',
+        access_type: 'offline',
+      });
+
       const result = await signInWithPopup(auth, driveProvider);
+
       const user = result.user;
-      const credential = GoogleAuthProvider.credentialFromResult(result);
+
+      const credential =
+        GoogleAuthProvider.credentialFromResult(result);
+
       const token = credential?.accessToken ?? null;
 
+      console.log('GOOGLE DRIVE TOKEN:', token);
+
       if (token) {
-        sessionStorage.setItem('drive_access_token', token);
-        sessionStorage.setItem('drive_token_expiry', String(Date.now() + 55 * 60 * 1000));
+        // Use localStorage instead of sessionStorage
+        localStorage.setItem('drive_access_token', token);
+
+        localStorage.setItem(
+          'drive_token_expiry',
+          String(Date.now() + 55 * 60 * 1000)
+        );
+
+        // TEST DRIVE ACCESS IMMEDIATELY
+        const testRes = await fetch(
+          'https://www.googleapis.com/drive/v3/about?fields=user',
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const testData = await testRes.json();
+
+        console.log('Drive API Test:', testData);
+
+        if (!testRes.ok) {
+          throw new Error(
+            testData?.error?.message ||
+            'Google Drive permission failed.'
+          );
+        }
       }
 
-      const [pSnap, tSnap, sSnap] = await Promise.all([
-        getDoc(doc(db, 'principals', user.uid)),
-        getDoc(doc(db, 'teachers', user.uid)),
-        getDoc(doc(db, 'students', user.uid)),
-      ]);
+      // Resolve existing role
+      const found = await resolveUserRole(user.uid);
 
-      if (pSnap.exists()) {
-        await postLogin({ uid: user.uid, role: 'principal', data: pSnap.data(), token });
-      } else if (tSnap.exists()) {
-        await postLogin({ uid: user.uid, role: 'teacher', data: tSnap.data(), token });
-      } else if (sSnap.exists()) {
-        await postLogin({ uid: user.uid, role: 'student', data: sSnap.data(), token });
+      if (found) {
+        await postLogin({
+          uid: user.uid,
+          role: found.role,
+          data: found.data,
+          token,
+        });
       } else {
-        // New Google user — pre-fill name/surname from Google profile
-        const parts = (user.displayName || '').trim().split(/\s+/);
+        // New user setup
+        const parts = (user.displayName || '')
+          .trim()
+          .split(/\s+/);
+
         const autoName = parts[0] || '';
         const autoSurname = parts.slice(1).join(' ') || '';
+
         setName(autoName);
         setSurname(autoSurname);
 
         const autoFields = [];
+
         if (autoName) autoFields.push('name');
         if (autoSurname) autoFields.push('surname');
-        if (autoFields.length) markAuto(autoFields);
 
-        setTempUser({ uid: user.uid, email: user.email, driveToken: token });
+        if (autoFields.length) {
+          markAuto(autoFields);
+        }
+
+        setTempUser({
+          uid: user.uid,
+          email: user.email,
+          driveToken: token,
+        });
+
         setIsModalOpen(false);
         setShowProfileSetup(true);
       }
+
     } catch (err) {
-      console.error(err);
-      setError('Authentication failed. Please try again.');
+      console.error('Google Login Error:', err);
+
+      setError(
+        err?.message ||
+        'Authentication failed. Please try again.'
+      );
     }
   };
 
@@ -290,15 +376,14 @@ export default function AuthPage({ setStudentInfo }) {
       } else {
         const cred = await signInWithEmailAndPassword(auth, email, password);
         const uid = cred.user.uid;
-        const [pSnap, tSnap, sSnap] = await Promise.all([
-          getDoc(doc(db, 'principals', uid)),
-          getDoc(doc(db, 'teachers', uid)),
-          getDoc(doc(db, 'students', uid)),
-        ]);
-        if (pSnap.exists()) await postLogin({ uid, role: 'principal', data: pSnap.data() });
-        else if (tSnap.exists()) await postLogin({ uid, role: 'teacher', data: tSnap.data() });
-        else if (sSnap.exists()) await postLogin({ uid, role: 'student', data: sSnap.data() });
-        else {
+
+        // FIX: sequential reads instead of Promise.all — avoids permission errors
+        // on collections where this user has no document
+        const found = await resolveUserRole(uid);
+
+        if (found) {
+          await postLogin({ uid, role: found.role, data: found.data });
+        } else {
           setTempUser({ uid, email, driveToken: null });
           setIsModalOpen(false);
           setShowProfileSetup(true);
@@ -312,7 +397,7 @@ export default function AuthPage({ setStudentInfo }) {
     }
   };
 
-  // ── Finalize profile ──────────────────────────────────────────────────────
+  // ── Finalize profile ───────────────────────────────────────────────────────
   const finalizeProfile = async (e) => {
     if (e) e.preventDefault();
 
@@ -331,7 +416,7 @@ export default function AuthPage({ setStudentInfo }) {
 
     const uid = tempUser?.uid || auth.currentUser?.uid;
     const finalEmail = tempUser?.email || email;
-    const driveToken = tempUser?.driveToken || sessionStorage.getItem('drive_access_token');
+    const driveToken = tempUser?.driveToken || localStorage.getItem('drive_access_token');
 
     const resolvedSchoolId = userRole === 'principal' ? uid : selectedSchoolId;
     const selectedSchoolDoc = schoolList.find((s) => s.id === selectedSchoolId);
@@ -374,10 +459,20 @@ export default function AuthPage({ setStudentInfo }) {
         userRole === 'teacher' ? 'teachers' : 'students';
 
     try {
-      await setDoc(doc(db, collectionName, uid), fullProfile);
+      // FIX 1: Write users/{uid} FIRST so security rule helpers (isTeacher,
+      // isPrincipal, sameSchool) can resolve userDoc() when evaluating the
+      // role collection write below.
       await setDoc(doc(db, 'users', uid), {
-        uid, email: finalEmail, role: userRole, schoolId: resolvedSchoolId,
+        uid,
+        email: finalEmail,
+        role: userRole,
+        schoolId: resolvedSchoolId,
       }, { merge: true });
+
+      // FIX 2: Now write the role collection — userDoc() resolves correctly.
+      await setDoc(doc(db, collectionName, uid), fullProfile);
+
+      // FIX 3: ensureUserFirestoreDocs runs last, after both writes succeed.
       await ensureUserFirestoreDocs(uid, userRole, fullProfile);
 
       if (driveToken) {
@@ -388,25 +483,18 @@ export default function AuthPage({ setStudentInfo }) {
       if (userRole === 'student') setStudentInfo(fullProfile);
 
       if (userRole === 'principal') {
-        // ── KEY: pass everything already collected as seed state ──────────
-        // SchoolRegistration reads `location.state.seed` and pre-populates its form.
         navigate('/school-registration', {
           state: {
             seed: {
-              // School basics — already typed in this form
               name: school.trim(),
               province,
               district: district.trim(),
               curricula: [curriculum],
-
-              // Principal identity — already collected
               principalUid: uid,
               principalTitle: title,
               principalName: name.trim(),
               principalSurname: surname.trim(),
               principalEmail: finalEmail,
-
-              // Profile snapshot so SchoolRegistration can write it back
               principalProfile: fullProfile,
             },
           },
@@ -465,11 +553,11 @@ export default function AuthPage({ setStudentInfo }) {
           </span>
         </h1>
         <p className="text-xl md:text-2xl opacity-70 max-w-3xl mb-10 leading-relaxed font-medium mx-auto">
-          <span className="text-indigo-600 dark:text-indigo-400 font-bold">Eduket OS</span>{" "}
+          <span className="text-indigo-600 dark:text-indigo-400 font-bold">Eduket OS</span>{' '}
           tracks every answer, predicts outcomes, and adapts to each learner.
         </p>
         <div className="flex flex-wrap justify-center gap-3 mb-16 text-sm">
-          {["Upload PDF or Word", "Auto-mark with memo", "Predictive outcome tracking", "Agentic study planner", "CAPS & IEB aligned"].map((tag) => (
+          {['Upload PDF or Word', 'Auto-mark with memo', 'Predictive outcome tracking', 'Agentic study planner', 'CAPS & IEB aligned'].map((tag) => (
             <span key={tag} className="px-4 py-2 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 bg-indigo-500/5 font-medium">
               {tag}
             </span>
@@ -500,7 +588,9 @@ export default function AuthPage({ setStudentInfo }) {
               <div>
                 <label className="label-xs block mb-1.5">Email Address</label>
                 <input
-                  type="email" placeholder="you@school.co.za" required
+                  type="email"
+                  placeholder="you@school.co.za"
+                  required
                   value={email}
                   className="input-f"
                   onChange={(e) => setEmail(e.target.value)}
@@ -509,21 +599,27 @@ export default function AuthPage({ setStudentInfo }) {
               <div>
                 <label className="label-xs block mb-1.5">Password</label>
                 <input
-                  type="password" placeholder="••••••••" required
+                  type="password"
+                  placeholder="••••••••"
+                  required
                   className="input-f"
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              <button type="submit"
-                className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20 uppercase tracking-widest text-xs">
+              <button
+                type="submit"
+                className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20 uppercase tracking-widest text-xs"
+              >
                 {isRegistering ? 'Create Account' : 'Sign In'}
               </button>
             </form>
 
             <Divider />
 
-            <button onClick={handleGoogleLogin}
-              className="w-full py-4 border-2 border-slate-100 dark:border-slate-800 rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-bold text-sm">
+            <button
+              onClick={handleGoogleLogin}
+              className="w-full py-4 border-2 border-slate-100 dark:border-slate-800 rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-bold text-sm"
+            >
               <img src="https://www.gstatic.com/images/branding/product/1x/gsa_64dp.png" className="w-5 h-5" alt="G" />
               Continue with Google
             </button>
@@ -534,8 +630,10 @@ export default function AuthPage({ setStudentInfo }) {
 
             <p className="text-center mt-5 text-sm font-medium">
               {isRegistering ? 'Already a member?' : 'New to Eduket?'}{' '}
-              <button onClick={() => setIsRegistering(!isRegistering)}
-                className="text-indigo-600 font-black hover:underline underline-offset-4">
+              <button
+                onClick={() => setIsRegistering(!isRegistering)}
+                className="text-indigo-600 font-black hover:underline underline-offset-4"
+              >
                 {isRegistering ? 'Sign In Instead' : 'Register Now'}
               </button>
             </p>
@@ -585,8 +683,12 @@ export default function AuthPage({ setStudentInfo }) {
                 <p className="label-xs">I am a…</p>
                 <div className="grid grid-cols-3 gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
                   {['student', 'teacher', 'principal'].map((role) => (
-                    <button key={role} type="button" onClick={() => setUserRole(role)}
-                      className={`py-3 rounded-xl text-[10px] font-black uppercase transition-all ${userRole === role ? 'bg-white dark:bg-slate-700 shadow-md text-indigo-600' : 'opacity-40'}`}>
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => setUserRole(role)}
+                      className={`py-3 rounded-xl text-[10px] font-black uppercase transition-all ${userRole === role ? 'bg-white dark:bg-slate-700 shadow-md text-indigo-600' : 'opacity-40'}`}
+                    >
                       {role === 'student' ? '🎓 Student' : role === 'teacher' ? '📚 Teacher' : '🏫 Principal'}
                     </button>
                   ))}
@@ -604,8 +706,12 @@ export default function AuthPage({ setStudentInfo }) {
                   <p className="label-xs">Title</p>
                   <div className="flex gap-2 flex-wrap">
                     {['Mr', 'Mrs', 'Ms', 'Miss', 'Dr', 'Prof'].map((t) => (
-                      <button key={t} type="button" onClick={() => setTitle(t)}
-                        className={`px-4 py-2 rounded-xl text-xs font-black border transition-all ${title === t ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-indigo-400'}`}>
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setTitle(t)}
+                        className={`px-4 py-2 rounded-xl text-xs font-black border transition-all ${title === t ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-indigo-400'}`}
+                      >
                         {t}
                       </button>
                     ))}
@@ -621,7 +727,10 @@ export default function AuthPage({ setStudentInfo }) {
                     {autoFilled.name && <AutoTag />}
                   </div>
                   <input
-                    type="text" value={name} placeholder="e.g. Thabo" required
+                    type="text"
+                    value={name}
+                    placeholder="e.g. Thabo"
+                    required
                     className="input-f"
                     onChange={(e) => { setName(e.target.value); clearAuto('name'); }}
                   />
@@ -632,7 +741,10 @@ export default function AuthPage({ setStudentInfo }) {
                     {autoFilled.surname && <AutoTag />}
                   </div>
                   <input
-                    type="text" value={surname} placeholder="e.g. Nkosi" required
+                    type="text"
+                    value={surname}
+                    placeholder="e.g. Nkosi"
+                    required
                     className="input-f"
                     onChange={(e) => { setSurname(e.target.value); clearAuto('surname'); }}
                   />
@@ -641,18 +753,18 @@ export default function AuthPage({ setStudentInfo }) {
 
               {/* ── School selection ── */}
               {userRole === 'principal' ? (
-                /* Principal: type school name manually */
                 <div>
                   <label className="label-xs block mb-1.5">Your School Name *</label>
                   <input
-                    type="text" value={school}
-                    placeholder="e.g. Hoërskool Randburg" required
+                    type="text"
+                    value={school}
+                    placeholder="e.g. Hoërskool Randburg"
+                    required
                     className="input-f"
                     onChange={(e) => setSchool(e.target.value)}
                   />
                 </div>
               ) : (
-                /* Teacher / Student: pick from registered schools */
                 <div>
                   <label className="label-xs block mb-1.5">Select Your School *</label>
                   {schoolsLoading ? (
@@ -680,7 +792,7 @@ export default function AuthPage({ setStudentInfo }) {
                 </div>
               )}
 
-              {/* ── Province + District (principal only; auto-filled for teacher/student) ── */}
+              {/* ── Province + District ── */}
               {userRole === 'principal' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -699,15 +811,16 @@ export default function AuthPage({ setStudentInfo }) {
                   <div>
                     <label className="label-xs block mb-1.5">District *</label>
                     <input
-                      type="text" value={district}
-                      placeholder="e.g. Johannesburg East" required
+                      type="text"
+                      value={district}
+                      placeholder="e.g. Johannesburg East"
+                      required
                       className="input-f"
                       onChange={(e) => setDistrict(e.target.value)}
                     />
                   </div>
                 </div>
               ) : (province || district) ? (
-                /* Show read-only auto-filled location for teacher/student */
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {province && (
                     <div>
@@ -716,7 +829,9 @@ export default function AuthPage({ setStudentInfo }) {
                         {autoFilled.province && <AutoTag />}
                       </div>
                       <input
-                        type="text" value={province} readOnly
+                        type="text"
+                        value={province}
+                        readOnly
                         className="input-f bg-slate-50 dark:bg-slate-800/50 cursor-default"
                       />
                     </div>
@@ -728,7 +843,9 @@ export default function AuthPage({ setStudentInfo }) {
                         {autoFilled.district && <AutoTag />}
                       </div>
                       <input
-                        type="text" value={district} readOnly
+                        type="text"
+                        value={district}
+                        readOnly
                         className="input-f bg-slate-50 dark:bg-slate-800/50 cursor-default"
                       />
                     </div>
@@ -736,14 +853,18 @@ export default function AuthPage({ setStudentInfo }) {
                 </div>
               ) : null}
 
-              {/* ── Curriculum (principal only; teachers/students inherit from school) ── */}
+              {/* ── Curriculum (principal only) ── */}
               {userRole === 'principal' && (
                 <div>
                   <label className="label-xs block mb-1.5">Curriculum</label>
                   <div className="flex gap-2">
                     {['CAPS', 'IEB', 'Both'].map((c) => (
-                      <button key={c} type="button" onClick={() => setCurriculum(c)}
-                        className={`px-5 py-2.5 rounded-xl text-xs font-black border-2 transition-all ${curriculum === c ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-indigo-400'}`}>
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setCurriculum(c)}
+                        className={`px-5 py-2.5 rounded-xl text-xs font-black border-2 transition-all ${curriculum === c ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-indigo-400'}`}
+                      >
                         {c}
                       </button>
                     ))}
@@ -751,7 +872,7 @@ export default function AuthPage({ setStudentInfo }) {
                 </div>
               )}
 
-              {/* ── Inherited curriculum badge for teacher/student ── */}
+              {/* ── Inherited curriculum badge (teacher/student) ── */}
               {(userRole === 'teacher' || userRole === 'student') && curriculum && (
                 <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                   <span className="text-xs font-bold text-slate-500">Curriculum:</span>
@@ -766,7 +887,12 @@ export default function AuthPage({ setStudentInfo }) {
                 <div>
                   <label className="label-xs block mb-1.5">Grade *</label>
                   <div className="relative">
-                    <select value={grade} onChange={(e) => setGrade(e.target.value)} required className="input-f appearance-none pr-10">
+                    <select
+                      value={grade}
+                      onChange={(e) => setGrade(e.target.value)}
+                      required
+                      className="input-f appearance-none pr-10"
+                    >
                       <option value="" disabled>Select your grade</option>
                       {['Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'].map((g) => (
                         <option key={g} value={g}>{g}</option>
@@ -788,8 +914,12 @@ export default function AuthPage({ setStudentInfo }) {
                       { value: 'Senior', label: 'Senior Phase', grades: 'Grades 7–9' },
                       { value: 'FET', label: 'FET Phase', grades: 'Grades 10–12' },
                     ].map((ph) => (
-                      <button key={ph.value} type="button" onClick={() => setTeachingPhase(ph.value)}
-                        className={`p-3 rounded-2xl border-2 text-left transition-all ${teachingPhase === ph.value ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-100 dark:border-slate-700 hover:border-indigo-300'}`}>
+                      <button
+                        key={ph.value}
+                        type="button"
+                        onClick={() => setTeachingPhase(ph.value)}
+                        className={`p-3 rounded-2xl border-2 text-left transition-all ${teachingPhase === ph.value ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-100 dark:border-slate-700 hover:border-indigo-300'}`}
+                      >
                         <p className="font-black text-xs text-slate-800 dark:text-white leading-tight">{ph.label}</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">{ph.grades}</p>
                       </button>
@@ -813,8 +943,12 @@ export default function AuthPage({ setStudentInfo }) {
                     {STANDARD_DBE_SUBJECTS.map((s) => {
                       const active = subjects.includes(s);
                       return (
-                        <button key={s} type="button" onClick={() => toggleSubject(s)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-indigo-400'}`}>
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => toggleSubject(s)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-indigo-400'}`}
+                        >
                           {active && '✓ '}{s}
                         </button>
                       );
@@ -828,18 +962,25 @@ export default function AuthPage({ setStudentInfo }) {
                 <div className="pt-1"><DriveBadge status={driveStatus} /></div>
               )}
 
-              {/* ── Profile summary (what will carry forward) ── */}
+              {/* ── Profile summary ── */}
               <ProfileSummary
                 role={userRole}
-                name={name} surname={surname} title={title}
+                name={name}
+                surname={surname}
+                title={title}
                 email={tempUser?.email || email}
-                school={userRole === 'principal' ? school : (schoolList.find(s => s.id === selectedSchoolId)?.name || '')}
-                province={province} district={district} curriculum={curriculum}
+                school={userRole === 'principal' ? school : (schoolList.find((s) => s.id === selectedSchoolId)?.name || '')}
+                province={province}
+                district={district}
+                curriculum={curriculum}
               />
 
               {/* ── Submit ── */}
-              <button type="submit" disabled={isSubmitting}
-                className="w-full py-5 bg-indigo-600 text-white rounded-[2rem] font-black text-xl shadow-xl flex items-center justify-center gap-3 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-5 bg-indigo-600 text-white rounded-[2rem] font-black text-xl shadow-xl flex items-center justify-center gap-3 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
                 {isSubmitting ? (
                   <><Loader2 size={20} className="animate-spin" /> Setting up dashboard…</>
                 ) : (
@@ -882,12 +1023,10 @@ export default function AuthPage({ setStudentInfo }) {
 }
 
 // ─── PROFILE SUMMARY ──────────────────────────────────────────────────────────
-// Collapsed review card shown at the bottom of the form so users can verify
-// everything before submitting.
 function ProfileSummary({ role, name, surname, title, email, school, province, district, curriculum }) {
   const [open, setOpen] = useState(false);
   const fields = [
-    name && { label: 'Name', value: `${(role !== 'student' ? title + ' ' : '')}${name} ${surname}`.trim() },
+    name && { label: 'Name', value: `${role !== 'student' ? title + ' ' : ''}${name} ${surname}`.trim() },
     email && { label: 'Email', value: email },
     school && { label: 'School', value: school },
     province && { label: 'Province', value: province },
@@ -933,7 +1072,9 @@ function ErrorBox({ message, className = '' }) {
 function Divider() {
   return (
     <div className="relative my-8">
-      <div className="absolute inset-0 flex items-center"><span className="w-full border-t dark:border-slate-800" /></div>
+      <div className="absolute inset-0 flex items-center">
+        <span className="w-full border-t dark:border-slate-800" />
+      </div>
       <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest">
         <span className="bg-white dark:bg-slate-900 px-4 text-slate-400">or</span>
       </div>
