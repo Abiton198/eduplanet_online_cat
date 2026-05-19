@@ -9,6 +9,12 @@ import {
     ArrowRight, AlertTriangle, Shield, Zap, RefreshCw
 } from 'lucide-react';
 
+
+const MERCHANT_ID = import.meta.env.VITE_PAYFAST_MERCHANT_ID;
+const MERCHANT_KEY = import.meta.env.VITE_PAYFAST_MERCHANT_KEY;
+const PAYFAST_URL = "https://www.payfast.co.za/eng/process";
+
+
 // ─── PAYMENT MODAL ────────────────────────────────────────────────────────────
 
 function PaymentForm({ tier, billingCycle, schoolId, schoolName, onSuccess, onCancel }) {
@@ -20,62 +26,84 @@ function PaymentForm({ tier, billingCycle, schoolId, schoolName, onSuccess, onCa
 
     const handlePayfastPayment = async (e) => {
         e.preventDefault();
+
         setStep('paying');
         setError('');
 
         try {
-            const payfastData = {
-                merchant_id: '10000100', // Sandbox default ID
-                merchant_key: '46f0cd694581a',
-                return_url: `${window.location.origin}/payment-success`,
-                cancel_url: `${window.location.origin}/payment-cancel`,
-                notify_url: 'https://your-backend-api.com/payfast-webhook',
-                name_first: schoolName,
-                email_address: 'billing@school.edu.za',
-                m_payment_id: `PAY-${Date.now()}`,
-                amount: computedPrice.toFixed(2),
-                item_name: `${tier.name} Plan (${billingCycle})`,
-                item_description: `Subscription package for ${schoolName}`,
-            };
+            const transactionRef = `PAY-${Date.now()}`;
 
-            console.log('Redirecting to Payfast engine:', payfastData);
-            await new Promise((res) => setTimeout(res, 2000));
-
-            // Form Submit Flow Example:
-            // const form = document.createElement('form');
-            // form.method = 'POST';
-            // form.action = 'https://sandbox.payfast.co.za/eng/process';
-            // Object.keys(payfastData).forEach(k => { ... form.appendChild(input) });
-            // form.submit();
-
-            const transactionRef = payfastData.m_payment_id;
-
-            await updateDoc(doc(db, 'schools', schoolId), {
-                tier: tier.id,
-                billingCycle: billingCycle,
-                tierUpdatedAt: serverTimestamp(),
-                lastTransactionRef: transactionRef,
-            });
-
+            // Save pending transaction first
             await addDoc(collection(db, 'billing'), {
                 schoolId,
                 schoolName,
                 tier: tier.id,
                 tierName: tier.name,
-                billingCycle: billingCycle,
+                billingCycle,
                 amount: computedPrice,
                 currency: 'ZAR',
                 transactionRef,
-                status: 'paid',
-                paidAt: serverTimestamp(),
+                status: 'pending',
+                createdAt: serverTimestamp(),
             });
 
-            setStep('success');
-            setTimeout(() => onSuccess(tier.id), 2000);
+            // Update school billing state
+            await updateDoc(doc(db, 'schools', schoolId), {
+                pendingTier: tier.id,
+                pendingBillingCycle: billingCycle,
+                lastTransactionRef: transactionRef,
+                paymentStatus: 'pending',
+                tierUpdatedAt: serverTimestamp(),
+            });
+
+            // PAYFAST FORM DATA
+            const paymentData = {
+                merchant_id: MERCHANT_ID,
+                merchant_key: MERCHANT_KEY,
+
+                return_url: `${window.location.origin}/payment-success`,
+                cancel_url: `${window.location.origin}/payment-cancel`,
+                notify_url: `${window.location.origin}/api/payfast-notify`,
+
+                name_first: schoolName || "School",
+                email_address: "billing@school.edu.za",
+
+                m_payment_id: transactionRef,
+
+                amount: computedPrice.toFixed(2),
+
+                item_name: `${tier.name} Plan`,
+                item_description: `${tier.name} Subscription (${billingCycle}) for ${schoolName}`,
+            };
+
+            console.log("Submitting PayFast Payment:", paymentData);
+
+            // CREATE FORM
+            const form = document.createElement("form");
+            form.method = "POST";
+            form.action = PAYFAST_URL;
+            form.target = "_self";
+
+            Object.entries(paymentData).forEach(([key, value]) => {
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+
         } catch (err) {
-            console.error('[Payfast Gateway Error]:', err);
+            console.error('[PayFast Error]', err);
+
             setStep('error');
-            setError('Could not process transaction checkout initialization via Payfast.');
+
+            setError(
+                err?.message || 'Failed to initialize PayFast payment.'
+            );
         }
     };
 
