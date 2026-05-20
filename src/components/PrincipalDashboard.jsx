@@ -7,7 +7,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
-import { auth } from '../utils/firebase';
+import { auth, db } from '../utils/firebase';
+
 import {
     Users, BookOpen, FileText, TrendingUp, Award, AlertTriangle,
     ChevronDown, ChevronRight, Filter, Download, Printer, LogOut,
@@ -26,6 +27,8 @@ import { useSchool } from '../utils/schoolContext';
 import { TIERS, getTierConfig, isFeatureAllowed, isAtLimit, getUsagePercent } from '../utils/tierConfig';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { onSnapshot, collection, getDoc, getDocs, query, where } from 'firebase/firestore';
+
 
 // ─── GRADE ORDER ──────────────────────────────────────────────────────────────
 const GRADE_ORDER = ['Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
@@ -252,6 +255,48 @@ export default function PrincipalDashboard({ principal }) {
 
     const schoolId = principal?.schoolId || principal?.uid;
     const printRef = useRef();
+
+    useEffect(() => {
+        if (!schoolId) return;
+
+        const unsub = onSnapshot(
+            collection(db, "students"),
+            (snap) => {
+                const data = snap.docs.map(d => d.data());
+                setStudents(data);
+            }
+        );
+
+        return () => unsub();
+    }, [schoolId]);
+
+    useEffect(() => {
+        if (!schoolId) return;
+
+        const unsub = onSnapshot(
+            collection(db, "exams"),
+            (snap) => {
+                const data = snap.docs.map(d => d.data());
+                setExams(data);
+            }
+        );
+
+        return () => unsub();
+    }, [schoolId]);
+
+    useEffect(() => {
+        if (!schoolId) return;
+
+        const unsub = onSnapshot(
+            collection(db, "teachers"),
+            (snap) => {
+                const data = snap.docs.map(d => d.data());
+                setTeachers(data);
+            }
+        );
+
+        return () => unsub();
+    }, [schoolId]);
 
     useEffect(() => {
         if (!schoolId) return;

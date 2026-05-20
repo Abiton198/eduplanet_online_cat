@@ -71,13 +71,11 @@ const S = {
   feedBox: { background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 12, padding: "14px 18px", marginBottom: 20, fontSize: 14, lineHeight: 1.7 },
   pill: { display: "inline-block", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 700, marginRight: 6 },
 
-  // Score banner
   scoreBanner: { background: "linear-gradient(135deg,#6366f1,#8b5cf6)", borderRadius: 16, padding: "28px 32px", marginBottom: 20, color: "#fff", textAlign: "center" },
   scoreNum: { fontSize: 52, fontWeight: 800, letterSpacing: "-2px", lineHeight: 1 },
   scorePct: { fontSize: 20, fontWeight: 700, opacity: .85, marginTop: 6 },
   scoreSub: { fontSize: 13, opacity: .7, marginTop: 4 },
 
-  // Post-submit agent panel
   agentPanel: { background: "#eef2ff", border: "1.5px solid #c7d2fe", borderRadius: 12, padding: "16px 20px", marginBottom: 20, fontSize: 14 },
   agentInput: { width: "100%", padding: "10px 14px", border: "1.5px solid #c7d2fe", borderRadius: 10, fontSize: 14, fontFamily: "inherit", marginTop: 10, boxSizing: "border-box" },
 
@@ -98,13 +96,155 @@ const FontLoader = () => (
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap');
     * { box-sizing: border-box; }
     button:disabled { opacity: .5; cursor: not-allowed; }
+
+    @keyframes timerPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+    @keyframes timerShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-3px); }
+      40% { transform: translateX(3px); }
+      60% { transform: translateX(-3px); }
+      80% { transform: translateX(3px); }
+    }
+    .timer-urgent {
+      animation: timerPulse 1s ease-in-out infinite;
+    }
+    .timer-shake {
+      animation: timerShake 0.4s ease-in-out;
+    }
   `}</style>
 );
+
+// ─── TIMER COMPONENT ──────────────────────────────────────────────────────────
+// Displays MM:SS countdown. Turns amber under 5 min, red under 2 min.
+// Calls onExpire when it hits zero.
+function ExamTimer({ totalSeconds, onExpire, compact = false }) {
+  const [secondsLeft, setSecondsLeft] = useState(totalSeconds);
+  const [shake, setShake] = useState(false);
+  const intervalRef = useRef(null);
+  const prevMinuteRef = useRef(Math.ceil(totalSeconds / 60));
+
+  useEffect(() => {
+    if (totalSeconds <= 0) return; // no timer if duration not set
+    intervalRef.current = setInterval(() => {
+      setSecondsLeft((s) => {
+        if (s <= 1) {
+          clearInterval(intervalRef.current);
+          onExpire();
+          return 0;
+        }
+        // Trigger shake on every minute boundary
+        const newMinute = Math.ceil((s - 1) / 60);
+        if (newMinute < prevMinuteRef.current) {
+          prevMinuteRef.current = newMinute;
+          setShake(true);
+          setTimeout(() => setShake(false), 450);
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(intervalRef.current);
+  }, []);
+
+  const mins = Math.floor(secondsLeft / 60);
+  const secs = secondsLeft % 60;
+  const display = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+
+  const isUrgent = secondsLeft <= 120; // ≤ 2 min — red + pulse
+  const isWarning = secondsLeft <= 300; // ≤ 5 min — amber
+
+  const bgColor = isUrgent ? "#fef2f2" : isWarning ? "#fffbeb" : "#f0fdf4";
+  const borderColor = isUrgent ? "#fca5a5" : isWarning ? "#fde68a" : "#86efac";
+  const textColor = isUrgent ? "#dc2626" : isWarning ? "#b45309" : "#16a34a";
+  const label = isUrgent ? "⏰" : isWarning ? "⏳" : "🕐";
+
+  if (compact) {
+    // Inline chip for top bar
+    return (
+      <span
+        className={`${isUrgent ? "timer-urgent" : ""} ${shake ? "timer-shake" : ""}`}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          background: bgColor, border: `1.5px solid ${borderColor}`,
+          color: textColor, borderRadius: 10, padding: "5px 12px",
+          fontWeight: 800, fontSize: 14, letterSpacing: "1px",
+          fontVariantNumeric: "tabular-nums", minWidth: 80, justifyContent: "center",
+          transition: "background .4s, color .4s, border-color .4s",
+        }}
+      >
+        {label} {display}
+      </span>
+    );
+  }
+
+  // Full-size timer card for normal exam view
+  return (
+    <div
+      className={`${isUrgent ? "timer-urgent" : ""} ${shake ? "timer-shake" : ""}`}
+      style={{
+        display: "flex", alignItems: "center", gap: 10,
+        background: bgColor, border: `1.5px solid ${borderColor}`,
+        borderRadius: 12, padding: "10px 18px", marginBottom: 16,
+        transition: "background .4s, color .4s, border-color .4s",
+      }}
+    >
+      <span style={{ fontSize: 20 }}>{label}</span>
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: textColor, opacity: .7 }}>
+          Time Remaining
+        </div>
+        <div style={{
+          fontSize: 28, fontWeight: 800, color: textColor, letterSpacing: "2px",
+          fontVariantNumeric: "tabular-nums", lineHeight: 1.1,
+        }}>
+          {display}
+        </div>
+      </div>
+      {isUrgent && (
+        <div style={{ marginLeft: "auto", fontSize: 12, color: "#dc2626", fontWeight: 700 }}>
+          Hurry up!
+        </div>
+      )}
+      {!isUrgent && isWarning && (
+        <div style={{ marginLeft: "auto", fontSize: 12, color: "#b45309", fontWeight: 700 }}>
+          5 min left
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── TIME-UP MODAL ────────────────────────────────────────────────────────────
+function TimeUpModal({ answeredCount, totalQ, onSubmit }) {
+  return (
+    <div style={S.overlay}>
+      <div style={{ ...S.modal, borderTop: "5px solid #dc2626" }}>
+        <div style={S.modalIcon}>⏰</div>
+        <div style={S.modalTitle}>Time's Up!</div>
+        <div style={S.modalSub}>
+          Your exam time has expired.<br />
+          You answered <b>{answeredCount}</b> of <b>{totalQ}</b> questions.<br />
+          Your answers will now be submitted automatically.
+        </div>
+        <div style={S.modalBtns}>
+          <button
+            style={{ ...S.btn, ...S.btnDanger, minWidth: 160 }}
+            onClick={onSubmit}
+          >
+            ✅ Submit Now
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AIExamMocker({ student }) {
   const containerRef = useRef(null);
-  const STUDENT_ID = useStudentId();  // resolves to student's real name from Firebase
+  const STUDENT_ID = useStudentId();
 
   // ── Exam list & setup ──────────────────────────────────────────────────────
   const [exams, setExams] = useState([]);
@@ -112,6 +252,13 @@ export default function AIExamMocker({ student }) {
   const [sessionId, setSessionId] = useState(null);
   const [totalQ, setTotalQ] = useState(0);
   const [memoMerged, setMemoMerged] = useState(false);
+
+  // ── Timer ──────────────────────────────────────────────────────────────────
+  // examDurationSeconds: pulled from the exam metadata returned by /start-exam.
+  // Falls back to 0 (no timer) if not set.
+  const [examDurationSeconds, setExamDurationSeconds] = useState(0);
+  const [timerKey, setTimerKey] = useState(0);       // increment to reset timer
+  const [timeExpired, setTimeExpired] = useState(false);
 
   // ── Exam state ─────────────────────────────────────────────────────────────
   const [question, setQuestion] = useState(null);
@@ -130,7 +277,7 @@ export default function AIExamMocker({ student }) {
   const [showExitModal, setShowExitModal] = useState(false);
   const [tfCorrection, setTfCorrection] = useState("");
 
-  // ── Post-submit agent chat (ask about results) ─────────────────────────────
+  // ── Post-submit agent chat ─────────────────────────────────────────────────
   const [agentQuestion, setAgentQuestion] = useState("");
   const [agentReply, setAgentReply] = useState("");
   const [agentLoading, setAgentLoading] = useState(false);
@@ -202,7 +349,7 @@ export default function AIExamMocker({ student }) {
     } catch (e) { console.error("loadExams:", e); }
   };
 
-  // ── API: start exam — NOW sends student_id ─────────────────────────────────
+  // ── API: start exam ────────────────────────────────────────────────────────
   const startExam = async () => {
     if (!selectedExam) return;
     setLoading(true);
@@ -210,16 +357,23 @@ export default function AIExamMocker({ student }) {
       const res = await fetch(`${API}/start-exam`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          exam: selectedExam,
-          student_id: STUDENT_ID,          // ← wired in
-        }),
+        body: JSON.stringify({ exam: selectedExam, student_id: STUDENT_ID }),
       });
       const data = await res.json();
       if (data.error) { alert(data.error); return; }
+
       setSessionId(data.session_id);
       setTotalQ(data.total_questions);
       setMemoMerged(data.memo_merged || false);
+
+      // ── Set timer from exam metadata ──────────────────────────────────────
+      // Backend may return exam_duration_minutes (from saveExamMetadata).
+      // Convert to seconds. If absent, fall back to 0 (no timer).
+      const durationMins = data.exam_duration_minutes || data.examDuration || 0;
+      setExamDurationSeconds(Number(durationMins) * 60);
+      setTimerKey((k) => k + 1);   // reset any previous timer
+      setTimeExpired(false);
+
       setStarted(true);
       setIndex(0);
       setAnswers({});
@@ -228,6 +382,12 @@ export default function AIExamMocker({ student }) {
       await fetchQuestion(data.session_id, 0);
     } finally { setLoading(false); }
   };
+
+  // ── Timer expiry handler ───────────────────────────────────────────────────
+  const handleTimeExpired = useCallback(() => {
+    setTimeExpired(true);
+    if (isFullscreen) exitFullscreen();
+  }, [isFullscreen, exitFullscreen]);
 
   // ── API: get question ──────────────────────────────────────────────────────
   const fetchQuestion = async (sid, i) => {
@@ -256,29 +416,27 @@ export default function AIExamMocker({ student }) {
     } catch (e) { console.error("saveAnswer:", e); }
   };
 
-  // ── API: submit — NOW sends student_id so agent updates study plan ─────────
+  // ── API: submit ────────────────────────────────────────────────────────────
   const submitExam = async () => {
-    const unanswered = totalQ - Object.keys(answers).length;
-    if (unanswered > 0) {
-      if (!confirm(`You have ${unanswered} unanswered question(s). Submit anyway?`)) return;
+    // If triggered by user (not timer), warn about unanswered
+    if (!timeExpired) {
+      const unanswered = totalQ - Object.keys(answers).length;
+      if (unanswered > 0) {
+        if (!confirm(`You have ${unanswered} unanswered question(s). Submit anyway?`)) return;
+      }
     }
     setSaving(true);
+    setTimeExpired(false);
     if (isFullscreen) exitFullscreen();
     try {
-      // 1. Submit to backend first — get marked results + AI feedback
       const res = await fetch(`${API}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          session_id: sessionId,
-          student_id: STUDENT_ID,
-        }),
+        body: JSON.stringify({ session_id: sessionId, student_id: STUDENT_ID }),
       });
       const data = await res.json();
       if (data.error) { alert(data.error); return; }
 
-      // 2. Save full attempt + marked results to Firestore so
-      //    ExamResultsDisplay can read everything from one doc.
       await addDoc(collection(db, "exam_attempts"), {
         studentId: STUDENT_ID,
         exam: selectedExam,
@@ -288,8 +446,9 @@ export default function AIExamMocker({ student }) {
         score: data.score,
         total: data.total,
         percentage: data.percentage,
-        markedResults: data.results || [],   // per-question breakdown
-        aiFeedback: data.feedback || "",  // AI summary feedback
+        markedResults: data.results || [],
+        aiFeedback: data.feedback || "",
+        timedOut: timeExpired,
         completedAt: serverTimestamp(),
         createdAt: serverTimestamp(),
       });
@@ -299,7 +458,7 @@ export default function AIExamMocker({ student }) {
     } finally { setSaving(false); }
   };
 
-  // ── API: post-submit agent question ───────────────────────────────────────
+  // ── Post-submit agent ──────────────────────────────────────────────────────
   const askAgent = async () => {
     const q = agentQuestion.trim();
     if (!q || agentLoading) return;
@@ -330,13 +489,13 @@ export default function AIExamMocker({ student }) {
     if (index < totalQ - 1) goTo(index + 1);
   };
 
-  // ── Cancel / exit exam ─────────────────────────────────────────────────────
   const cancelExam = () => {
     if (isFullscreen) exitFullscreen();
     setShowExitModal(false);
     setStarted(false); setSubmitted(false); setResults(null);
     setQuestion(null); setAnswers({}); setSkipped(new Set());
     setSessionId(null); setIndex(0); setAgentReply("");
+    setTimeExpired(false); setExamDurationSeconds(0);
   };
 
   // ── Question navigator dot style ───────────────────────────────────────────
@@ -360,7 +519,6 @@ export default function AIExamMocker({ student }) {
     const q = question;
     const saved = answers[index] || "";
 
-    // MCQ
     if (q.type === "mcq" && Array.isArray(q.options) && q.options.length > 0) {
       return (
         <div>
@@ -380,7 +538,6 @@ export default function AIExamMocker({ student }) {
       );
     }
 
-    // True/False
     if (q.type === "true_false") {
       const isFalse = saved.startsWith("False");
       return (
@@ -415,7 +572,6 @@ export default function AIExamMocker({ student }) {
       );
     }
 
-    // Matching
     if (q.type === "matching" && Array.isArray(q.column_a) && q.column_a.length > 0) {
       let savedMap = {};
       try { savedMap = JSON.parse(saved || "{}"); } catch (_) { }
@@ -452,7 +608,6 @@ export default function AIExamMocker({ student }) {
       );
     }
 
-    // Open
     return (
       <textarea style={S.textarea} placeholder="Write your answer here..."
         value={saved} onChange={(e) => saveAnswer(e.target.value)} />
@@ -523,7 +678,7 @@ export default function AIExamMocker({ student }) {
     </div>
   );
 
-  // ── Question card (shared between normal + fullscreen) ─────────────────────
+  // ── Question card ──────────────────────────────────────────────────────────
   const QuestionContent = ({ cardStyle }) => {
     const q = question;
     const answered = Object.keys(answers).length;
@@ -596,7 +751,6 @@ export default function AIExamMocker({ student }) {
       <div style={S.wrap} ref={containerRef}>
         <FontLoader />
 
-        {/* Score banner */}
         <div style={S.scoreBanner}>
           <div style={S.scoreNum}>{results.score} / {results.total}</div>
           <div style={{ ...S.scorePct, color: pct >= 70 ? "#bbf7d0" : pct >= 50 ? "#fef08a" : "#fca5a5" }}>
@@ -605,19 +759,15 @@ export default function AIExamMocker({ student }) {
           <div style={S.scoreSub}>
             {pct >= 70 ? "🎉 Great work!" : pct >= 50 ? "📈 Good effort — keep practising" : "💪 Keep going — review your weak areas"}
           </div>
-          <div style={{ fontSize: 11, opacity: .5, marginTop: 8 }}>
-            Student: {STUDENT_ID}
-          </div>
+          <div style={{ fontSize: 11, opacity: .5, marginTop: 8 }}>Student: {STUDENT_ID}</div>
         </div>
 
-        {/* AI feedback */}
         {results.feedback && (
           <div style={S.feedBox}>
             🤖 <b>AI Feedback:</b><br />{results.feedback}
           </div>
         )}
 
-        {/* Agent follow-up panel */}
         <div style={S.agentPanel}>
           <div style={{ fontWeight: 700, fontSize: 14, color: "#3730a3", marginBottom: 6 }}>
             🤖 Ask the AI Agent about your results
@@ -631,28 +781,20 @@ export default function AIExamMocker({ student }) {
             </div>
           )}
           <div style={{ display: "flex", gap: 8 }}>
-            <input
-              type="text"
-              style={S.agentInput}
+            <input type="text" style={S.agentInput}
               placeholder="Ask the agent anything about this exam…"
               value={agentQuestion}
               onChange={(e) => setAgentQuestion(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") askAgent(); }}
-            />
-            <button
-              style={{ ...S.btn, ...S.btnPri, whiteSpace: "nowrap", opacity: agentLoading || !agentQuestion.trim() ? .6 : 1 }}
-              onClick={askAgent}
-              disabled={agentLoading || !agentQuestion.trim()}>
+              onKeyDown={(e) => { if (e.key === "Enter") askAgent(); }} />
+            <button style={{ ...S.btn, ...S.btnPri, whiteSpace: "nowrap", opacity: agentLoading || !agentQuestion.trim() ? .6 : 1 }}
+              onClick={askAgent} disabled={agentLoading || !agentQuestion.trim()}>
               {agentLoading ? "…" : "Ask"}
             </button>
           </div>
         </div>
 
-        {/* Per-question results */}
         {(results.results || []).map((r, i) => {
           const st = STATUS_COLOR[r.status] || STATUS_COLOR.missing;
-
-          // Format student answer for display
           let studentDisplay = r.student_answer || "No answer";
           if (r.type === "matching" && r.student_answer && r.student_answer !== "No answer") {
             try {
@@ -660,7 +802,6 @@ export default function AIExamMocker({ student }) {
               studentDisplay = Object.entries(obj).map(([k, v]) => `${k} → ${v}`).join("\n");
             } catch (_) { }
           }
-
           return (
             <div key={i} style={{ ...S.resultCard, background: st.bg, borderColor: st.border }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -681,11 +822,8 @@ export default function AIExamMocker({ student }) {
                 {r.feedback && <><b>Feedback:</b> {r.feedback}</>}
               </div>
               <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                <span style={{ ...S.pill, background: st.bg, color: "#374151", border: `1px solid ${st.border}` }}>
-                  {r.status}
-                </span>
+                <span style={{ ...S.pill, background: st.bg, color: "#374151", border: `1px solid ${st.border}` }}>{r.status}</span>
                 <span style={{ ...S.pill, background: "#f3f4f6", color: "#374151" }}>{r.type}</span>
-                {/* Quick hint button for incorrect/partial */}
                 {(r.status === "incorrect" || r.status === "partial") && (
                   <button
                     style={{ ...S.btnSkip, fontSize: 12, padding: "3px 10px", background: "#eef2ff", color: "#4338ca", border: "1px solid #c7d2fe" }}
@@ -705,6 +843,7 @@ export default function AIExamMocker({ student }) {
           onClick={() => {
             setSubmitted(false); setStarted(false); setResults(null);
             setAnswers({}); setSkipped(new Set()); setAgentReply("");
+            setExamDurationSeconds(0);
           }}>
           🔄 Try Another Exam
         </button>
@@ -733,11 +872,7 @@ export default function AIExamMocker({ student }) {
               const label = typeof ex === "string"
                 ? ex.replace("_exam.json", "").replace(/_/g, " ")
                 : `${ex.name}${ex.grade ? ` — Grade ${ex.grade}` : ""}${ex.year ? ` (${ex.year})` : ""}`;
-              return (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              );
+              return <option key={id} value={id}>{label}</option>;
             })}
           </select>
           <button style={{ ...S.startBtn, opacity: loading || !selectedExam ? 0.6 : 1 }}
@@ -759,6 +894,15 @@ export default function AIExamMocker({ student }) {
         {showExitModal && <ExitModal />}
         {drawerOpen && <NavigatorDrawer />}
 
+        {/* Time-up modal — shown over fullscreen too */}
+        {timeExpired && (
+          <TimeUpModal
+            answeredCount={Object.keys(answers).length}
+            totalQ={totalQ}
+            onSubmit={submitExam}
+          />
+        )}
+
         <div style={S.topBar}>
           <span style={S.topBarTitle}>
             📝 {exams.find(e => (e.id || e) === selectedExam)?.name || selectedExam?.replace(/_/g, " ")}
@@ -769,6 +913,17 @@ export default function AIExamMocker({ student }) {
           <span style={{ fontSize: 13, color: "#9ca3af" }}>
             {Object.keys(answers).length}/{totalQ} answered
           </span>
+
+          {/* ── Timer chip in top bar ── */}
+          {examDurationSeconds > 0 && (
+            <ExamTimer
+              key={timerKey}
+              totalSeconds={examDurationSeconds}
+              onExpire={handleTimeExpired}
+              compact={true}
+            />
+          )}
+
           <button style={{ ...S.btn, ...S.btnGhost, fontSize: 13, color: "#e5e7eb", borderColor: "#374151" }}
             onClick={() => setDrawerOpen(true)}>
             ☰ Questions
@@ -788,7 +943,7 @@ export default function AIExamMocker({ student }) {
             Loading question…
           </div>
         ) : question ? (
-          QuestionContent({ cardStyle: { ...S.cardFull, maxWidth: 760, margin: "0 auto", width: "100%", padding: "28px 40px" } })  // ← changed
+          QuestionContent({ cardStyle: { ...S.cardFull, maxWidth: 760, margin: "0 auto", width: "100%", padding: "28px 40px" } })
         ) : (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444" }}>
             ⚠️ Failed to load question.
@@ -808,6 +963,15 @@ export default function AIExamMocker({ student }) {
       <FontLoader />
       {showExitModal && <ExitModal />}
       {drawerOpen && <NavigatorDrawer />}
+
+      {/* Time-up modal */}
+      {timeExpired && (
+        <TimeUpModal
+          answeredCount={answered}
+          totalQ={totalQ}
+          onSubmit={submitExam}
+        />
+      )}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
         <div>
@@ -834,10 +998,20 @@ export default function AIExamMocker({ student }) {
         {memoMerged ? "✅ Memo loaded — AI marking enabled" : "⚠️ No memo — AI feedback only"}
       </div>
 
+      {/* ── Countdown timer — full size in normal view ── */}
+      {examDurationSeconds > 0 && (
+        <ExamTimer
+          key={timerKey}
+          totalSeconds={examDurationSeconds}
+          onExpire={handleTimeExpired}
+          compact={false}
+        />
+      )}
+
       {loading ? (
         <div style={{ ...S.card, textAlign: "center", color: "#9ca3af", padding: 40 }}>Loading question…</div>
       ) : question ? (
-        QuestionContent({ cardStyle: S.card })   // ← changed
+        QuestionContent({ cardStyle: S.card })
       ) : (
         <div style={{ ...S.card, color: "#ef4444" }}>⚠️ Failed to load question.</div>
       )}

@@ -14,7 +14,7 @@ import Swal from 'sweetalert2';
 import {
   hasDrivePermission, requestDrivePermission, getValidDriveToken,
   getFolderIds, uploadFileToDrive, saveExamMetadata, ensureUserFirestoreDocs,
-  deleteExamFromAudit, updateExamInAudit,
+  updateExamInAudit, shareFileWithServiceAccount, deleteExamFromAudit
 } from '../utils/driveManager';
 import { runExamDeletion } from '../utils/examDeleteUtils';
 import { validateExamFile, getFileTypeLabel, isOpenDocumentFormat } from '../utils/examUploadUtils';
@@ -186,8 +186,8 @@ function AuditRow({ exam, onEdit, onDelete, expanded, onToggle }) {
       >
         {/* Status dot */}
         <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${exam.status === 'ready' ? 'bg-green-500' :
-            exam.status === 'pending_extraction' ? 'bg-amber-400 animate-pulse' :
-              exam.status === 'indexed' ? 'bg-purple-500' : 'bg-blue-500'
+          exam.status === 'pending_extraction' ? 'bg-amber-400 animate-pulse' :
+            exam.status === 'indexed' ? 'bg-purple-500' : 'bg-blue-500'
           }`} />
 
         {/* Main info */}
@@ -453,8 +453,6 @@ export default function TeacherDashboard() {
 
   // ─── UPLOAD ──────────────────────────────────────────────────────────────
   const handleExamUpload = async () => {
-
-    // --- Validate all fields including file types ---
     const examFileError = validateExamFile(examFile, 'Question paper');
     const memoFileError = validateExamFile(memoFile, 'Marking memo');
 
@@ -483,9 +481,11 @@ export default function TeacherDashboard() {
 
       setUploadProgress(`Uploading question paper (${getFileTypeLabel(examFile)})...`);
       const examDriveFile = await uploadFileToDrive(examFile, folderIds.uploadedId, token);
+      await shareFileWithServiceAccount(examDriveFile.id, token);
 
       setUploadProgress(`Uploading marking memo (${getFileTypeLabel(memoFile)})...`);
       const memoDriveFile = await uploadFileToDrive(memoFile, folderIds.uploadedId, token);
+      await shareFileWithServiceAccount(memoDriveFile.id, token);
 
       setUploadProgress('Saving to Eduket AI...');
       const userDocSnap = await getDoc(doc(db, "users", user.uid));
@@ -495,8 +495,6 @@ export default function TeacherDashboard() {
         uid: user.uid,
         teacherName: `${teacherProfile?.title || ''} ${teacherProfile?.surname || 'Teacher'}`.trim(),
         schoolId: userData.schoolId ?? teacherProfile?.schoolId ?? null,
-
-
         title: paperTitle.trim(),
         year: paperYear,
         subject: paperSubject,
@@ -505,32 +503,39 @@ export default function TeacherDashboard() {
         examFileType: getFileTypeLabel(examFile),
         memoFileType: getFileTypeLabel(memoFile),
         examDuration,
-
         examDriveFile,
         memoDriveFile,
       });
 
-      setUploadProgress('Queuing AI extraction...');
-      await fetch('https://chatbot-backend-educat.onrender.com/auto-extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          exam_id: examId,
-          exam_file_type: getFileTypeLabel(examFile),
-          memo_file_type: getFileTypeLabel(memoFile),
-          exam_needs_conversion: isOpenDocumentFormat(examFile),  // ← tells backend to convert ODT→PDF first
-          memo_needs_conversion: isOpenDocumentFormat(memoFile),
-        }),
-      });
+      // ✅ isNewExam declared here, where examId exists
+      const isNewExam = !uploadedExams.some(
+        (u) => u.examId === examId || u.id === examId
+      );
+
+      if (isNewExam) {
+        setUploadProgress('Queuing AI extraction...');
+        await fetch('https://chatbot-backend-educat.onrender.com/auto-extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            exam_id: examId,
+            exam_file_type: getFileTypeLabel(examFile),
+            memo_file_type: getFileTypeLabel(memoFile),
+            exam_needs_conversion: isOpenDocumentFormat(examFile),
+            memo_needs_conversion: isOpenDocumentFormat(memoFile),
+          }),
+        });
+      } else {
+        setUploadProgress('Exam already processed — skipping extraction.');
+      }
 
       await Swal.fire({
         icon: 'success',
         title: 'Upload Complete!',
-        text: 'AI extraction pipeline queued.',
+        text: isNewExam ? 'AI extraction pipeline queued.' : 'Exam already processed.',
         confirmButtonColor: '#4F46E5',
       });
 
-      // Reset wizard
       setUploadStep(1);
       setExamFile(null);
       setMemoFile(null);
@@ -544,6 +549,7 @@ export default function TeacherDashboard() {
       setUploadProgress('');
     }
   };
+
 
 
   // ─── EDIT ────────────────────────────────────────────────────────────────
