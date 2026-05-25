@@ -55,6 +55,21 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // ── Keep Render backend alive ──────────────────────────────────────────
+  useEffect(() => {
+    const BACKEND = "https://chatbot-backend-educat.onrender.com";
+
+    // Wake immediately on app load
+    fetch(`${BACKEND}/`).catch(() => { });
+
+    // Ping every 10 minutes to prevent sleep
+    const interval = setInterval(() => {
+      fetch(`${BACKEND}/`).catch(() => { });
+    }, 10 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // ── Load legacy session from localStorage (keeps existing users working) ───
   useEffect(() => {
     const savedUser = localStorage.getItem('user-session');

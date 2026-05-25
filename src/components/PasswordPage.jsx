@@ -21,6 +21,8 @@
 //      so security rule helpers (isTeacher, isPrincipal, sameSchool) can resolve
 //      userDoc() when evaluating the role doc write.
 //   3. ensureUserFirestoreDocs is called LAST, after both writes succeed.
+//   4. MIGRATION: Shifted environment completely from Google Drive API to native 
+//      Firebase Storage infrastructure for exam files and resources.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -34,15 +36,13 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../utils/firebase';
 import {
   X, Zap, BrainCircuit, UserCheck, ArrowRight,
-  Sun, Moon, CheckCircle2, HardDrive, Loader2,
+  Sun, Moon, CheckCircle2, CloudLightning, Loader2,
   Sparkles, ChevronDown,
 } from 'lucide-react';
-import { ensureUserFirestoreDocs, ensureAppFolders, hasDrivePermission } from '../utils/driveManager';
+import { ensureUserFirestoreDocs } from '../utils/driveManager';
 import { listSchools } from '../utils/firestoreHelpers';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive';
 
 const SA_PROVINCES = [
   'Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal',
@@ -69,25 +69,25 @@ function AutoTag() {
   );
 }
 
-// ─── DRIVE BADGE ─────────────────────────────────────────────────────────────
-function DriveBadge({ status }) {
+// ─── STORAGE BADGE ─────────────────────────────────────────────────────────────
+function StorageBadge({ status }) {
   if (status === 'idle') return null;
   if (status === 'linking') return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800">
       <Loader2 size={14} className="animate-spin text-indigo-500" />
-      <span className="text-xs font-bold text-indigo-600 dark:text-indigo-300">Linking Google Drive…</span>
+      <span className="text-xs font-bold text-indigo-600 dark:text-indigo-300">Allocating Storage Space…</span>
     </div>
   );
   if (status === 'linked') return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800">
       <CheckCircle2 size={14} className="text-green-500" />
-      <span className="text-xs font-bold text-green-600 dark:text-green-300">Google Drive linked ✓</span>
+      <span className="text-xs font-bold text-green-600 dark:text-green-300">Firebase Storage Active ✓</span>
     </div>
   );
   if (status === 'failed') return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800">
-      <HardDrive size={14} className="text-amber-500" />
-      <span className="text-xs font-bold text-amber-600 dark:text-amber-300">Drive link pending — will retry on next login</span>
+      <CloudLightning size={14} className="text-amber-500" />
+      <span className="text-xs font-bold text-amber-600 dark:text-amber-300">Provisioning pending — retrying shortly</span>
     </div>
   );
   return null;
@@ -103,11 +103,11 @@ export default function AuthPage({ setStudentInfo }) {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [driveStatus, setDriveStatus] = useState('idle');
+  const [storageStatus, setStorageStatus] = useState('idle');
   const [error, setError] = useState('');
 
   // ── Auth ───────────────────────────────────────────────────────────────────
-  const [tempUser, setTempUser] = useState(null); // { uid, email, driveToken }
+  const [tempUser, setTempUser] = useState(null); // { uid, email }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -190,53 +190,51 @@ export default function AuthPage({ setStudentInfo }) {
     if (found) applySchoolAutoFill(found);
   }, [schoolList, applySchoolAutoFill]);
 
-  // ── Drive helpers ──────────────────────────────────────────────────────────
-  const silentlyLinkDrive = useCallback(async (uid, freshToken = null) => {
+  // ── Firebase Storage Provisioning Helper ───────────────────────────────────
+  const silentlyProvisionStorage = useCallback(async (uid, schoolId, role) => {
     try {
-      const alreadyLinked = await hasDrivePermission(uid);
-      if (alreadyLinked) { setDriveStatus('linked'); return; }
+      setStorageStatus('linking');
 
-      const token =
-        freshToken ||
-        (sessionStorage.getItem('drive_token_expiry') > Date.now()
-          ? sessionStorage.getItem('drive_access_token')
-          : null);
+      // Builds structured directories following security architecture
+      const storagePaths = {
+        root: `users/${uid}`,
+        exams: `users/${uid}/exams`,
+        memos: `users/${uid}/memos`,
+        submissions: role === 'student' ? `schools/${schoolId}/students/${uid}/submissions` : null,
+        resources: role === 'teacher' ? `schools/${schoolId}/teachers/${uid}/resources` : null
+      };
 
-      if (!token) { setDriveStatus('idle'); return; }
-
-      setDriveStatus('linking');
-      const folderIds = await ensureAppFolders(token);
       await setDoc(
-        doc(db, 'userDriveConfig', uid),
+        doc(db, 'userStorageConfig', uid),
         {
           uid,
-          drivePermissionGranted: true,
-          driveScope: DRIVE_SCOPE,
-          folderIds,
-          permissionGrantedAt: new Date().toISOString(),
+          schoolId,
+          role,
+          storageProvider: 'FirebaseStorage',
+          bucketPath: `gs://chatbot-backend-educat.appspot.com/users/${uid}`,
+          paths: Object.fromEntries(Object.entries(storagePaths).filter(([_, v]) => v !== null)),
+          provisionedAt: new Date().toISOString(),
+          status: 'active'
         },
         { merge: true }
       );
-      setDriveStatus('linked');
+      setStorageStatus('linked');
     } catch (err) {
-      console.warn('[Drive] Silent link failed:', err.message);
-      setDriveStatus('failed');
+      console.warn('[Storage] Allocation failed:', err.message);
+      setStorageStatus('failed');
     }
   }, []);
 
   // ── Post-login routing ─────────────────────────────────────────────────────
-  const postLogin = useCallback(async ({ uid, role, data, token = null }) => {
+  const postLogin = useCallback(async ({ uid, role, data }) => {
     await ensureUserFirestoreDocs(uid, role, data);
-    silentlyLinkDrive(uid, token);
+    await silentlyProvisionStorage(uid, data.schoolId || 'unassigned', role);
     if (role === 'student') { setStudentInfo(data); navigate('/exam'); }
     else if (role === 'teacher') navigate('/teacher-dashboard');
     else navigate('/principal-dashboard');
-  }, [navigate, setStudentInfo, silentlyLinkDrive]);
+  }, [navigate, setStudentInfo, silentlyProvisionStorage]);
 
-  // ── FIX: sequential role doc reads — stops at first match ─────────────────
-  // Reading all three collections with Promise.all causes permission errors when
-  // the user's doc doesn't exist in the other two collections, because the security
-  // rules call resource.data on a null document. Sequential reads avoid this.
+  // ── Sequential role doc reads — stops at first match ───────────────────────
   const resolveUserRole = useCallback(async (uid) => {
     const pSnap = await getDoc(doc(db, 'principals', uid));
     if (pSnap.exists()) return { role: 'principal', data: pSnap.data() };
@@ -247,35 +245,39 @@ export default function AuthPage({ setStudentInfo }) {
     const sSnap = await getDoc(doc(db, 'students', uid));
     if (sSnap.exists()) return { role: 'student', data: sSnap.data() };
 
-    return null; // new user — no profile yet
+    return null;
   }, []);
 
   // ── Google login ───────────────────────────────────────────────────────────
   const handleGoogleLogin = async () => {
     setError('');
-
     try {
       const provider = new GoogleAuthProvider();
-
       provider.addScope('profile');
       provider.addScope('email');
 
       const result = await signInWithPopup(auth, provider);
-
       const user = result.user;
 
-      const found = await resolveUserRole(user.uid);
-
-      if (!found) {
-        throw new Error('User role not found');
+      if (user.displayName) {
+        const parts = user.displayName.split(' ');
+        setName(parts[0] || '');
+        setSurname(parts.slice(1).join(' ') || '');
+        markAuto(['name', 'surname']);
       }
 
-      await postLogin({
-        uid: user.uid,
-        role: found.role,
-        data: found.data,
-      });
-
+      const found = await resolveUserRole(user.uid);
+      if (!found) {
+        setTempUser({ uid: user.uid, email: user.email });
+        setIsModalOpen(false);
+        setShowProfileSetup(true);
+      } else {
+        await postLogin({
+          uid: user.uid,
+          role: found.role,
+          data: found.data,
+        });
+      }
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -289,17 +291,14 @@ export default function AuthPage({ setStudentInfo }) {
     try {
       if (isRegistering) {
         const cred = await createUserWithEmailAndPassword(auth, email, password);
-        setTempUser({ uid: cred.user.uid, email: cred.user.email, driveToken: null });
+        setTempUser({ uid: cred.user.uid, email: cred.user.email });
         setIsModalOpen(false);
         setShowProfileSetup(true);
       } else {
         const cred = await signInWithEmailAndPassword(auth, email, password);
         const uid = cred.user.uid;
 
-        // FIX: sequential reads instead of Promise.all — avoids permission errors
-        // on collections where this user has no document
         const found = await resolveUserRole(uid);
-
         if (found) {
           await postLogin({ uid, role: found.role, data: found.data });
         } else {
@@ -335,7 +334,6 @@ export default function AuthPage({ setStudentInfo }) {
 
     const uid = tempUser?.uid || auth.currentUser?.uid;
     const finalEmail = tempUser?.email || email;
-    const driveToken = tempUser?.driveToken || localStorage.getItem('drive_access_token');
 
     const resolvedSchoolId = userRole === 'principal' ? uid : selectedSchoolId;
     const selectedSchoolDoc = schoolList.find((s) => s.id === selectedSchoolId);
@@ -378,9 +376,7 @@ export default function AuthPage({ setStudentInfo }) {
         userRole === 'teacher' ? 'teachers' : 'students';
 
     try {
-      // FIX 1: Write users/{uid} FIRST so security rule helpers (isTeacher,
-      // isPrincipal, sameSchool) can resolve userDoc() when evaluating the
-      // role collection write below.
+      // 1. Write users/{uid} FIRST so rules validate correctly
       await setDoc(doc(db, 'users', uid), {
         uid,
         email: finalEmail,
@@ -388,16 +384,14 @@ export default function AuthPage({ setStudentInfo }) {
         schoolId: resolvedSchoolId,
       }, { merge: true });
 
-      // FIX 2: Now write the role collection — userDoc() resolves correctly.
+      // 2. Write role database profile
       await setDoc(doc(db, collectionName, uid), fullProfile);
 
-      // FIX 3: ensureUserFirestoreDocs runs last, after both writes succeed.
-      await ensureUserFirestoreDocs(uid, userRole, fullProfile);
+      // 3. Complete cloud file-system allocation maps
+      await silentlyProvisionStorage(uid, resolvedSchoolId, userRole);
 
-      if (driveToken) {
-        setDriveStatus('linking');
-        silentlyLinkDrive(uid, driveToken);
-      }
+      // 4. Fire helper syncer documents last
+      await ensureUserFirestoreDocs(uid, userRole, fullProfile);
 
       if (userRole === 'student') setStudentInfo(fullProfile);
 
@@ -436,7 +430,20 @@ export default function AuthPage({ setStudentInfo }) {
     );
   };
 
-  // ─── RENDER ───────────────────────────────────────────────────────────────
+  // Helper inside layout view for handling forms
+  const ErrorBox = ({ message, className = "" }) => (
+    <div className={`p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900 text-rose-600 dark:text-rose-400 text-xs font-semibold ${className}`}>
+      ⚠️ {message}
+    </div>
+  );
+
+  const Divider = () => (
+    <div className="relative my-6 flex items-center justify-center text-xs font-bold uppercase tracking-wider text-slate-400 select-none">
+      <div className="absolute inset-x-0 h-px bg-slate-100 dark:bg-slate-800" />
+      <span className="relative bg-white dark:bg-slate-900 px-4">Or</span>
+    </div>
+  );
+
   return (
     <div className={`min-h-screen transition-all duration-700 relative overflow-hidden ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
 
@@ -484,9 +491,7 @@ export default function AuthPage({ setStudentInfo }) {
         </div>
       </main>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          AUTH MODAL
-      ══════════════════════════════════════════════════════════════════════ */}
+      {/* ── AUTH MODAL ── */}
       {isModalOpen && !showProfileSetup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
           <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl relative border border-slate-200 dark:border-slate-800">
@@ -527,7 +532,8 @@ export default function AuthPage({ setStudentInfo }) {
               </div>
               <button
                 type="submit"
-                className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20 uppercase tracking-widest text-xs"
+                disabled={isSubmitting}
+                className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20 uppercase tracking-widest text-xs disabled:opacity-50"
               >
                 {isRegistering ? 'Create Account' : 'Sign In'}
               </button>
@@ -544,7 +550,7 @@ export default function AuthPage({ setStudentInfo }) {
             </button>
 
             <p className="text-center mt-4 text-[10px] text-slate-400 leading-relaxed">
-              🔒 Google sign-in automatically links your Drive for secure file storage.
+              🔒 Unified access automatically provisions cloud space for your papers and records safely.
             </p>
 
             <p className="text-center mt-5 text-sm font-medium">
@@ -560,14 +566,11 @@ export default function AuthPage({ setStudentInfo }) {
         </div>
       )}
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          PROFILE SETUP MODAL
-      ══════════════════════════════════════════════════════════════════════ */}
+      {/* ── PROFILE SETUP MODAL ── */}
       {showProfileSetup && (
         <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 bg-indigo-600/95 backdrop-blur-2xl overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[3rem] p-10 shadow-2xl my-8">
 
-            {/* Header */}
             <div className="flex items-start justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="bg-indigo-100 dark:bg-indigo-900/40 p-2 rounded-xl">
@@ -580,10 +583,9 @@ export default function AuthPage({ setStudentInfo }) {
                   </p>
                 </div>
               </div>
-              <DriveBadge status={driveStatus} />
+              <StorageBadge status={storageStatus} />
             </div>
 
-            {/* Auto-fill info bar */}
             {Object.values(autoFilled).some(Boolean) && (
               <div className="mb-5 flex items-center gap-2 px-4 py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800">
                 <Sparkles size={14} className="text-indigo-500 flex-shrink-0" />
@@ -596,8 +598,6 @@ export default function AuthPage({ setStudentInfo }) {
             {error && <ErrorBox message={error} className="mb-5" />}
 
             <form onSubmit={finalizeProfile} className="space-y-6">
-
-              {/* ── Role selector ── */}
               <div>
                 <p className="label-xs">I am a…</p>
                 <div className="grid grid-cols-3 gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
@@ -619,7 +619,6 @@ export default function AuthPage({ setStudentInfo }) {
                 )}
               </div>
 
-              {/* ── Title (staff only) ── */}
               {(userRole === 'teacher' || userRole === 'principal') && (
                 <div>
                   <p className="label-xs">Title</p>
@@ -638,7 +637,6 @@ export default function AuthPage({ setStudentInfo }) {
                 </div>
               )}
 
-              {/* ── Name + Surname ── */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1.5">
@@ -670,7 +668,6 @@ export default function AuthPage({ setStudentInfo }) {
                 </div>
               </div>
 
-              {/* ── School selection ── */}
               {userRole === 'principal' ? (
                 <div>
                   <label className="label-xs block mb-1.5">Your School Name *</label>
@@ -711,164 +708,78 @@ export default function AuthPage({ setStudentInfo }) {
                 </div>
               )}
 
-              {/* ── Province + District ── */}
-              {userRole === 'principal' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="label-xs block mb-1.5">Province *</label>
-                    <div className="relative">
-                      <select
-                        value={province}
-                        onChange={(e) => setProvince(e.target.value)}
-                        className="input-f appearance-none pr-10"
-                      >
-                        {SA_PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="label-xs block mb-1.5">District *</label>
-                    <input
-                      type="text"
-                      value={district}
-                      placeholder="e.g. Johannesburg East"
-                      required
-                      className="input-f"
-                      onChange={(e) => setDistrict(e.target.value)}
-                    />
-                  </div>
-                </div>
-              ) : (province || district) ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {province && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <label className="label-xs">Province</label>
-                        {autoFilled.province && <AutoTag />}
-                      </div>
-                      <input
-                        type="text"
-                        value={province}
-                        readOnly
-                        className="input-f bg-slate-50 dark:bg-slate-800/50 cursor-default"
-                      />
-                    </div>
-                  )}
-                  {district && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <label className="label-xs">District</label>
-                        {autoFilled.district && <AutoTag />}
-                      </div>
-                      <input
-                        type="text"
-                        value={district}
-                        readOnly
-                        className="input-f bg-slate-50 dark:bg-slate-800/50 cursor-default"
-                      />
-                    </div>
-                  )}
-                </div>
-              ) : null}
-
-              {/* ── Curriculum (principal only) ── */}
-              {userRole === 'principal' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="label-xs block mb-1.5">Curriculum</label>
-                  <div className="flex gap-2">
-                    {['CAPS', 'IEB', 'Both'].map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => setCurriculum(c)}
-                        className={`px-5 py-2.5 rounded-xl text-xs font-black border-2 transition-all ${curriculum === c ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-indigo-400'}`}
-                      >
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ── Inherited curriculum badge (teacher/student) ── */}
-              {(userRole === 'teacher' || userRole === 'student') && curriculum && (
-                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                  <span className="text-xs font-bold text-slate-500">Curriculum:</span>
-                  <span className="text-xs font-black text-slate-800 dark:text-white">{curriculum}</span>
-                  {autoFilled.curriculum && <AutoTag />}
-                  <span className="ml-auto text-[10px] text-slate-400">Inherited from school</span>
-                </div>
-              )}
-
-              {/* ── Grade (students) ── */}
-              {userRole === 'student' && (
-                <div>
-                  <label className="label-xs block mb-1.5">Grade *</label>
+                  <label className="label-xs block mb-1.5">Province *</label>
                   <div className="relative">
                     <select
-                      value={grade}
-                      onChange={(e) => setGrade(e.target.value)}
-                      required
+                      value={province}
+                      onChange={(e) => setProvince(e.target.value)}
                       className="input-f appearance-none pr-10"
+                      disabled={userRole !== 'principal'}
                     >
-                      <option value="" disabled>Select your grade</option>
-                      {['Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'].map((g) => (
-                        <option key={g} value={g}>{g}</option>
-                      ))}
+                      {SA_PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
                     </select>
                     <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
-              )}
-
-              {/* ── Teaching Phase (teachers) ── */}
-              {userRole === 'teacher' && (
                 <div>
-                  <label className="label-xs block mb-2">DBE Teaching Phase *</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { value: 'Foundation', label: 'Foundation Phase', grades: 'Grades R–3' },
-                      { value: 'Intermediate', label: 'Intermediate Phase', grades: 'Grades 4–6' },
-                      { value: 'Senior', label: 'Senior Phase', grades: 'Grades 7–9' },
-                      { value: 'FET', label: 'FET Phase', grades: 'Grades 10–12' },
-                    ].map((ph) => (
-                      <button
-                        key={ph.value}
-                        type="button"
-                        onClick={() => setTeachingPhase(ph.value)}
-                        className={`p-3 rounded-2xl border-2 text-left transition-all ${teachingPhase === ph.value ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-100 dark:border-slate-700 hover:border-indigo-300'}`}
-                      >
-                        <p className="font-black text-xs text-slate-800 dark:text-white leading-tight">{ph.label}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">{ph.grades}</p>
-                      </button>
-                    ))}
-                  </div>
+                  <label className="label-xs block mb-1.5">District *</label>
+                  <input
+                    type="text"
+                    value={district}
+                    placeholder="e.g. Johannesburg East"
+                    required
+                    className="input-f"
+                    disabled={userRole !== 'principal'}
+                    onChange={(e) => setDistrict(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {userRole === 'student' && (
+                <div>
+                  <label className="label-xs block mb-1.5">Grade *</label>
+                  <select
+                    value={grade}
+                    onChange={(e) => setGrade(e.target.value)}
+                    className="input-f"
+                    required
+                  >
+                    <option value="">Select Grade</option>
+                    {['10', '11', '12'].map((g) => <option key={g} value={g}>Grade {g}</option>)}
+                  </select>
                 </div>
               )}
 
-              {/* ── Subjects (students + teachers) ── */}
+              {userRole === 'teacher' && (
+                <div>
+                  <label className="label-xs block mb-1.5">Teaching Phase *</label>
+                  <select
+                    value={teachingPhase}
+                    onChange={(e) => setTeachingPhase(e.target.value)}
+                    className="input-f"
+                  >
+                    <option value="Senior">Senior Phase (Grade 7-9)</option>
+                    <option value="FET">FET Phase (Grade 10-12)</option>
+                  </select>
+                </div>
+              )}
+
               {(userRole === 'student' || userRole === 'teacher') && (
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="label-xs">
-                      {userRole === 'student' ? 'My Subjects *' : 'Subjects I Teach *'}
-                    </label>
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${subjects.length >= (userRole === 'student' ? 2 : 1) ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {subjects.length} selected{userRole === 'student' ? ' / min 2' : ''}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2 max-h-44 overflow-y-auto p-1">
-                    {STANDARD_DBE_SUBJECTS.map((s) => {
-                      const active = subjects.includes(s);
+                  <label className="label-xs block mb-2">Registered Subjects (Select at least 2) *</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-2 border border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/50">
+                    {STANDARD_DBE_SUBJECTS.map((sub) => {
+                      const active = subjects.includes(sub);
                       return (
                         <button
-                          key={s}
+                          key={sub}
                           type="button"
-                          onClick={() => toggleSubject(s)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-indigo-400'}`}
+                          onClick={() => toggleSubject(sub)}
+                          className={`p-2.5 text-left text-xs rounded-xl font-bold transition-all border ${active ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700/60 hover:border-slate-300'}`}
                         >
-                          {active && '✓ '}{s}
+                          {active ? '✓ ' : ''}{sub}
                         </button>
                       );
                     })}
@@ -876,127 +787,25 @@ export default function AuthPage({ setStudentInfo }) {
                 </div>
               )}
 
-              {/* ── Drive status ── */}
-              {driveStatus !== 'idle' && (
-                <div className="pt-1"><DriveBadge status={driveStatus} /></div>
-              )}
-
-              {/* ── Profile summary ── */}
-              <ProfileSummary
-                role={userRole}
-                name={name}
-                surname={surname}
-                title={title}
-                email={tempUser?.email || email}
-                school={userRole === 'principal' ? school : (schoolList.find((s) => s.id === selectedSchoolId)?.name || '')}
-                province={province}
-                district={district}
-                curriculum={curriculum}
-              />
-
-              {/* ── Submit ── */}
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-5 bg-indigo-600 text-white rounded-[2rem] font-black text-xl shadow-xl flex items-center justify-center gap-3 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-500/10 uppercase tracking-widest text-xs disabled:opacity-50"
               >
                 {isSubmitting ? (
-                  <><Loader2 size={20} className="animate-spin" /> Setting up dashboard…</>
+                  <>
+                    <Loader2 size={16} className="animate-spin" /> Launching Core Environment...
+                  </>
                 ) : (
-                  <>{userRole === 'principal' ? 'CONTINUE TO SCHOOL SETUP →' : 'START DASHBOARD'} {userRole !== 'principal' && <ArrowRight />}</>
+                  <>
+                    Finalize Connection <ArrowRight size={14} />
+                  </>
                 )}
               </button>
             </form>
           </div>
         </div>
       )}
-
-      <style>{`
-        .label-xs {
-          font-size: 10px;
-          font-weight: 900;
-          color: #94a3b8;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-        }
-        .input-f {
-          width: 100%;
-          padding: 14px 16px;
-          border-radius: 1rem;
-          border: 1px solid #e2e8f0;
-          background: white;
-          font-size: 14px;
-          outline: none;
-          color: #0f172a;
-          transition: border-color 0.2s;
-        }
-        .dark .input-f {
-          background: #1e293b;
-          border-color: #334155;
-          color: white;
-        }
-        .input-f:focus { border-color: #4f46e5; }
-      `}</style>
-    </div>
-  );
-}
-
-// ─── PROFILE SUMMARY ──────────────────────────────────────────────────────────
-function ProfileSummary({ role, name, surname, title, email, school, province, district, curriculum }) {
-  const [open, setOpen] = useState(false);
-  const fields = [
-    name && { label: 'Name', value: `${role !== 'student' ? title + ' ' : ''}${name} ${surname}`.trim() },
-    email && { label: 'Email', value: email },
-    school && { label: 'School', value: school },
-    province && { label: 'Province', value: province },
-    district && { label: 'District', value: district },
-    curriculum && { label: 'Curriculum', value: curriculum },
-  ].filter(Boolean);
-
-  if (fields.length < 2) return null;
-
-  return (
-    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 text-xs font-black text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50"
-      >
-        <span>📋 Review what will be saved</span>
-        <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <div className="px-4 pb-4 grid grid-cols-2 gap-2">
-          {fields.map(({ label, value }) => (
-            <div key={label} className="bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-2">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">{label}</p>
-              <p className="text-xs font-bold text-slate-800 dark:text-white mt-0.5 truncate">{value}</p>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── SMALL SHARED COMPONENTS ──────────────────────────────────────────────────
-function ErrorBox({ message, className = '' }) {
-  return (
-    <div className={`p-3 bg-red-50 dark:bg-red-900/20 text-red-600 text-xs font-bold rounded-xl border border-red-100 dark:border-red-800 ${className}`}>
-      {message}
-    </div>
-  );
-}
-
-function Divider() {
-  return (
-    <div className="relative my-8">
-      <div className="absolute inset-0 flex items-center">
-        <span className="w-full border-t dark:border-slate-800" />
-      </div>
-      <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest">
-        <span className="bg-white dark:bg-slate-900 px-4 text-slate-400">or</span>
-      </div>
     </div>
   );
 }

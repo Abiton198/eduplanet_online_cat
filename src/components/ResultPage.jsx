@@ -25,55 +25,75 @@ export default function ResultPage({ studentInfo }) {
     if (!rawName && !user?.uid) return;
 
     setLoading(true);
-    const resultsMap = new Map();
 
-    const updateState = (snap, sourceLabel) => {
-      console.log(`Source: ${sourceLabel} | Found: ${snap.docs.length}`);
-      snap.docs.forEach((doc) => {
-        resultsMap.set(doc.id, { id: doc.id, ...doc.data() });
-      });
+    const attemptsRef = collection(db, "exam_attempts");
 
-      const sorted = Array.from(resultsMap.values()).sort((a, b) => {
-        return new Date(b.completedTime || 0) - new Date(a.completedTime || 0);
-      });
-
-
-      setGeneralResults(sorted);
-      setLoading(false);
-      console.log("Docs:", snap.docs.map(d => d.data()));
-    };
-
-    // We create multiple listeners to catch the data regardless of how it was saved
     const listeners = [];
 
-    // QUERY A: By studentUid (The most reliable for Grade 10)
+    // Query by Firebase UID
     if (user?.uid) {
       listeners.push(
-        onSnapshot(query(collection(db, "examResults"), where("studentUid", "==", user.uid)),
-          (s) => updateState(s, "UID"))
+        onSnapshot(
+          query(
+            attemptsRef,
+            where("studentUid", "==", user.uid)
+          ),
+          (snap) => {
+            handleResults(snap, "studentUid");
+          }
+        )
       );
     }
 
-    // QUERY B: By exact name (The "Abiton_11" or "Hayley" case)
-    listeners.push(
-      onSnapshot(query(collection(db, "examResults"), where("name", "==", tidyName)),
-        (s) => updateState(s, "Exact Name"))
-    );
+    // Query by studentId
+    if (tidyName) {
+      listeners.push(
+        onSnapshot(
+          query(
+            attemptsRef,
+            where("studentId", "==", tidyName)
+          ),
+          (snap) => {
+            handleResults(snap, "studentId");
+          }
+        )
+      );
+    }
 
-    // QUERY C: By lower-case name (If your saving logic used .toLowerCase())
-    listeners.push(
-      onSnapshot(query(collection(db, "examResults"), where("nameLower", "==", lowerName)),
-        (s) => updateState(s, "Lower Name"))
-    );
+    function handleResults(snapshot, source) {
+      console.log(
+        `[Results] ${source}:`,
+        snapshot.docs.length
+      );
 
-    // If after 2 seconds nothing is found, stop the loading spinner
-    const timer = setTimeout(() => setLoading(false), 2000);
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      const sorted = data.sort((a, b) => {
+        const aTime =
+          a.completedAt?.seconds || 0;
+
+        const bTime =
+          b.completedAt?.seconds || 0;
+
+        return bTime - aTime;
+      });
+
+      setGeneralResults(sorted);
+      setLoading(false);
+    }
+
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 3000);
 
     return () => {
-      listeners.forEach((unsub) => unsub());
+      listeners.forEach((u) => u());
       clearTimeout(timer);
     };
-  }, [rawName, user?.uid]);
+  }, [rawName, tidyName, user?.uid]);
 
   if (loading) return <div className="p-10 text-center">Searching for results...</div>;
 

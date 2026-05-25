@@ -1,5 +1,5 @@
 /**
- * studentId.js — shared student identity for EduCAT
+ * studentId.js — shared student identity for Eduket
  *
  * Priority order:
  *   1. Firestore students/{uid}.name  (most reliable — set at registration)

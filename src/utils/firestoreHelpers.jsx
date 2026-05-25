@@ -7,7 +7,55 @@ import {
     collection, query, where, orderBy, limit,
     getDocs, onSnapshot, serverTimestamp, addDoc,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db } from '../utils/firebase';
+
+/**
+ * Updates the audit log status of a specific examination paper.* @param {string} examId - The unique document ID of the target exam
+ * @param {string} status - The new operational status (e.g., 'Draft', 'Pending Approval', 'Live', 'Marked')
+ * @param {Object} operatorInfo - Metadata detailing who initiated the status shift
+ * @param {string} operatorInfo.uid - The user ID of the teacher/principal
+ * @param {string} operatorInfo.name - The name or title of the operator
+ * @param {string} [customMessage] - Optional developer or user comment describing the context
+ */
+
+export async function updateExamStatusInAudit(examId, status, updatedBy) {
+    const examRef = doc(db, 'exams', examId);
+
+    return await updateDoc(examRef, {
+        status: status,
+        updatedAt: serverTimestamp(),
+        auditLog: arrayUnion({
+            status,
+            timestamp: new Date().toISOString(),
+            actionedBy: updatedBy,
+            message: `Exam status transitioned to ${status}`
+        })
+    });
+}
+
+export async function updateExamInAudit(examId, status, operatorInfo = {}, customMessage = "") {
+    if (!examId) throw new Error("[FirestoreHelpers] Cannot update audit logs without a valid examId.");
+
+    const examRef = doc(db, 'exams', examId);
+
+    // Clean default fallbacks to prevent undefined values from crashing the write payload
+    const operatorUid = operatorInfo.uid || 'system-fallback';
+    const operatorName = operatorInfo.name || 'Anonymous Staff';
+    const displayMessage = customMessage || `Exam status transitioned to ${status}.`;
+
+    return await updateDoc(examRef, {
+        status: status,
+        updatedAt: serverTimestamp(),
+        auditLog: arrayUnion({
+            status: status,
+            timestamp: new Date().toISOString(),
+            actionedBy: operatorName,
+            operatorId: operatorUid,
+            message: displayMessage
+        })
+    });
+}
+
 
 // ── School ────────────────────────────────────────────────────────────────────
 

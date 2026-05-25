@@ -1,24 +1,29 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { doc, onSnapshot, collection, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, getDoc, query, where } from 'firebase/firestore';
 import { getAuth, signOut } from 'firebase/auth';
 import { db } from '../utils/firebase';
 import {
   BookOpen, School, ShieldCheck, Upload, ClipboardList,
   FileText, CheckCircle, ArrowRight, ArrowLeft, LayoutDashboard,
-  LogOut, HardDrive, AlertCircle, Loader2, ExternalLink,
+  LogOut, Loader2, ExternalLink,
   CheckCircle2, MapPin, GraduationCap, Trash2, Pencil,
   X, Save, Clock, Filter, Search, ChevronDown, ChevronUp,
   CalendarDays, Tag, Layers,
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
 import {
-  hasDrivePermission, requestDrivePermission, getValidDriveToken,
-  getFolderIds, uploadFileToDrive, saveExamMetadata, ensureUserFirestoreDocs,
-  updateExamInAudit, shareFileWithServiceAccount, deleteExamFromAudit
+  saveExamMetadata,
+  ensureUserFirestoreDocs,
+  deleteExamFromAudit,
 } from '../utils/driveManager';
+import { updateExamInAudit, updateExamStatusInAudit } from "../utils/firestoreHelpers"
+
 import { runExamDeletion } from '../utils/examDeleteUtils';
 import { validateExamFile, getFileTypeLabel, isOpenDocumentFormat } from '../utils/examUploadUtils';
 import { ResultsTab } from './ResultsTab';
+import { serverTimestamp } from "firebase/firestore";
 
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -151,7 +156,6 @@ function EditExamModal({ exam, onSave, onClose }) {
   );
 }
 
-// ─── AUDIT ROW ────────────────────────────────────────────────────────────────
 // ─── AUDIT ROW ────────────────────────────────────────────────────────────────
 // Drop-in replacement for the existing AuditRow component.
 // Adds examDuration to the row summary chip and the expanded detail panel,
@@ -339,11 +343,6 @@ function DetailItem({ label, value, highlight = false }) {
 export default function TeacherDashboard() {
   const auth = getAuth();
 
-  // Profile & Drive
-  const [teacherProfile, setTeacherProfile] = useState(null);
-  const [driveLinked, setDriveLinked] = useState(false);
-  const [driveChecked, setDriveChecked] = useState(false);
-  const [isRequestingDrive, setIsRequestingDrive] = useState(false);
 
   // Tabs
   const [activeTab, setActiveTab] = useState('results');
@@ -359,6 +358,7 @@ export default function TeacherDashboard() {
   const [curriculum, setCurriculum] = useState('CAPS');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
+  const [teacherProfile, setTeacherProfile] = useState(null);
 
 
   // Audit trail
@@ -373,6 +373,7 @@ export default function TeacherDashboard() {
   const [user, setUser] = useState(auth.currentUser);
   const [examDuration, setExamDuration] = useState(60); // default 60 minutes
 
+
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(setUser);
     return () => unsub();
@@ -383,27 +384,53 @@ export default function TeacherDashboard() {
     const user = auth.currentUser;
     if (!user) return;
 
+    // Wake up Render backend on dashboard load
+    fetch('https://chatbot-backend-educat.onrender.com/').catch(() => { });
+
     ensureUserFirestoreDocs(user.uid, 'teacher').catch(console.error);
 
+    // ── Teacher profile ──────────────────────────────────────────────────
     const profileUnsub = onSnapshot(doc(db, 'teachers', user.uid), (snap) => {
       if (!snap.exists()) return;
       const data = snap.data();
       setTeacherProfile(data);
-      if (Array.isArray(data.subjects) && data.subjects.length > 0) setPaperSubject(data.subjects[0]);
-      else if (typeof data.subjects === 'string' && data.subjects) setPaperSubject(data.subjects);
+      if (Array.isArray(data.subjects) && data.subjects.length > 0)
+        setPaperSubject(data.subjects[0]);
+      else if (typeof data.subjects === 'string' && data.subjects)
+        setPaperSubject(data.subjects);
       if (data.curriculum) setCurriculum(data.curriculum);
     });
 
-    const uploadUnsub = onSnapshot(doc(db, 'teacherExamUploads', user.uid), (snap) => {
-      setUploadedExams(snap.exists() ? (snap.data().uploads || []) : []);
-    });
+    // ── Audit trail — read from /exams where uploadedBy == teacher uid ───
+    // This works with both old uploads (teacherExamUploads array)
+    // and new uploads (exams collection with schoolId/subject structure)
+    const examsUnsub = onSnapshot(
+      query(
+        collection(db, 'exams'),
+        where('uploadedBy', '==', user.uid)
+      ),
+      (snap) => {
+        const exams = snap.docs.map((d) => ({
+          ...d.data(),
+          id: d.id,
+          examId: d.data().examId || d.id, // ensure examId always set
+        }));
+        // Sort newest first
+        exams.sort((a, b) =>
+          new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0)
+        );
+        setUploadedExams(exams);
+      },
+      (err) => {
+        console.error('[Audit] Failed to load exams:', err.message);
+        setUploadedExams([]);
+      }
+    );
 
-    hasDrivePermission(user.uid).then((has) => {
-      setDriveLinked(has);
-      setDriveChecked(true);
-    });
-
-    return () => { profileUnsub(); uploadUnsub(); };
+    return () => {
+      profileUnsub();
+      examsUnsub();
+    };
   }, []);
 
   // ─── FILTERED + SORTED AUDIT LIST ────────────────────────────────────────
@@ -424,32 +451,6 @@ export default function TeacherDashboard() {
       return sortDir === 'desc' ? bTime - aTime : aTime - bTime;
     });
 
-  // ─── DRIVE ───────────────────────────────────────────────────────────────
-  const handleRequestDrivePermission = async () => {
-    setIsRequestingDrive(true);
-    try {
-      const token = await requestDrivePermission();
-      if (token) {
-        setDriveLinked(true);
-        Swal.fire({ icon: 'success', title: 'Drive Linked!', text: 'Secure exam storage is ready.', confirmButtonColor: '#4F46E5' });
-      }
-    } catch (err) { console.error(err); }
-    finally { setIsRequestingDrive(false); }
-  };
-
-  const handleUploadTabClick = async () => {
-    if (driveLinked) { setActiveTab('upload'); return; }
-    const res = await Swal.fire({
-      title: 'Link Google Drive',
-      html: `<p class="text-gray-600">Drive access is required to store exam PDFs securely in your own account.</p>`,
-      icon: 'info', showCancelButton: true,
-      confirmButtonText: 'Link My Drive', confirmButtonColor: '#4F46E5',
-    });
-    if (res.isConfirmed) {
-      await handleRequestDrivePermission();
-      setActiveTab('upload');
-    }
-  };
 
   // ─── UPLOAD ──────────────────────────────────────────────────────────────
   const handleExamUpload = async () => {
@@ -470,31 +471,57 @@ export default function TeacherDashboard() {
     }
 
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user?.uid) {
+      Swal.fire({ icon: 'error', title: 'Not logged in' });
+      return;
+    }
 
     setIsUploading(true);
-    setUploadProgress('Preparing Drive...');
+    setUploadProgress('Preparing upload...');
 
     try {
-      const token = await getValidDriveToken(user.uid);
-      const folderIds = await getFolderIds(user.uid, token);
-
-      setUploadProgress(`Uploading question paper (${getFileTypeLabel(examFile)})...`);
-      const examDriveFile = await uploadFileToDrive(examFile, folderIds.uploadedId, token);
-      await shareFileWithServiceAccount(examDriveFile.id, token);
-
-      setUploadProgress(`Uploading marking memo (${getFileTypeLabel(memoFile)})...`);
-      const memoDriveFile = await uploadFileToDrive(memoFile, folderIds.uploadedId, token);
-      await shareFileWithServiceAccount(memoDriveFile.id, token);
-
-      setUploadProgress('Saving to Eduket AI...');
       const userDocSnap = await getDoc(doc(db, "users", user.uid));
       const userData = userDocSnap.exists() ? userDocSnap.data() : {};
+      const schoolId = userData.schoolId ?? teacherProfile?.schoolId ?? "unknown";
 
-      const examId = await saveExamMetadata({
+      // ── Clean school name for folder (no special chars) ───────────────
+      const schoolName = (teacherProfile?.school || schoolId)
+        .replace(/[^a-zA-Z0-9\s-]/g, '')
+        .replace(/\s+/g, '_')
+        .substring(0, 40);
+
+      const schoolFolder = `${schoolId}_${schoolName}`;
+      const subjectFolder = paperSubject.replace(/\s+/g, '_');
+      const examId = `${user.uid}_${Date.now()}`;
+
+      // ── Storage path: exams/{schoolId_schoolName}/{subject}/{examId}/ ──
+      const storagePath = `exams/${schoolFolder}/${subjectFolder}/${examId}`;
+      const storage = getStorage();
+
+      // ── Upload exam paper ──────────────────────────────────────────────
+      setUploadProgress(`Uploading question paper...`);
+      const examRef = ref(storage, `${storagePath}/exam_${examFile.name}`);
+      await uploadBytes(examRef, examFile);
+      const examUrl = await getDownloadURL(examRef);
+      const examFilePath = `${storagePath}/exam_${examFile.name}`;
+
+      // ── Upload memo ────────────────────────────────────────────────────
+      setUploadProgress(`Uploading marking memo...`);
+      const memoRef = ref(storage, `${storagePath}/memo_${memoFile.name}`);
+      await uploadBytes(memoRef, memoFile);
+      const memoUrl = await getDownloadURL(memoRef);
+      const memoFilePath = `${storagePath}/memo_${memoFile.name}`;
+
+      // ── Save metadata ──────────────────────────────────────────────────
+      setUploadProgress('Saving to Eduket AI...');
+
+      const saved = await saveExamMetadata({
+        examId,
         uid: user.uid,
         teacherName: `${teacherProfile?.title || ''} ${teacherProfile?.surname || 'Teacher'}`.trim(),
-        schoolId: userData.schoolId ?? teacherProfile?.schoolId ?? null,
+        schoolId,
+        schoolName: teacherProfile?.school || schoolId,
+        schoolFolder,
         title: paperTitle.trim(),
         year: paperYear,
         subject: paperSubject,
@@ -503,36 +530,20 @@ export default function TeacherDashboard() {
         examFileType: getFileTypeLabel(examFile),
         memoFileType: getFileTypeLabel(memoFile),
         examDuration,
-        examDriveFile,
-        memoDriveFile,
+        examFileName: examFile.name,
+        memoFileName: memoFile.name,
+        examStorageUrl: examUrl,
+        memoStorageUrl: memoUrl,
+        examStoragePath: examFilePath,
+        memoStoragePath: memoFilePath,
       });
 
-      // ✅ isNewExam declared here, where examId exists
-      const isNewExam = !uploadedExams.some(
-        (u) => u.examId === examId || u.id === examId
-      );
-
-      if (isNewExam) {
-        setUploadProgress('Queuing AI extraction...');
-        await fetch('https://chatbot-backend-educat.onrender.com/auto-extract', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            exam_id: examId,
-            exam_file_type: getFileTypeLabel(examFile),
-            memo_file_type: getFileTypeLabel(memoFile),
-            exam_needs_conversion: isOpenDocumentFormat(examFile),
-            memo_needs_conversion: isOpenDocumentFormat(memoFile),
-          }),
-        });
-      } else {
-        setUploadProgress('Exam already processed — skipping extraction.');
-      }
+      if (!saved?.examId) throw new Error("Failed to create exam record");
 
       await Swal.fire({
         icon: 'success',
-        title: 'Upload Complete!',
-        text: isNewExam ? 'AI extraction pipeline queued.' : 'Exam already processed.',
+        title: 'Upload Successful!',
+        text: 'AI extraction will begin automatically.',
         confirmButtonColor: '#4F46E5',
       });
 
@@ -543,13 +554,13 @@ export default function TeacherDashboard() {
       setActiveTab('audit');
 
     } catch (err) {
+      console.error('[Upload]', err);
       Swal.fire({ icon: 'error', title: 'Upload Failed', text: err.message });
     } finally {
       setIsUploading(false);
       setUploadProgress('');
     }
   };
-
 
 
   // ─── EDIT ────────────────────────────────────────────────────────────────
@@ -665,18 +676,7 @@ export default function TeacherDashboard() {
               </p>
             </div>
             <div className="flex flex-col items-end gap-2">
-              {driveChecked && (
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black border ${driveLinked ? 'bg-green-500/20 border-green-400/30 text-green-200' : 'bg-amber-500/20 border-amber-400/30 text-amber-200'
-                  }`}>
-                  <HardDrive size={14} />
-                  {driveLinked ? 'Drive Active' : (
-                    <button onClick={handleRequestDrivePermission} disabled={isRequestingDrive} className="underline underline-offset-2 flex items-center gap-1">
-                      {isRequestingDrive ? <Loader2 size={12} className="animate-spin" /> : null}
-                      Link Drive
-                    </button>
-                  )}
-                </div>
-              )}
+              {/* ✅  Drive badge removed, curriculum badge kept: */}
               <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-2xl text-xs font-bold border border-white/5">
                 <GraduationCap size={14} /> {teacherProfile?.curriculum || 'CAPS'}
               </div>
@@ -696,7 +696,7 @@ export default function TeacherDashboard() {
       {/* TABS */}
       <div className="flex p-1.5 bg-white dark:bg-slate-900 rounded-2xl w-fit mb-8 shadow-sm border border-slate-200 dark:border-slate-800 gap-1 flex-wrap">
         <TabButton active={activeTab === 'results'} onClick={() => setActiveTab('results')} icon={<ClipboardList size={16} />} label="Mark Analysis" />
-        <TabButton active={activeTab === 'upload'} onClick={handleUploadTabClick} icon={<Upload size={16} />} label="Upload Exam" badge={!driveLinked && driveChecked ? '!' : null} />
+        <TabButton active={activeTab === 'upload'} onClick={() => setActiveTab('upload')} icon={<Upload size={16} />} label="Upload Exam" />
         <TabButton active={activeTab === 'audit'} onClick={() => setActiveTab('audit')} icon={<FileText size={16} />} label={`Audit Trail ${uploadedExams.length > 0 ? `(${uploadedExams.length})` : ''}`} />
       </div>
 
@@ -708,23 +708,6 @@ export default function TeacherDashboard() {
       {/* ── UPLOAD TAB ───────────────────────────────────────────────────── */}
       {activeTab === 'upload' && (
         <div className="space-y-8 animate-in zoom-in-95 duration-300">
-
-          {!driveLinked && (
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="text-amber-500 shrink-0" size={22} />
-                <div>
-                  <p className="font-black text-amber-800 dark:text-amber-300 text-sm">Google Drive not linked</p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400">Files will be stored in your Drive — link it first.</p>
-                </div>
-              </div>
-              <button onClick={handleRequestDrivePermission} disabled={isRequestingDrive}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl text-xs transition-colors shrink-0">
-                {isRequestingDrive ? <Loader2 size={14} className="animate-spin" /> : <HardDrive size={14} />}
-                Link Drive
-              </button>
-            </div>
-          )}
 
           <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
             <div className="bg-indigo-600 p-8 flex justify-between items-center text-white">
@@ -847,10 +830,11 @@ export default function TeacherDashboard() {
                       className="flex-1 bg-slate-100 dark:bg-slate-800 p-5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 disabled:opacity-50">
                       <ArrowLeft size={16} /> Back
                     </button>
-                    <button onClick={handleExamUpload} disabled={isUploading || !memoFile || !driveLinked}
+                    <button onClick={handleExamUpload} disabled={isUploading || !memoFile}
                       className="flex-[2] bg-green-600 hover:bg-green-700 text-white p-5 rounded-2xl font-black text-sm shadow-lg shadow-green-500/20 disabled:opacity-40 transition-colors">
                       {isUploading ? 'Uploading...' : '✓ FINALIZE UPLOAD'}
                     </button>
+
                   </div>
                 </div>
               )}
