@@ -7,8 +7,10 @@ import {
   query, orderBy, getDoc, getDocs, doc, where
 } from "firebase/firestore";
 
-const API = "https://chatbot-backend-educat.onrender.com";
+// const API = "https://chatbot-backend-educat.onrender.com";
+const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 import { useStudentId } from "./StudentId";
+import { useParams } from "react-router-dom";
 
 // ─── Style tokens ─────────────────────────────────────────────────────────────
 const S = {
@@ -205,7 +207,10 @@ function InputContent({ question, savedAnswer, saveAnswer }) {
 
   // ── MCQ ───────────────────────────────────────────────────────────────────
   if (qType === "mcq") {
-    const opts = normalizeOptions(question.options);
+    // ⚡ FIX 1: Use the robust convertOptions helper function sitting at the bottom of your file!
+    console.log("MCQ options raw:", question.options);
+    const opts = convertOptions(question.options);
+    console.log("MCQ options converted:", opts);
 
     if (opts.length === 0) {
       return (
@@ -285,29 +290,31 @@ function InputContent({ question, savedAnswer, saveAnswer }) {
 
   // ── MATCHING / COLUMNS ────────────────────────────────────────────────────
   if (qType === "matching") {
-    // Supports multiple Firestore schemas:
-    //   question.column_a / question.column_b  (array of strings or {label,value})
-    //   question.premises  / question.responses
-    //   question.left      / question.right
-    //   question.matches   (array of {premise, options:[...]})
-    const getRaw = (...keys) => { for (const k of keys) if (question[k]) return question[k]; return null; };
-    const colA = getRaw("column_a", "columnA", "premises", "left", "items") || [];
-    const colB = getRaw("column_b", "columnB", "responses", "right", "choices") || [];
+    // ⚡ FIX 2: Prioritize camelCase keys directly to guarantee match alignment with Firestore data fields
+    const colA = question.columnA || question.column_a || question.premises || question.left || [];
+    const colB = question.columnB || question.column_b || question.responses || question.right || [];
 
-    const toRows = (arr) => arr.map((item, i) => {
-      if (typeof item === "string") return { key: String(i + 1), label: item };
-      return {
-        key: String(item.key || item.number || item.id || i + 1),
-        label: item.label || item.text || item.value || item.content || String(item),
-      };
-    });
-    const toCols = (arr) => arr.map((item, i) => {
-      if (typeof item === "string") return { key: String.fromCharCode(65 + i), label: item };
-      return {
-        key: String(item.key || item.letter || item.id || String.fromCharCode(65 + i)),
-        label: item.label || item.text || item.value || item.content || String(item),
-      };
-    });
+    const toRows = (arr) => {
+      if (!Array.isArray(arr)) return [];
+      return arr.map((item, i) => {
+        if (typeof item === "string") return { key: String(i + 1), label: item };
+        return {
+          key: String(item.key || item.number || item.id || i + 1),
+          label: item.label || item.text || item.value || item.content || String(item),
+        };
+      });
+    };
+
+    const toCols = (arr) => {
+      if (!Array.isArray(arr)) return [];
+      return arr.map((item, i) => {
+        if (typeof item === "string") return { key: String.fromCharCode(65 + i), label: item };
+        return {
+          key: String(item.key || item.letter || item.id || String.fromCharCode(65 + i)),
+          label: item.label || item.text || item.value || item.content || String(item),
+        };
+      });
+    };
 
     const rows = toRows(colA);
     const options = toCols(colB);
@@ -319,7 +326,6 @@ function InputContent({ question, savedAnswer, saveAnswer }) {
     };
 
     if (rows.length === 0) {
-      // Fallback: no structured columns — render a textarea
       return (
         <div style={{ marginTop: 16 }}>
           <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>
@@ -337,7 +343,6 @@ function InputContent({ question, savedAnswer, saveAnswer }) {
 
     return (
       <div style={{ marginTop: 16 }}>
-        {/* Column B legend */}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
           {options.map((opt) => (
             <span key={opt.key} style={{ background: "#eef2ff", border: "1.5px solid #c7d2fe", borderRadius: 8, padding: "5px 12px", fontSize: 13, fontWeight: 600, color: "#3730a3" }}>
@@ -346,11 +351,9 @@ function InputContent({ question, savedAnswer, saveAnswer }) {
           ))}
         </div>
 
-        {/* Column A rows with dropdowns */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {rows.map((row) => {
             const chosen = matchMap[row.key];
-            const chosenLabel = options.find(o => o.key === chosen)?.label;
             return (
               <div key={row.key}
                 style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, background: chosen ? "#f0fdf4" : "#fafafa" }}>
@@ -370,7 +373,6 @@ function InputContent({ question, savedAnswer, saveAnswer }) {
           })}
         </div>
 
-        {/* Progress pill */}
         <div style={{ marginTop: 10, fontSize: 12, color: "#6b7280" }}>
           Matched: {Object.keys(matchMap).filter(k => matchMap[k]).length} / {rows.length}
         </div>
@@ -614,6 +616,7 @@ export default function AIExamMocker({ student }) {
   const [agentQuestion, setAgentQuestion] = useState("");
   const [agentReply, setAgentReply] = useState("");
   const [agentLoading, setAgentLoading] = useState(false);
+  const { examId } = useParams();
 
   // ── Real-time exam list ────────────────────────────────────────────────────
   useEffect(() => {
@@ -686,47 +689,88 @@ export default function AIExamMocker({ student }) {
 
   // ── Save answer ────────────────────────────────────────────────────────────
   const saveAnswer = useCallback((val) => {
-    setAnswers((prev) => ({ ...prev, [index]: val }));
-    fetch(`${API}/answer`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: sessionId, index, answer: val }),
-    }).catch(console.error);
-  }, [index, sessionId]);
+    setAnswers((prev) => ({
+      ...prev,
+      [index]: val,
+    }));
+
+    // debounce autosave instead of spam
+    clearTimeout(window.__saveTimeout);
+
+    window.__saveTimeout = setTimeout(() => {
+      fetch(`${API}/autosave`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          examId: selectedExam,
+          studentId: STUDENT_ID,
+          answers: {
+            ...answers,
+            [index]: val,
+          },
+        }),
+      }).catch(console.error);
+    }, 800);
+  }, [index, sessionId, answers]);
 
   // ── Start exam ─────────────────────────────────────────────────────────────
   const startExam = async () => {
     if (!selectedExam) return;
     setLoading(true);
+
     try {
-      const examId = typeof selectedExam === "string" ? selectedExam : selectedExam?.examId || selectedExam?.id;
+      // DEBUG
+      console.log("=== startExam DEBUG ===");
+      console.log("API:", API);
+      console.log("selectedExam:", selectedExam);
+
+      const examId = typeof selectedExam === "string"
+        ? selectedExam
+        : selectedExam?.examId || selectedExam?.id;
+
+      console.log("examId:", examId);
+      console.log("Full URL:", `${API}/start_exam`);
+
       if (!examId) throw new Error("Invalid exam selected");
 
-      const examSnap = await getDoc(doc(db, "exams", examId));
-      if (!examSnap.exists()) throw new Error("Exam not found");
-      const examData = examSnap.data();
+      // Test server reachability
+      try {
+        const ping = await fetch(`${API}/`);
+        const pingData = await ping.json();
+        console.log("Server ping OK:", pingData);
+      } catch (e) {
+        console.error("Server unreachable:", e.message);
+        throw new Error(`Cannot reach server at: ${API}`);
+      }
 
-      const qSnap = await getDocs(query(collection(db, "exam_questions"), where("examId", "==", examId)));
-      let questions = qSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-      if (!questions.length) throw new Error(`No questions found for examId: ${examId}`);
+      const res = await fetch(`${API}/start_exam`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exam_id: examId, student_id: STUDENT_ID }),
+      });
 
-      if (questions.length === 1 && Array.isArray(questions[0].questions)) questions = questions[0].questions;
+      console.log("Response status:", res.status);
+      console.log("Response ok:", res.ok);
 
-      const normalized = questions.map((q, idx) => ({
+      const text = await res.text();  // get raw text first
+      console.log("Raw response:", text);
+
+      const data = JSON.parse(text);  // then parse
+      if (data.error) throw new Error(data.error);
+      const normalized = data.questions.map((q, idx) => ({
         ...q,
         id: q.id || `q_${idx}`,
-        text: q.questionText || q.question || q.wording || q.content || "Missing question text",
-        type: normalizeType(q.type || q.question_type),
-        marks: q.marks || q.mark || q.max_marks || 1,
-        options: convertOptions(q.options),
+        text: q.question,
+        type: normalizeType(q.type),
+        marks: q.marks || 1,
+        options: q.options || [],
         section: q.section || "Section A",
-        order: q.order ?? idx,
+        order: idx,
       }));
 
       window.__examQuestions = normalized;
-
-      setSessionId(examId);
-      setExamDurationSeconds((examData.examDuration || 60) * 60);
+      setSessionId(data.session_id);
+      setExamDurationSeconds((data.exam_duration_minutes || 60) * 60);
       setTimerKey((k) => k + 1);
       setTimeExpired(false);
       setAnswers({});
@@ -736,6 +780,7 @@ export default function AIExamMocker({ student }) {
       setQuestion(normalized[0]);
       setIndex(0);
       setStarted(true);
+
     } catch (err) {
       console.error("[startExam]", err);
       alert(err.message || "Failed to start exam");
@@ -750,6 +795,7 @@ export default function AIExamMocker({ student }) {
     if (isFullscreen) exitFullscreen();
   }, [isFullscreen, exitFullscreen]);
 
+
   // ── Submit ─────────────────────────────────────────────────────────────────
   const submitExam = async () => {
     if (!timeExpired) {
@@ -759,23 +805,54 @@ export default function AIExamMocker({ student }) {
     setSaving(true);
     setTimeExpired(false);
     if (isFullscreen) exitFullscreen();
-    try {
-      const res = await fetch(`${API}/submit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, student_id: STUDENT_ID }) });
-      const data = await res.json();
-      if (data.error) { alert(data.error); return; }
 
-      await addDoc(collection(db, "exam_attempts"), {
-        studentId: STUDENT_ID, exam: selectedExam,
-        examId: typeof selectedExam === "string" ? selectedExam : selectedExam?.id,
-        answers, skipped: [...skipped],
-        answeredCount: Object.keys(answers).length,
-        score: data.score, total: data.total, percentage: data.percentage,
-        markedResults: data.results || [], aiFeedback: data.feedback || "",
-        timedOut: timeExpired, completedAt: serverTimestamp(), createdAt: serverTimestamp(),
+    try {
+      // ✅ Send session_id (set this when exam starts from /start response)
+      const payload = {
+        session_id: sessionId,   // <-- must be stored in state when exam loads
+        student_id: STUDENT_ID,
+      };
+
+      const res = await fetch(`${API}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
+
+      const data = await res.json();
+
+      // ✅ Catch backend errors before saving
+      if (!res.ok || data.error) {
+        alert(data.error || "Submission failed. Please try again.");
+        return;
+      }
+
+      // ✅ Now save to Firestore with real marked data
+      await addDoc(collection(db, "exam_attempts"), {
+        studentId: STUDENT_ID,
+        exam: selectedExam,
+        examId: payload.examId,
+        answers,
+        skipped: [...skipped],
+        answeredCount: Object.keys(answers).length,
+        score: data.score,
+        total: data.total,
+        percentage: data.percentage,
+        markedResults: data.results,
+        aiFeedback: data.feedback,
+        timedOut: timeExpired,
+        completedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+      });
+
       setResults(data);
       setSubmitted(true);
-    } finally { setSaving(false); }
+    } catch (err) {
+      console.error("Submit failed:", err);
+      alert("Network error. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   // ── Cancel ─────────────────────────────────────────────────────────────────
