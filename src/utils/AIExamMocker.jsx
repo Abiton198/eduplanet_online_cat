@@ -588,8 +588,6 @@ function ExitModal({ answeredCount, totalQ, onClose, onExit }) {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AIExamMocker({ student }) {
   const containerRef = useRef(null);
-  const STUDENT_ID = useStudentId();
-
   const [exams, setExams] = useState([]);
   const [selectedExam, setSelectedExam] = useState("");
   const [sessionId, setSessionId] = useState(null);
@@ -617,6 +615,8 @@ export default function AIExamMocker({ student }) {
   const [agentReply, setAgentReply] = useState("");
   const [agentLoading, setAgentLoading] = useState(false);
   const { examId } = useParams();
+  const answersRef = useRef({});
+  const STUDENT_ID = useStudentId();
 
   // ── Real-time exam list ────────────────────────────────────────────────────
   useEffect(() => {
@@ -632,6 +632,11 @@ export default function AIExamMocker({ student }) {
     }, console.error);
     return () => unsub();
   }, []);
+
+  // Temporary debug — remove after fix
+  useEffect(() => {
+    console.log("[state] started:", started, "totalQ:", totalQ, "question:", question?.id);
+  }, [started, totalQ, question]);
 
   // ── Fullscreen ─────────────────────────────────────────────────────────────
   const enterFullscreen = useCallback(() => {
@@ -689,29 +694,27 @@ export default function AIExamMocker({ student }) {
 
   // ── Save answer ────────────────────────────────────────────────────────────
   const saveAnswer = useCallback((val) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [index]: val,
-    }));
+    setAnswers((prev) => {
+      const updated = { ...prev, [index]: val };
+      answersRef.current = updated;
+      return updated;
+    });
 
-    // debounce autosave instead of spam
+    // Autosave inside the callback where val and index are in scope
     clearTimeout(window.__saveTimeout);
-
     window.__saveTimeout = setTimeout(() => {
       fetch(`${API}/autosave`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          examId: selectedExam,
-          studentId: STUDENT_ID,
-          answers: {
-            ...answers,
-            [index]: val,
-          },
+          exam_id: selectedExam,
+          student_id: STUDENT_ID,
+          answers: answersRef.current,  // use ref — always current
         }),
       }).catch(console.error);
     }, 800);
-  }, [index, sessionId, answers]);
+
+  }, [index, selectedExam]);
 
   // ── Start exam ─────────────────────────────────────────────────────────────
   const startExam = async () => {
@@ -719,29 +722,14 @@ export default function AIExamMocker({ student }) {
     setLoading(true);
 
     try {
-      // DEBUG
-      console.log("=== startExam DEBUG ===");
-      console.log("API:", API);
-      console.log("selectedExam:", selectedExam);
-
       const examId = typeof selectedExam === "string"
         ? selectedExam
         : selectedExam?.examId || selectedExam?.id;
 
-      console.log("examId:", examId);
-      console.log("Full URL:", `${API}/start_exam`);
-
       if (!examId) throw new Error("Invalid exam selected");
 
-      // Test server reachability
-      try {
-        const ping = await fetch(`${API}/`);
-        const pingData = await ping.json();
-        console.log("Server ping OK:", pingData);
-      } catch (e) {
-        console.error("Server unreachable:", e.message);
-        throw new Error(`Cannot reach server at: ${API}`);
-      }
+      console.log("[startExam] hitting:", `${API}/start_exam`);
+      console.log("[startExam] payload:", { exam_id: examId, student_id: STUDENT_ID });
 
       const res = await fetch(`${API}/start_exam`, {
         method: "POST",
@@ -749,14 +737,29 @@ export default function AIExamMocker({ student }) {
         body: JSON.stringify({ exam_id: examId, student_id: STUDENT_ID }),
       });
 
-      console.log("Response status:", res.status);
-      console.log("Response ok:", res.ok);
+      console.log("[startExam] status:", res.status, res.ok);
 
-      const text = await res.text();  // get raw text first
-      console.log("Raw response:", text);
+      const text = await res.text();
+      console.log("[startExam] raw response:", text.slice(0, 500));
 
-      const data = JSON.parse(text);  // then parse
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        throw new Error(`JSON parse failed: ${text.slice(0, 200)}`);
+      }
+
+      console.log("[startExam] parsed data keys:", Object.keys(data));
+      console.log("[startExam] error field:", data.error);
+      console.log("[startExam] questions count:", data.questions?.length);
+      console.log("[startExam] session_id:", data.session_id);
+
       if (data.error) throw new Error(data.error);
+
+      if (!data.questions || data.questions.length === 0) {
+        throw new Error("No questions returned from server");
+      }
+
       const normalized = data.questions.map((q, idx) => ({
         ...q,
         id: q.id || `q_${idx}`,
@@ -768,7 +771,10 @@ export default function AIExamMocker({ student }) {
         order: idx,
       }));
 
+      console.log("[startExam] normalized[0]:", normalized[0]);
+
       window.__examQuestions = normalized;
+      answersRef.current = {};
       setSessionId(data.session_id);
       setExamDurationSeconds((data.exam_duration_minutes || 60) * 60);
       setTimerKey((k) => k + 1);
@@ -779,10 +785,12 @@ export default function AIExamMocker({ student }) {
       setTotalQ(normalized.length);
       setQuestion(normalized[0]);
       setIndex(0);
-      setStarted(true);
+      setStarted(true);  // ← this flips the view
+
+      console.log("[startExam] ✅ done — started=true, totalQ=", normalized.length);
 
     } catch (err) {
-      console.error("[startExam]", err);
+      console.error("[startExam] ❌ error:", err.message);
       alert(err.message || "Failed to start exam");
     } finally {
       setLoading(false);
@@ -807,39 +815,35 @@ export default function AIExamMocker({ student }) {
     if (isFullscreen) exitFullscreen();
 
     try {
-      // ✅ Send session_id (set this when exam starts from /start response)
-      const payload = {
-        session_id: sessionId,   // <-- must be stored in state when exam loads
-        student_id: STUDENT_ID,
-      };
-
       const res = await fetch(`${API}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          exam_id: selectedExam,
+          student_id: STUDENT_ID,
+          answers,                        // send answers directly
+        }),
       });
 
       const data = await res.json();
-
-      // ✅ Catch backend errors before saving
       if (!res.ok || data.error) {
         alert(data.error || "Submission failed. Please try again.");
         return;
       }
 
-      // ✅ Now save to Firestore with real marked data
       await addDoc(collection(db, "exam_attempts"), {
         studentId: STUDENT_ID,
         exam: selectedExam,
-        examId: payload.examId,
+        examId: selectedExam,
         answers,
         skipped: [...skipped],
         answeredCount: Object.keys(answers).length,
-        score: data.score,
-        total: data.total,
-        percentage: data.percentage,
-        markedResults: data.results,
-        aiFeedback: data.feedback,
+        score: data.score ?? 0,
+        total: data.total ?? 0,
+        percentage: data.percentage ?? 0,
+        markedResults: data.results ?? [],
+        aiFeedback: data.feedback ?? "",
+        subject: data.subject ?? "",
         timedOut: timeExpired,
         completedAt: serverTimestamp(),
         createdAt: serverTimestamp(),
@@ -847,19 +851,21 @@ export default function AIExamMocker({ student }) {
 
       setResults(data);
       setSubmitted(true);
+
     } catch (err) {
       console.error("Submit failed:", err);
-      alert("Network error. Please try again.");
+      alert(err.message || "Network error. Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
+
   // ── Cancel ─────────────────────────────────────────────────────────────────
   const cancelExam = () => {
     if (isFullscreen) exitFullscreen();
     setShowExitModal(false); setStarted(false); setSubmitted(false); setResults(null);
-    setQuestion(null); setAnswers({}); setSkipped(new Set());
+    setQuestion(null); setAnswers({}); setSkipped(new Set()); answersRef.current = {};
     setSessionId(null); setIndex(0); setAgentReply("");
     setTimeExpired(false); setExamDurationSeconds(0);
   };
@@ -878,7 +884,7 @@ export default function AIExamMocker({ student }) {
   };
 
   // ── Landing screen ─────────────────────────────────────────────────────────
-  if (!started) {
+  if (!started && !submitted) {
     return (
       <div style={S.wrap}>
         <FontLoader />
@@ -895,7 +901,11 @@ export default function AIExamMocker({ student }) {
             ))}
           </select>
           {loading && <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 8 }}>⏳ Loading...</p>}
-          <button style={{ ...S.startBtn, opacity: loading || !selectedExam ? 0.6 : 1 }} onClick={startExam} disabled={loading || !selectedExam}>
+          <button
+            style={{ ...S.startBtn, opacity: loading || !selectedExam ? 0.6 : 1 }}
+            onClick={startExam}
+            disabled={loading || !selectedExam}
+          >
             {loading ? "Loading exam..." : "▶ Start Exam"}
           </button>
         </div>
@@ -903,7 +913,85 @@ export default function AIExamMocker({ student }) {
     );
   }
 
-  // ── Active exam ────────────────────────────────────────────────────────────
+  // ── Results screen ──────────────────────────────────────────────────────────
+  if (submitted && results) {
+    const pct = results.percentage ?? 0;
+    const scoreColor = pct >= 75 ? "#10b981" : pct >= 50 ? "#6366f1" : "#dc2626";
+
+    return (
+      <div style={S.wrap}>
+        <FontLoader />
+
+        <div style={{ ...S.scoreBanner, background: `linear-gradient(135deg, ${scoreColor}, ${scoreColor}cc)` }}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>
+            {pct >= 75 ? "🏆" : pct >= 50 ? "👍" : "📚"}
+          </div>
+          <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: "-1px" }}>{pct}%</div>
+          <div style={{ fontSize: 16, opacity: 0.9, marginTop: 4 }}>{results.score} / {results.total} marks</div>
+          <div style={{ fontSize: 13, opacity: 0.75, marginTop: 8 }}>{results.subject || "Exam"} · {STUDENT_ID}</div>
+        </div>
+
+        {results.feedback && (
+          <div style={S.card}>
+            <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "#6b7280", marginBottom: 8 }}>
+              🤖 AI Feedback
+            </div>
+            <p style={{ fontSize: 14, lineHeight: 1.7, color: "#374151" }}>{results.feedback}</p>
+          </div>
+        )}
+
+        <div style={S.card}>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "#6b7280", marginBottom: 16 }}>
+            Question Breakdown
+          </div>
+          {(results.results ?? []).map((r, i) => {
+            const correct = r.status === "correct";
+            const partial = r.status === "partial";
+            const bg = correct ? "#f0fdf4" : partial ? "#fffbeb" : "#fef2f2";
+            const border = correct ? "#86efac" : partial ? "#fde68a" : "#fca5a5";
+            const icon = correct ? "✅" : partial ? "⚠️" : "❌";
+            return (
+              <div key={i} style={{ background: bg, border: `1.5px solid ${border}`, borderRadius: 10, padding: "12px 16px", marginBottom: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>{icon} Q{r.question_number}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#6b7280" }}>{r.earned}/{r.marks} marks</span>
+                </div>
+                <p style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>{r.question}</p>
+                <div style={{ fontSize: 12, color: "#6b7280" }}>
+                  <span style={{ fontWeight: 600 }}>Your answer: </span>
+                  <span style={{ color: correct ? "#059669" : "#dc2626" }}>{r.student_answer}</span>
+                </div>
+                {!correct && (
+                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+                    <span style={{ fontWeight: 600 }}>Correct: </span>
+                    <span style={{ color: "#059669" }}>{r.correct_answer}</span>
+                  </div>
+                )}
+                {r.feedback && (
+                  <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4, fontStyle: "italic" }}>{r.feedback}</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <button
+          style={{ ...S.btn, ...S.btnPri, width: "100%", padding: 14, fontSize: 15, marginBottom: 24 }}
+          onClick={() => {
+            setSubmitted(false); setStarted(false); setResults(null);
+            setAnswers({}); answersRef.current = {};
+            setSkipped(new Set()); setQuestion(null);
+            setIndex(0); setSessionId(null);
+            setTimeExpired(false); setExamDurationSeconds(0);
+          }}
+        >
+          ✅ Done — Back to Exams
+        </button>
+      </div>
+    );
+  }
+
+  // ── Active exam ─────────────────────────────────────────────────────────────
   return (
     <div ref={containerRef} style={isFullscreen ? S.wrapFull : S.wrap}>
       <FontLoader />
