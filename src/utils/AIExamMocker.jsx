@@ -832,21 +832,47 @@ export default function AIExamMocker({ student }) {
       }
 
       await addDoc(collection(db, "exam_attempts"), {
+
         studentId: STUDENT_ID,
-        exam: selectedExam,
+
         examId: selectedExam,
+
+        subject: data.subject,
+
         answers,
+
         skipped: [...skipped],
+
         answeredCount: Object.keys(answers).length,
-        score: data.score ?? 0,
-        total: data.total ?? 0,
-        percentage: data.percentage ?? 0,
-        markedResults: data.results ?? [],
-        aiFeedback: data.feedback ?? "",
-        subject: data.subject ?? "",
-        timedOut: timeExpired,
+
+        score: data.score,
+
+        total: data.total,
+
+        percentage: data.percentage,
+
+        markedResults: data.results,
+
+        aiFeedback: data.feedback,
+
+        aiAnalysis: data.analysis,
+
+        submittedAt: serverTimestamp(),
+
         completedAt: serverTimestamp(),
-        createdAt: serverTimestamp(),
+
+        metadata: {
+
+          aiModel: data.aiModel ?? "llama-3.3-70b",
+
+          analysisVersion: 1,
+
+          markingVersion: 1,
+
+          generatedAt: new Date().toISOString()
+
+        }
+
       });
 
       setResults(data);

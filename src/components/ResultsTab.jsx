@@ -42,11 +42,18 @@ function RemarkModal({ attempt, onClose, onSave }) {
         setStep("ai-loading");
         setAiError(null);
         try {
-            const functions = getFunctions();
-            const remarkWithAI = httpsCallable(functions, "remarkWithAI");
+            const API = import.meta.env.VITE_API_URL;
 
-            const { data } = await remarkWithAI({ markedResults: rows });
-            const parsed = data.results; // [{ idx, earned, status, feedback }]
+            const res = await fetch(`${API}/remark`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ results: rows }),
+            });
+
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+            const data = await res.json();
+            const parsed = data.results;
 
             setRows(prev => prev.map((r, i) => {
                 const update = parsed.find(p => p.idx === i) ?? parsed[i];
