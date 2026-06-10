@@ -58,10 +58,58 @@ const Empty = ({ icon: Icon, text }) => (
   </div>
 );
 
+/* ── Normalise an attempt doc — fixes all field name mismatches ────────────── */
+const normaliseAttempt = (docSnap, examTitles = {}) => {
+  const d = docSnap.data();
+
+  const examId = d.examId || d.exam || '';
+
+  const examTitle =
+    examTitles[examId] ||
+    d.examTitle ||
+    (examId ? examId.replace(/_exam\.json$/, '').replace(/_/g, ' ') : 'Unknown Exam');
+
+  const tsSeconds =
+    d.completedAt?.seconds ||
+    d.submittedAt?.seconds ||
+    d.completedAt?._seconds ||
+    d.submittedAt?._seconds ||
+    (d.completedTime ? new Date(d.completedTime).getTime() / 1000 : 0);
+
+  // ✅ percentage may be top-level OR inside metadata
+  const percentage =
+    d.percentage != null
+      ? parseFloat(d.percentage)
+      : d.metadata?.percentage != null
+        ? parseFloat(d.metadata.percentage)
+        : null;
+
+  // ✅ score/total same pattern
+  const score = d.score ?? d.metadata?.score ?? null;
+  const total = d.total ?? d.metadata?.total ?? null;
+
+  return {
+    id: docSnap.id,
+    ...d,
+    exam: examId,
+    examId,
+    examTitle,
+    _tsSeconds: tsSeconds,
+    percentage,
+    score,
+    total,
+    answeredCount: d.answeredCount ?? Object.keys(d.answers || {}).length,
+    skipped: d.skipped ?? [],
+    markedResults: d.markedResults ?? [],
+    aiFeedback: d.aiFeedback ?? d.feedback ?? '',
+    analysis: d.analysis ?? {},
+  };
+};
+
 /* ══════════════════════════════════════════════════════════════════════════════
    AI RESULT CARD
 ══════════════════════════════════════════════════════════════════════════════ */
-const AIResultCard = ({ res, expandedId, setExpandedId, examTitles }) => {
+const AIResultCard = ({ res, expandedId, setExpandedId }) => {
   const open = expandedId === res.id;
   const pct = res.percentage ?? 0;
   const theme = getTheme(pct);
@@ -91,24 +139,23 @@ const AIResultCard = ({ res, expandedId, setExpandedId, examTitles }) => {
     }
   };
 
-  const examLabel =
-    (res.exam && examTitles[res.exam])
-    || res.examTitle
-    || (res.exam || 'Unknown Exam').replace(/_exam\.json$/, '').replace(/_/g, ' ');
-
-  const dateLabel = res.completedAt
-    ? new Date(res.completedAt.seconds ? res.completedAt.seconds * 1000 : res.completedAt).toLocaleString()
-    : res.createdAt?.seconds
-      ? new Date(res.createdAt.seconds * 1000).toLocaleString()
-      : '—';
+  const dateLabel = res._tsSeconds
+    ? new Date(res._tsSeconds * 1000).toLocaleString()
+    : '—';
 
   return (
     <div className={`mb-3 border rounded-xl overflow-hidden shadow-sm ${theme.bg}`}>
-      <div className="p-4 flex justify-between cursor-pointer hover:bg-white/40" onClick={() => setExpandedId(open ? null : res.id)}>
+      {/* ── Header row ── */}
+      <div
+        className="p-4 flex justify-between cursor-pointer hover:bg-white/40"
+        onClick={() => setExpandedId(open ? null : res.id)}
+      >
         <div className="flex gap-3">
-          <div className={`p-2 rounded-lg ${theme.accent} text-white flex items-center`}><Bot size={16} /></div>
+          <div className={`p-2 rounded-lg ${theme.accent} text-white flex items-center`}>
+            <Bot size={16} />
+          </div>
           <div>
-            <h3 className="font-black text-[11px] text-gray-900">{examLabel}</h3>
+            <h3 className="font-black text-[11px] text-gray-900">{res.examTitle}</h3>
             <p className="text-[9px] uppercase font-bold text-gray-400">AI Exam · {dateLabel}</p>
           </div>
         </div>
@@ -121,19 +168,67 @@ const AIResultCard = ({ res, expandedId, setExpandedId, examTitles }) => {
         </div>
       </div>
 
+      {/* ── Progress bar ── */}
       <div className="h-1 bg-gray-100">
         <div className={`h-1 ${theme.bar} transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
       </div>
 
+      {/* ── Expanded body ── */}
       {open && (
         <div className="bg-white border-t p-5">
-          <div className="grid grid-cols-3 gap-2 mb-4">
+
+          {/* Stats row */}
+          <div className="grid grid-cols-4 gap-2 mb-4">
             <Stat label="Score" value={`${res.score ?? '?'}/${res.total ?? '?'}`} />
             <Stat label="Percentage" value={`${pct}%`} />
-            <Stat label="Answered" value={res.answeredCount ?? Object.keys(res.answers || {}).length} />
+            <Stat label="Answered" value={res.answeredCount} />
+            <Stat label="Skipped" value={res.skipped?.length ?? 0} />
           </div>
 
-          {(res.markedResults ?? []).length > 0 && (
+          {/* AI Analysis summary */}
+          {res.analysis?.overallSummary && (
+            <div className="mb-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+              <p className="text-[10px] font-black uppercase text-indigo-400 mb-1">🧠 AI Learning Analysis</p>
+              <p className="text-[11px] text-indigo-800 leading-relaxed">{res.analysis.overallSummary}</p>
+            </div>
+          )}
+
+          {/* Strengths & Weaknesses */}
+          {(res.analysis?.strengths?.length > 0 || res.analysis?.weaknesses?.length > 0) && (
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {res.analysis?.strengths?.length > 0 && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-[10px] font-black text-green-600 mb-1">✅ Strengths</p>
+                  {res.analysis.strengths.slice(0, 3).map((s, i) => (
+                    <p key={i} className="text-[10px] text-gray-600">• {s}</p>
+                  ))}
+                </div>
+              )}
+              {res.analysis?.weaknesses?.length > 0 && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-[10px] font-black text-red-500 mb-1">⚠️ Needs Work</p>
+                  {res.analysis.weaknesses.slice(0, 3).map((w, i) => (
+                    <p key={i} className="text-[10px] text-gray-600">• {w}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Study plan */}
+          {res.analysis?.studyPlan?.length > 0 && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-[10px] font-black text-amber-600 mb-1">📚 Personalised Study Plan</p>
+              {res.analysis.studyPlan.slice(0, 4).map((step, i) => (
+                <p key={i} className="text-[10px] text-gray-700 py-0.5">
+                  {i + 1}. {typeof step === 'string' ? step : step.task || step.topic || JSON.stringify(step)}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* Question breakdown */}
+          {res.markedResults.length > 0 && (
             <div className="space-y-2 mb-4">
               <p className="text-[10px] font-black uppercase text-gray-400 mb-2">Question Breakdown</p>
               {res.markedResults.map((r, idx) => {
@@ -148,10 +243,14 @@ const AIResultCard = ({ res, expandedId, setExpandedId, examTitles }) => {
                         ? <CheckCircle size={14} className="text-green-600 mt-0.5 flex-shrink-0" />
                         : <XCircle size={14} className="text-red-600 mt-0.5 flex-shrink-0" />}
                       <div className="min-w-0">
-                        <p className="text-[11px] font-bold text-gray-800">{r.question_number}. {r.question}</p>
+                        <p className="text-[11px] font-bold text-gray-800">
+                          {r.question_number}. {r.question}
+                        </p>
                         <p className="text-[10px] mt-1">
                           <span className="text-gray-400">Your answer: </span>
-                          <span className={correct ? 'text-green-700' : 'text-red-700 font-bold'}>{r.student_answer || 'No answer'}</span>
+                          <span className={correct ? 'text-green-700' : 'text-red-700 font-bold'}>
+                            {r.student_answer || 'No answer'}
+                          </span>
                         </p>
                         {!correct && (
                           <p className="text-[10px]">
@@ -159,8 +258,17 @@ const AIResultCard = ({ res, expandedId, setExpandedId, examTitles }) => {
                             <span className="text-green-700 font-bold">{r.correct_answer || '—'}</span>
                           </p>
                         )}
-                        {r.feedback && <p className="text-[10px] text-gray-500 mt-1 italic">{r.feedback}</p>}
-                        <p className="text-[10px] text-gray-400 mt-0.5">{r.earned ?? r.score ?? 0}/{r.marks} marks · {r.status}</p>
+                        {r.feedback && (
+                          <p className="text-[10px] text-gray-500 mt-1 italic">{r.feedback}</p>
+                        )}
+                        {r.model_answer && !correct && (
+                          <p className="text-[10px] text-indigo-600 mt-1">
+                            <span className="font-bold">Model answer: </span>{r.model_answer}
+                          </p>
+                        )}
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          {r.earned ?? r.score ?? 0}/{r.marks} marks · {r.status}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -169,27 +277,35 @@ const AIResultCard = ({ res, expandedId, setExpandedId, examTitles }) => {
             </div>
           )}
 
+          {/* AI Feedback */}
           {res.aiFeedback && (
             <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 mb-4 text-[11px] text-indigo-800">
               🤖 <b>AI Feedback:</b> {res.aiFeedback}
             </div>
           )}
 
+          {/* Ask agent */}
           <div className="bg-gray-50 border rounded-lg p-3">
             <p className="text-[10px] font-black uppercase text-gray-400 mb-2">Ask Agent About This Exam</p>
             {agentReply && (
-              <div className="bg-white border border-indigo-100 rounded p-2 mb-2 text-[11px] text-gray-700 whitespace-pre-wrap">{agentReply}</div>
+              <div className="bg-white border border-indigo-100 rounded p-2 mb-2 text-[11px] text-gray-700 whitespace-pre-wrap">
+                {agentReply}
+              </div>
             )}
             <div className="flex gap-2">
               <input
-                type="text" value={agentQ}
+                type="text"
+                value={agentQ}
                 onChange={e => setAgentQ(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') askAgent(); }}
                 placeholder={`"Explain Q4.1" or "What should I revise?"`}
                 className="flex-1 text-[11px] border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-indigo-300"
               />
-              <button onClick={askAgent} disabled={agentLoading || !agentQ.trim()}
-                className="px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-black rounded disabled:opacity-40">
+              <button
+                onClick={askAgent}
+                disabled={agentLoading || !agentQ.trim()}
+                className="px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-black rounded disabled:opacity-40"
+              >
                 {agentLoading ? '…' : 'Ask'}
               </button>
             </div>
@@ -209,12 +325,17 @@ const LegacyResultCard = ({ res, expandedId, setExpandedId }) => {
 
   return (
     <div className={`mb-3 border rounded-xl overflow-hidden shadow-sm ${theme.bg}`}>
-      <div className="p-4 flex justify-between cursor-pointer hover:bg-white/40" onClick={() => setExpandedId(open ? null : res.id)}>
+      <div
+        className="p-4 flex justify-between cursor-pointer hover:bg-white/40"
+        onClick={() => setExpandedId(open ? null : res.id)}
+      >
         <div className="flex gap-3">
           <div className={`p-2 rounded-lg ${theme.accent} text-white`}><BookOpen size={16} /></div>
           <div>
             <h3 className="font-black text-[11px] text-gray-900">{res.exam}</h3>
-            <p className="text-[9px] uppercase font-bold text-gray-400">Grade {res.grade || res.gradeYear} · {res.completedTime}</p>
+            <p className="text-[9px] uppercase font-bold text-gray-400">
+              Grade {res.grade || res.gradeYear} · {res.completedTime}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -233,16 +354,25 @@ const LegacyResultCard = ({ res, expandedId, setExpandedId }) => {
           </div>
           <div className="space-y-2">
             {(res.answers ?? []).map((ans, idx) => {
-              const correct = String(ans.answer || '').trim().toLowerCase() === String(ans.correctAnswer || '').trim().toLowerCase();
+              const correct =
+                String(ans.answer || '').trim().toLowerCase() ===
+                String(ans.correctAnswer || '').trim().toLowerCase();
               return (
-                <div key={idx} className={`p-3 rounded border-l-4 ${correct ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'}`}>
+                <div
+                  key={idx}
+                  className={`p-3 rounded border-l-4 ${correct ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'}`}
+                >
                   <div className="flex gap-2 items-start">
-                    {correct ? <CheckCircle size={14} className="text-green-600 mt-0.5" /> : <XCircle size={14} className="text-red-600 mt-0.5" />}
+                    {correct
+                      ? <CheckCircle size={14} className="text-green-600 mt-0.5" />
+                      : <XCircle size={14} className="text-red-600 mt-0.5" />}
                     <div>
                       <p className="text-[11px] font-bold text-gray-800">{idx + 1}. {ans.question}</p>
                       <p className="text-[10px] mt-1">
                         <span className="text-gray-400">Answered: </span>
-                        <span className={correct ? 'text-green-700' : 'text-red-700 font-bold'}>{ans.answer || 'No Answer'}</span>
+                        <span className={correct ? 'text-green-700' : 'text-red-700 font-bold'}>
+                          {ans.answer || 'No Answer'}
+                        </span>
                       </p>
                       {!correct && (
                         <p className="text-[10px]">
@@ -265,7 +395,7 @@ const LegacyResultCard = ({ res, expandedId, setExpandedId }) => {
 /* ══════════════════════════════════════════════════════════════════════════════
    PROGRESS DASHBOARD
 ══════════════════════════════════════════════════════════════════════════════ */
-const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory, examTitles }) => {
+const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory }) => {
   const [agentData, setAgentData] = useState(null);
   const [agentQ, setAgentQ] = useState('');
   const [agentReply, setAgentReply] = useState('');
@@ -287,16 +417,30 @@ const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory
     const allScores = [];
     aiAttempts.forEach(a => {
       if (a.percentage == null) return;
-      const title = (a.exam && examTitles[a.exam]) || a.examTitle || (a.exam || 'AI Exam').replace(/_/g, ' ');
-      allScores.push({ pct: parseFloat(a.percentage), label: title, source: 'ai', date: a.createdAt?.seconds || 0 });
+      allScores.push({
+        pct: parseFloat(a.percentage),
+        label: a.examTitle || a.exam || 'AI Exam',
+        source: 'ai',
+        date: a._tsSeconds || 0,
+      });
     });
     legacyCurrent.forEach(r => {
       if (r.percentage == null) return;
-      allScores.push({ pct: parseFloat(r.percentage), label: r.exam, source: 'teacher', date: new Date(r.completedTime || 0).getTime() / 1000 });
+      allScores.push({
+        pct: parseFloat(r.percentage),
+        label: r.exam,
+        source: 'teacher',
+        date: new Date(r.completedTime || 0).getTime() / 1000,
+      });
     });
     legacyHistory.forEach(r => {
       if (r.percentage == null) return;
-      allScores.push({ pct: parseFloat(r.percentage), label: r.exam, source: 'history', date: new Date(r.completedTime || 0).getTime() / 1000 });
+      allScores.push({
+        pct: parseFloat(r.percentage),
+        label: r.exam,
+        source: 'history',
+        date: new Date(r.completedTime || 0).getTime() / 1000,
+      });
     });
     allScores.sort((a, b) => a.date - b.date);
     const total = allScores.length;
@@ -308,9 +452,8 @@ const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory
     const passing = allScores.filter(x => x.pct >= 50).length;
     const failing = allScores.filter(x => x.pct < 50).length;
     return { allScores, total, avg, best, latest, trend, passing, failing };
-  }, [aiAttempts, legacyCurrent, legacyHistory, examTitles]);
+  }, [aiAttempts, legacyCurrent, legacyHistory]);
 
-  // Weak areas — from markedResults across all attempts
   const allWeakAreas = useMemo(() => {
     const map = new Map();
     aiAttempts.forEach(attempt => {
@@ -442,7 +585,12 @@ const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory
           <p className="text-[10px] font-black uppercase text-gray-400 mb-3">💡 Personalised Recommendations</p>
           <div className="space-y-3">
             {recommendations.map((r, i) => {
-              const styles = { success: 'bg-green-50 border-green-200', info: 'bg-blue-50 border-blue-200', warning: 'bg-amber-50 border-amber-200', danger: 'bg-red-50 border-red-200' };
+              const styles = {
+                success: 'bg-green-50 border-green-200',
+                info: 'bg-blue-50 border-blue-200',
+                warning: 'bg-amber-50 border-amber-200',
+                danger: 'bg-red-50 border-red-200',
+              };
               return (
                 <div key={i} className={`border rounded-lg p-3 ${styles[r.type] || styles.info}`}>
                   <p className="font-black text-[11px] mb-0.5">{r.icon} {r.title}</p>
@@ -497,7 +645,7 @@ const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory
         </div>
       )}
 
-      {/* AI Academic Mentor — INSIDE ProgressDashboard */}
+      {/* AI Academic Mentor */}
       <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 rounded-2xl p-5 text-white shadow-xl">
         <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center">
@@ -505,7 +653,9 @@ const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory
           </div>
           <div>
             <h3 className="font-black">AI Academic Mentor</h3>
-            <p className="text-[10px] uppercase tracking-wider text-slate-400">Personalised Coaching Based On All Your Assessments</p>
+            <p className="text-[10px] uppercase tracking-wider text-slate-400">
+              Personalised Coaching Based On All Your Assessments
+            </p>
           </div>
         </div>
 
@@ -517,17 +667,20 @@ const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
           {[
-            "What is my weakest concept?",
+            'What is my weakest concept?',
             "Create today's study plan",
-            "Explain my last mistakes",
-            "Generate practice questions",
-            "Am I improving?",
-            "Prepare me for my next exam",
-            "How can I reach distinction?",
-            "Test my understanding",
-          ].map((prompt, index) => (
-            <button key={index} onClick={() => setAgentQ(prompt)}
-              className="bg-white/10 hover:bg-indigo-500 transition-all rounded-lg p-2 text-[10px] text-left">
+            'Explain my last mistakes',
+            'Generate practice questions',
+            'Am I improving?',
+            'Prepare me for my next exam',
+            'How can I reach distinction?',
+            'Test my understanding',
+          ].map((prompt, i) => (
+            <button
+              key={i}
+              onClick={() => setAgentQ(prompt)}
+              className="bg-white/10 hover:bg-indigo-500 transition-all rounded-lg p-2 text-[10px] text-left"
+            >
               {prompt}
             </button>
           ))}
@@ -541,8 +694,11 @@ const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory
             placeholder="Ask your AI Mentor anything about your learning..."
             className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-3 text-sm placeholder-slate-400 outline-none"
           />
-          <button onClick={askAgent} disabled={asking}
-            className="bg-indigo-600 hover:bg-indigo-700 px-5 rounded-lg font-bold">
+          <button
+            onClick={askAgent}
+            disabled={asking}
+            className="bg-indigo-600 hover:bg-indigo-700 px-5 rounded-lg font-bold disabled:opacity-40"
+          >
             {asking ? 'Thinking...' : 'Ask'}
           </button>
         </div>
@@ -550,10 +706,10 @@ const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory
 
     </div>
   );
-};  // ← ProgressDashboard ends here
+};
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   MAIN COMPONENT — ExamResultsDisplay (single export, defined once)
+   MAIN COMPONENT
 ══════════════════════════════════════════════════════════════════════════════ */
 export default function ExamResultsDisplay() {
   const [legacyHistory, setLegacyHistory] = useState([]);
@@ -566,6 +722,7 @@ export default function ExamResultsDisplay() {
   const [activeTab, setActiveTab] = useState('insights');
   const studentId = useStudentId();
 
+  // ── 1. Load exam titles (for display labels only) ──────────────────────────
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'exams'), snap => {
       const map = {};
@@ -575,18 +732,25 @@ export default function ExamResultsDisplay() {
     return () => unsub();
   }, []);
 
+  // ── 2. Load all student results ────────────────────────────────────────────
+  // NOTE: examTitles intentionally NOT in deps — removing it prevents the
+  // re-fetch race condition. examTitles is only used for display labels and
+  // normaliseAttempt is called again when examTitles updates via the memo below.
   useEffect(() => {
     const auth = getAuth();
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) { setLoading(false); return; }
       try {
         setLoading(true);
+
+        // Student profile
         const profileSnap = await getDoc(doc(db, 'students', user.uid));
         const profile = profileSnap.exists() ? profileSnap.data() : {};
         const studentName = (profile.name || user.displayName || '').trim();
         const grade = extractGradeNumber(profile) || 12;
         setCurrentGrade(grade);
 
+        // Legacy exam results
         const legacySnap = await getDocs(query(
           collection(db, 'examResults'),
           or(where('studentId', '==', user.uid), where('name', '==', studentName))
@@ -603,37 +767,92 @@ export default function ExamResultsDisplay() {
         setLegacyCurrent(sortDate(curr));
         setLegacyHistory(sortDate(hist));
 
-        const sid = studentId || '';
-        const [uidDocs, sidDocs] = await Promise.all([
-          getDocs(query(collection(db, 'exam_attempts'), where('studentId', '==', user.uid))),
-          sid ? getDocs(query(collection(db, 'exam_attempts'), where('studentId', '==', sid))) : Promise.resolve({ docs: [] }),
-        ]);
+        // AI exam attempts — query by ALL possible student IDs
+        // studentId from hook may be a custom string like "Abiton" (not Firebase UID)
+        const sid = getCachedStudentId() || studentId || '';
+        const possibleIds = [...new Set([user.uid, sid, user.email, studentName].filter(Boolean))];
 
-        const map = new Map();
-        [...uidDocs.docs, ...sidDocs.docs].forEach(docSnap => {
-          if (map.has(docSnap.id)) return;
-          const d = docSnap.data();
-          map.set(docSnap.id, { id: docSnap.id, ...d, examTitle: examTitles[d.exam] || d.examTitle || d.exam });
+        console.log('[ExamResults] querying exam_attempts by IDs:', possibleIds);
+
+        const allSnaps = await Promise.all(
+          possibleIds.map(id =>
+            getDocs(query(collection(db, 'exam_attempts'), where('studentId', '==', id)))
+              .catch(err => {
+                console.warn(`[ExamResults] query failed for id "${id}":`, err);
+                return { docs: [] };
+              })
+          )
+        );
+
+        // Log what came back per ID
+        allSnaps.forEach((snap, i) => {
+          console.log(`[ExamResults] "${possibleIds[i]}" → ${snap.docs.length} docs`);
         });
-        setAiAttempts([...map.values()].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
+
+        // Merge, deduplicate by doc ID
+        const map = new Map();
+        allSnaps.forEach(snap => {
+          snap.docs.forEach(docSnap => {
+            if (!map.has(docSnap.id)) {
+              map.set(docSnap.id, docSnap);
+            }
+          });
+        });
+
+        console.log(`[ExamResults] total unique docs: ${map.size}`);
+
+        // Normalise — percentage pulled from top-level OR metadata
+        // Sort by completedAt / submittedAt (NOT createdAt — that field doesn't exist)
+        const attempts = [...map.values()]
+          .map(docSnap => normaliseAttempt(docSnap, {}))
+          .sort((a, b) => b._tsSeconds - a._tsSeconds);
+
+        console.log('[ExamResults] attempts after normalise:', attempts.map(a => ({
+          id: a.id,
+          studentId: a.studentId,
+          examId: a.examId,
+          percentage: a.percentage,
+          score: a.score,
+          total: a.total,
+          _tsSeconds: a._tsSeconds,
+        })));
+
+        setAiAttempts(attempts);
 
       } catch (err) {
-        console.error('ExamResultsDisplay:', err);
+        console.error('[ExamResults] fatal error:', err);
       } finally {
         setLoading(false);
       }
     });
     return () => unsub();
-  }, [studentId, examTitles]);
+  }, [studentId]);
 
-  const totalExams = aiAttempts.length + legacyCurrent.length + legacyHistory.length;
+  // ── 3. Apply examTitles to attempts once titles load ───────────────────────
+  // This avoids re-fetching Firestore just because titles arrived late
+  const aiAttemptsWithTitles = useMemo(() => {
+    if (!examTitles || Object.keys(examTitles).length === 0) return aiAttempts;
+    return aiAttempts.map(a => ({
+      ...a,
+      examTitle:
+        examTitles[a.examId] ||
+        examTitles[a.exam] ||
+        a.examTitle ||
+        (a.examId || a.exam || 'Unknown Exam').replace(/_exam\.json$/, '').replace(/_/g, ' '),
+    }));
+  }, [aiAttempts, examTitles]);
+
+  const totalExams = aiAttemptsWithTitles.length + legacyCurrent.length + legacyHistory.length;
   const overallAverage = totalExams
-    ? Math.round([...aiAttempts, ...legacyCurrent, ...legacyHistory].reduce((s, x) => s + Number(x.percentage || 0), 0) / totalExams)
+    ? Math.round(
+      [...aiAttemptsWithTitles, ...legacyCurrent, ...legacyHistory]
+        .reduce((s, x) => s + Number(x.percentage || 0), 0) / totalExams
+    )
     : 0;
 
   const tabs = [
     { id: 'insights', label: '🧠 My Progress', count: totalExams },
-    { id: 'ai', label: '🤖 AI Exams', count: aiAttempts.length },
+    { id: 'ai', label: '🤖 AI Exams', count: aiAttemptsWithTitles.length },
     { id: 'current', label: `📈 Grade ${currentGrade || 12}`, count: legacyCurrent.length },
     { id: 'history', label: '📦 History', count: legacyHistory.length },
   ];
@@ -654,20 +873,29 @@ export default function ExamResultsDisplay() {
           </div>
           <div>
             <p className="font-black">{studentId}</p>
-            <p className="text-xs text-slate-400">{totalExams} Exams • {overallAverage}% Average</p>
+            <p className="text-xs text-slate-400">{totalExams} Exams · {overallAverage}% Average</p>
           </div>
           <div className="ml-auto flex gap-2 flex-wrap">
-            {!!aiAttempts.length && <span className="px-2 py-1 rounded bg-indigo-600 text-xs">{aiAttempts.length} AI</span>}
-            {!!legacyCurrent.length && <span className="px-2 py-1 rounded bg-blue-600 text-xs">{legacyCurrent.length} Current</span>}
-            {!!legacyHistory.length && <span className="px-2 py-1 rounded bg-slate-600 text-xs">{legacyHistory.length} History</span>}
+            {!!aiAttemptsWithTitles.length && (
+              <span className="px-2 py-1 rounded bg-indigo-600 text-xs">{aiAttemptsWithTitles.length} AI</span>
+            )}
+            {!!legacyCurrent.length && (
+              <span className="px-2 py-1 rounded bg-blue-600 text-xs">{legacyCurrent.length} Current</span>
+            )}
+            {!!legacyHistory.length && (
+              <span className="px-2 py-1 rounded bg-slate-600 text-xs">{legacyHistory.length} History</span>
+            )}
           </div>
         </div>
       )}
 
       <div className="flex gap-2 flex-wrap mb-5">
         {tabs.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-xl text-xs font-black ${activeTab === tab.id ? 'bg-slate-800 text-white' : 'bg-white border text-gray-500'}`}>
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2 rounded-xl text-xs font-black ${activeTab === tab.id ? 'bg-slate-800 text-white' : 'bg-white border text-gray-500'}`}
+          >
             {tab.label} <span className="ml-2">{tab.count}</span>
           </button>
         ))}
@@ -676,40 +904,60 @@ export default function ExamResultsDisplay() {
       {activeTab === 'insights' && (
         <ProgressDashboard
           studentId={studentId}
-          aiAttempts={aiAttempts}
+          aiAttempts={aiAttemptsWithTitles}
           legacyCurrent={legacyCurrent}
           legacyHistory={legacyHistory}
-          examTitles={examTitles}
         />
       )}
 
       {activeTab === 'ai' && (
         <>
           <Header icon={Bot} title="AI Exam Intelligence" sub={`Student: ${studentId}`} />
-          {!aiAttempts.length ? <Empty icon={Clock} text="No AI exams yet" /> :
-            aiAttempts.map(r => (
-              <AIResultCard key={r.id} res={r} expandedId={expandedId} setExpandedId={setExpandedId} examTitles={examTitles} />
-            ))}
+          {!aiAttemptsWithTitles.length
+            ? <Empty icon={Clock} text="No AI exams yet" />
+            : aiAttemptsWithTitles.map(r => (
+              <AIResultCard
+                key={r.id}
+                res={r}
+                expandedId={expandedId}
+                setExpandedId={setExpandedId}
+              />
+            ))
+          }
         </>
       )}
 
       {activeTab === 'current' && (
         <>
           <Header icon={Target} title={`Grade ${currentGrade} Results`} />
-          {!legacyCurrent.length ? <Empty icon={Clock} text="No Current Results" /> :
-            legacyCurrent.map(r => (
-              <LegacyResultCard key={r.id} res={r} expandedId={expandedId} setExpandedId={setExpandedId} />
-            ))}
+          {!legacyCurrent.length
+            ? <Empty icon={Clock} text="No Current Results" />
+            : legacyCurrent.map(r => (
+              <LegacyResultCard
+                key={r.id}
+                res={r}
+                expandedId={expandedId}
+                setExpandedId={setExpandedId}
+              />
+            ))
+          }
         </>
       )}
 
       {activeTab === 'history' && (
         <>
           <Header icon={Archive} title="Academic History" />
-          {!legacyHistory.length ? <Empty icon={Inbox} text="No History" /> :
-            legacyHistory.map(r => (
-              <LegacyResultCard key={r.id} res={r} expandedId={expandedId} setExpandedId={setExpandedId} />
-            ))}
+          {!legacyHistory.length
+            ? <Empty icon={Inbox} text="No History" />
+            : legacyHistory.map(r => (
+              <LegacyResultCard
+                key={r.id}
+                res={r}
+                expandedId={expandedId}
+                setExpandedId={setExpandedId}
+              />
+            ))
+          }
         </>
       )}
 

@@ -688,7 +688,10 @@ export default function AIExamMocker({ student }) {
   };
 
   const skipQuestion = () => {
-    setSkipped((prev) => new Set([...prev, index]));
+    // ✅ Only mark as skipped if not already answered
+    if (!answers[index]) {
+      setSkipped((prev) => new Set([...prev, index]));
+    }
     if (index < totalQ - 1) goTo(index + 1);
   };
 
@@ -700,7 +703,14 @@ export default function AIExamMocker({ student }) {
       return updated;
     });
 
-    // Autosave inside the callback where val and index are in scope
+    // ✅ Remove from skipped once the student starts answering
+    setSkipped((prev) => {
+      if (!prev.has(index)) return prev;
+      const next = new Set(prev);
+      next.delete(index);
+      return next;
+    });
+
     clearTimeout(window.__saveTimeout);
     window.__saveTimeout = setTimeout(() => {
       fetch(`${API}/autosave`, {
@@ -709,11 +719,10 @@ export default function AIExamMocker({ student }) {
         body: JSON.stringify({
           exam_id: selectedExam,
           student_id: STUDENT_ID,
-          answers: answersRef.current,  // use ref — always current
+          answers: answersRef.current,
         }),
       }).catch(console.error);
     }, 800);
-
   }, [index, selectedExam]);
 
   // ── Start exam ─────────────────────────────────────────────────────────────
@@ -803,6 +812,12 @@ export default function AIExamMocker({ student }) {
     if (isFullscreen) exitFullscreen();
   }, [isFullscreen, exitFullscreen]);
 
+  // Removes undefined from an object
+  function removeUndefined(obj) {
+    return Object.fromEntries(
+      Object.entries(obj).filter(([_, v]) => v !== undefined)
+    );
+  }
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const submitExam = async () => {
@@ -826,54 +841,40 @@ export default function AIExamMocker({ student }) {
       });
 
       const data = await res.json();
+      console.log("Submit response:", data);
       if (!res.ok || data.error) {
         alert(data.error || "Submission failed. Please try again.");
         return;
       }
 
-      await addDoc(collection(db, "exam_attempts"), {
-
+      const saveData = removeUndefined({
         studentId: STUDENT_ID,
-
         examId: selectedExam,
-
-        subject: data.subject,
-
+        subject: data.subject || "",
         answers,
-
         skipped: [...skipped],
-
         answeredCount: Object.keys(answers).length,
-
         score: data.score,
-
         total: data.total,
-
         percentage: data.percentage,
-
-        markedResults: data.results,
-
-        aiFeedback: data.feedback,
-
-        aiAnalysis: data.analysis,
-
+        markedResults: data.results || [],
+        aiFeedback: data.feedback || "",
+        analysis: data.analysis || {},                              // ✅ save the full analysis
+        overallSummary: data.analysis?.overallSummary || "",       // ✅ top-level fields
+        strengths: data.analysis?.strengths || [],                 // ✅ from analysis
+        weaknesses: data.analysis?.weaknesses || [],               // ✅ from analysis
+        studyPlan: data.analysis?.studyPlan || [],                 // ✅ from analysis
         submittedAt: serverTimestamp(),
-
         completedAt: serverTimestamp(),
-
         metadata: {
-
-          aiModel: data.aiModel ?? "llama-3.3-70b",
-
-          analysisVersion: 1,
-
-          markingVersion: 1,
-
-          generatedAt: new Date().toISOString()
-
-        }
-
+          markingVersion: 2,
+          generatedAt: new Date().toISOString(),
+        },
       });
+      console.log("Before adding to Firestore:", { examId: selectedExam, studentId: STUDENT_ID });
+
+      await addDoc(collection(db, "exam_attempts"), saveData);
+      console.log("Saved to Firestore:", saveData);
 
       setResults(data);
       setSubmitted(true);
@@ -1000,6 +1001,73 @@ export default function AIExamMocker({ student }) {
             );
           })}
         </div>
+
+        {/* AI Coach Panel — add inside the results screen, after the question breakdown card */}
+        <div style={S.card}>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "#6b7280", marginBottom: 8 }}>
+            🤖 Ask Your AI Coach
+          </div>
+          <input
+            style={S.agentInput}
+            placeholder="e.g. Explain my weakest topic, or create a study plan..."
+            value={agentQuestion}
+            onChange={(e) => setAgentQuestion(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && askAgent()}
+          />
+          <button
+            style={{ ...S.btn, ...S.btnPri, marginTop: 10, width: "100%" }}
+            onClick={askAgent}
+            disabled={agentLoading || !agentQuestion.trim()}
+          >
+            {agentLoading ? "⏳ Thinking..." : "Ask Coach →"}
+          </button>
+          {agentReply && (
+            <div style={{ marginTop: 14, padding: "14px 16px", background: "#eef2ff", borderRadius: 10, fontSize: 14, lineHeight: 1.7, color: "#1e1b4b" }}>
+              {agentReply}
+            </div>
+          )}
+        </div>
+
+        {/* AI Result Analysis */}
+        {results.analysis && results.analysis.overallSummary && (
+          <div style={S.card}>
+            <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "#6b7280", marginBottom: 8 }}>
+              🧠 AI Learning Analysis
+            </div>
+            <p style={{ fontSize: 14, lineHeight: 1.7, color: "#374151", marginBottom: 12 }}>
+              {results.analysis.overallSummary}
+            </p>
+
+            {results.analysis.strengths?.length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#059669", marginBottom: 4 }}>✅ Strengths</div>
+                {results.analysis.strengths.map((s, i) => (
+                  <div key={i} style={{ fontSize: 13, color: "#374151", padding: "4px 0" }}>• {s}</div>
+                ))}
+              </div>
+            )}
+
+            {results.analysis.weaknesses?.length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#dc2626", marginBottom: 4 }}>⚠️ Areas to Improve</div>
+                {results.analysis.weaknesses.map((w, i) => (
+                  <div key={i} style={{ fontSize: 13, color: "#374151", padding: "4px 0" }}>• {w}</div>
+                ))}
+              </div>
+            )}
+
+            {results.analysis.studyPlan?.length > 0 && (
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#6366f1", marginBottom: 4 }}>📚 Study Plan</div>
+                {results.analysis.studyPlan.map((step, i) => (
+                  <div key={i} style={{ fontSize: 13, color: "#374151", padding: "4px 0" }}>
+                    {i + 1}. {typeof step === "string" ? step : step.task || step.topic || JSON.stringify(step)}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <button
           style={{ ...S.btn, ...S.btnPri, width: "100%", padding: 14, fontSize: 15, marginBottom: 24 }}

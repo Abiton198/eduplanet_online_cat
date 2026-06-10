@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Monitor } from 'lucide-react';
+import { useGooglePicker } from '../utils/useGooglePicker';
 
 import {
   saveExamMetadata,
@@ -359,6 +361,9 @@ export default function TeacherDashboard() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
   const [teacherProfile, setTeacherProfile] = useState(null);
+  const [examSource, setExamSource] = useState('local');
+  const [memoSource, setMemoSource] = useState('local');
+  const { openPicker } = useGooglePicker();
 
 
   // Audit trail
@@ -654,6 +659,15 @@ export default function TeacherDashboard() {
     signOut(auth).then(() => { sessionStorage.clear(); window.location.href = '/'; });
   };
 
+  function DriveIcon({ className }) {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none">
+        <path d="M6.5 20L1 11l4-7h14l4 7-4 7H6.5z" fill="#FBBC04" opacity=".8" />
+        <path d="M1 11l5.5 9H15L9.5 11H1z" fill="#4285F4" opacity=".8" />
+        <path d="M9.5 11L15 20h4l1-2-5.5-9-5 2z" fill="#34A853" opacity=".8" />
+      </svg>
+    );
+  }
   // ─── UI ───────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8 bg-gray-50 dark:bg-slate-950 min-h-screen transition-colors duration-500">
@@ -728,7 +742,7 @@ export default function TeacherDashboard() {
               {uploadStep === 1 && (
                 <div className="max-w-2xl mx-auto space-y-6">
                   <StepHeader num={1} title="Identity & Metadata" />
-                  <input type="text" placeholder="Exam Name (e.g. Grade 12 CAT March Test)" value={paperTitle}
+                  <input type="text" placeholder="Exam Name (e.g. English Exam 2)" value={paperTitle}
                     onChange={(e) => setPaperTitle(e.target.value)}
                     className="w-full border-2 dark:bg-slate-800 dark:border-slate-700 p-5 rounded-2xl outline-none focus:border-indigo-600 font-bold text-sm" />
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -755,16 +769,73 @@ export default function TeacherDashboard() {
                 </div>
               )}
 
+              {/* Upload Steps */}
               {uploadStep === 2 && (
                 <div className="max-w-2xl mx-auto space-y-6">
                   <StepHeader num={2} title="Upload Question Paper" />
-                  <FileDropZone id="examFile" file={examFile} onChange={setExamFile} icon={<FileText size={32} className="text-indigo-400" />} label="Click to Select PDF" />
+
+                  {/* Source Toggle */}
+                  <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+                    {['local', 'drive'].map((src) => (
+                      <button
+                        key={src}
+                        type="button"
+                        onClick={() => { setExamSource(src); setExamFile(null); }}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all
+            ${examSource === src
+                            ? 'bg-white dark:bg-slate-700 shadow text-indigo-600 dark:text-indigo-400'
+                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                      >
+                        {src === 'local'
+                          ? <><Monitor size={15} /> My Computer</>
+                          : <><DriveIcon className="w-4 h-4" /> Google Drive</>}
+                      </button>
+                    ))}
+                  </div>
+
+                  {examSource === 'local' ? (
+                    <FileDropZone
+                      id="examFile"
+                      file={examFile}
+                      onChange={setExamFile}
+                      icon={<FileText size={32} className="text-indigo-400" />}
+                      label="Click to Select Document"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => openPicker((f) => setExamFile(f), 'office')}
+                      className="w-full border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-2xl p-10
+                   flex flex-col items-center gap-3 hover:border-indigo-500 hover:bg-indigo-50
+                   dark:hover:bg-indigo-900/20 transition-all group"
+                    >
+                      <DriveIcon className="w-10 h-10" />
+                      <div className="text-center">
+                        <p className="font-black text-sm text-slate-700 dark:text-slate-300 group-hover:text-indigo-600">
+                          {examFile ? examFile.name : 'Choose from Google Drive'}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">PDF, Word documents supported</p>
+                      </div>
+                      {examFile && (
+                        <span className="text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full font-black">
+                          ✓ File selected
+                        </span>
+                      )}
+                    </button>
+                  )}
+
                   <div className="flex gap-4">
-                    <button onClick={() => setUploadStep(1)} className="flex-1 bg-slate-100 dark:bg-slate-800 p-5 rounded-2xl font-black text-sm flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => setUploadStep(1)}
+                      className="flex-1 bg-slate-100 dark:bg-slate-800 p-5 rounded-2xl font-black text-sm flex items-center justify-center gap-2"
+                    >
                       <ArrowLeft size={16} /> Back
                     </button>
-                    <button onClick={() => setUploadStep(3)} disabled={!examFile}
-                      className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white p-5 rounded-2xl font-black text-sm disabled:opacity-30 transition-colors">
+                    <button
+                      onClick={() => setUploadStep(3)}
+                      disabled={!examFile}
+                      className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white p-5 rounded-2xl font-black text-sm disabled:opacity-30 transition-colors"
+                    >
                       Next: Marking Memo →
                     </button>
                   </div>
@@ -774,14 +845,67 @@ export default function TeacherDashboard() {
               {uploadStep === 3 && (
                 <div className="max-w-2xl mx-auto space-y-6">
                   <StepHeader num={3} title="Upload Marking Memo" />
-                  <FileDropZone id="memoFile" file={memoFile} onChange={setMemoFile} icon={<CheckCircle size={32} className="text-green-400" />} label="Click to Select Memo PDF" accentColor="green" />
+
+                  {/* Source Toggle */}
+                  <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+                    {['local', 'drive'].map((src) => (
+                      <button
+                        key={src}
+                        type="button"
+                        onClick={() => { setMemoSource(src); setMemoFile(null); }}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all
+            ${memoSource === src
+                            ? 'bg-white dark:bg-slate-700 shadow text-green-600 dark:text-green-400'
+                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                      >
+                        {src === 'local'
+                          ? <><Monitor size={15} /> My Computer</>
+                          : <><DriveIcon className="w-4 h-4" /> Google Drive</>}
+                      </button>
+                    ))}
+                  </div>
+
+                  {memoSource === 'local' ? (
+                    <FileDropZone
+                      id="memoFile"
+                      file={memoFile}
+                      onChange={setMemoFile}
+                      icon={<CheckCircle size={32} className="text-green-400" />}
+                      label="Click to Select Memo Document"
+                      accentColor="green"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => openPicker((f) => setMemoFile(f), 'office')}
+                      className="w-full border-2 border-dashed border-green-300 dark:border-green-700 rounded-2xl p-10
+                   flex flex-col items-center gap-3 hover:border-green-500 hover:bg-green-50
+                   dark:hover:bg-green-900/20 transition-all group"
+                    >
+                      <DriveIcon className="w-10 h-10" />
+                      <div className="text-center">
+                        <p className="font-black text-sm text-slate-700 dark:text-slate-300 group-hover:text-green-600">
+                          {memoFile ? memoFile.name : 'Choose from Google Drive'}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">PDF, Word documents supported</p>
+                      </div>
+                      {memoFile && (
+                        <span className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-3 py-1 rounded-full font-black">
+                          ✓ File selected
+                        </span>
+                      )}
+                    </button>
+                  )}
 
                   {isUploading && (
                     <div className="flex items-center gap-3 p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl">
                       <Loader2 size={20} className="animate-spin text-indigo-600" />
-                      <p className="text-sm font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">{uploadProgress}</p>
+                      <p className="text-sm font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">
+                        {uploadProgress}
+                      </p>
                     </div>
                   )}
+
 
                   {/* Upload summary before final submit */}
                   {examFile && memoFile && !isUploading && (
@@ -841,139 +965,144 @@ export default function TeacherDashboard() {
             </div>
           </div>
         </div>
-      )}
+      )
+      }
 
       {/* ── AUDIT TRAIL TAB ──────────────────────────────────────────────── */}
-      {activeTab === 'audit' && (
-        <div className="space-y-6 animate-in fade-in">
+      {
+        activeTab === 'audit' && (
+          <div className="space-y-6 animate-in fade-in">
 
-          {/* Audit header + stats */}
-          <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
-            <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-              <div>
-                <h2 className="text-2xl font-black">Exam Upload Audit Trail</h2>
-                <p className="text-slate-400 text-sm mt-1">
-                  {uploadedExams.length} paper{uploadedExams.length !== 1 ? 's' : ''} uploaded · Live from Firestore
-                </p>
-              </div>
-              <button onClick={() => setActiveTab('upload')}
-                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs transition-colors">
-                <Upload size={14} /> New Upload
-              </button>
-            </div>
-
-            {/* Stats strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {[
-                { label: 'Total', value: uploadedExams.length, color: 'indigo' },
-                { label: 'Ready', value: uploadedExams.filter((e) => e.status === 'ready').length, color: 'green' },
-                { label: 'Pending', value: uploadedExams.filter((e) => e.status === 'pending_extraction').length, color: 'amber' },
-                { label: 'Subjects', value: new Set(uploadedExams.map((e) => e.subject).filter(Boolean)).size, color: 'purple' },
-              ].map(({ label, value, color }) => (
-                <div key={label} className={`bg-${color}-50 dark:bg-${color}-900/20 rounded-2xl p-4 border border-${color}-100 dark:border-${color}-800`}>
-                  <p className={`text-2xl font-black text-${color}-600 dark:text-${color}-400`}>{value}</p>
-                  <p className={`text-[10px] font-black uppercase tracking-widest text-${color}-500 dark:text-${color}-400 mt-0.5`}>{label}</p>
+            {/* Audit header + stats */}
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
+              <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+                <div>
+                  <h2 className="text-2xl font-black">Exam Upload Audit Trail</h2>
+                  <p className="text-slate-400 text-sm mt-1">
+                    {uploadedExams.length} paper{uploadedExams.length !== 1 ? 's' : ''} uploaded · Live from Firestore
+                  </p>
                 </div>
-              ))}
+                <button onClick={() => setActiveTab('upload')}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs transition-colors">
+                  <Upload size={14} /> New Upload
+                </button>
+              </div>
+
+              {/* Stats strip */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { label: 'Total', value: uploadedExams.length, color: 'indigo' },
+                  { label: 'Ready', value: uploadedExams.filter((e) => e.status === 'ready').length, color: 'green' },
+                  { label: 'Pending', value: uploadedExams.filter((e) => e.status === 'pending_extraction').length, color: 'amber' },
+                  { label: 'Subjects', value: new Set(uploadedExams.map((e) => e.subject).filter(Boolean)).size, color: 'purple' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className={`bg-${color}-50 dark:bg-${color}-900/20 rounded-2xl p-4 border border-${color}-100 dark:border-${color}-800`}>
+                    <p className={`text-2xl font-black text-${color}-600 dark:text-${color}-400`}>{value}</p>
+                    <p className={`text-[10px] font-black uppercase tracking-widest text-${color}-500 dark:text-${color}-400 mt-0.5`}>{label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Filters */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 flex flex-wrap gap-3 items-center">
-            {/* Search */}
-            <div className="relative flex-1 min-w-48">
-              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input type="text" placeholder="Search exams..." value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border dark:bg-slate-800 dark:border-slate-700 text-sm outline-none focus:border-indigo-500" />
-            </div>
+            {/* Filters */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 flex flex-wrap gap-3 items-center">
+              {/* Search */}
+              <div className="relative flex-1 min-w-48">
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input type="text" placeholder="Search exams..." value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 rounded-xl border dark:bg-slate-800 dark:border-slate-700 text-sm outline-none focus:border-indigo-500" />
+              </div>
 
-            {/* Subject filter */}
-            <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)}
-              className="px-3 py-2.5 rounded-xl border dark:bg-slate-800 dark:border-slate-700 text-xs font-bold outline-none focus:border-indigo-500 min-w-32">
-              <option value="">All Subjects</option>
-              {[...new Set(uploadedExams.map((e) => e.subject).filter(Boolean))].sort().map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+              {/* Subject filter */}
+              <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)}
+                className="px-3 py-2.5 rounded-xl border dark:bg-slate-800 dark:border-slate-700 text-xs font-bold outline-none focus:border-indigo-500 min-w-32">
+                <option value="">All Subjects</option>
+                {[...new Set(uploadedExams.map((e) => e.subject).filter(Boolean))].sort().map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
 
-            {/* Grade filter */}
-            <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)}
-              className="px-3 py-2.5 rounded-xl border dark:bg-slate-800 dark:border-slate-700 text-xs font-bold outline-none focus:border-indigo-500">
-              <option value="">All Grades</option>
-              {GRADES.map((g) => <option key={g} value={String(g)}>Grade {g}</option>)}
-            </select>
+              {/* Grade filter */}
+              <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)}
+                className="px-3 py-2.5 rounded-xl border dark:bg-slate-800 dark:border-slate-700 text-xs font-bold outline-none focus:border-indigo-500">
+                <option value="">All Grades</option>
+                {GRADES.map((g) => <option key={g} value={String(g)}>Grade {g}</option>)}
+              </select>
 
-            {/* Status filter */}
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2.5 rounded-xl border dark:bg-slate-800 dark:border-slate-700 text-xs font-bold outline-none focus:border-indigo-500">
-              <option value="">All Statuses</option>
-              {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-            </select>
+              {/* Status filter */}
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-3 py-2.5 rounded-xl border dark:bg-slate-800 dark:border-slate-700 text-xs font-bold outline-none focus:border-indigo-500">
+                <option value="">All Statuses</option>
+                {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
 
-            {/* Sort */}
-            <button onClick={() => setSortDir((d) => d === 'desc' ? 'asc' : 'desc')}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border dark:border-slate-700 text-xs font-black text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
-              <Filter size={12} />
-              {sortDir === 'desc' ? 'Newest First' : 'Oldest First'}
-            </button>
-
-            {/* Clear */}
-            {(searchTerm || filterSubject || filterGrade || filterStatus) && (
-              <button onClick={() => { setSearchTerm(''); setFilterSubject(''); setFilterGrade(''); setFilterStatus(''); }}
-                className="flex items-center gap-1 px-3 py-2.5 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 text-xs font-black hover:bg-red-100 transition-colors">
-                <X size={12} /> Clear
+              {/* Sort */}
+              <button onClick={() => setSortDir((d) => d === 'desc' ? 'asc' : 'desc')}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border dark:border-slate-700 text-xs font-black text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
+                <Filter size={12} />
+                {sortDir === 'desc' ? 'Newest First' : 'Oldest First'}
               </button>
-            )}
 
-            <p className="ml-auto text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              {filteredExams.length} result{filteredExams.length !== 1 ? 's' : ''}
-            </p>
-          </div>
+              {/* Clear */}
+              {(searchTerm || filterSubject || filterGrade || filterStatus) && (
+                <button onClick={() => { setSearchTerm(''); setFilterSubject(''); setFilterGrade(''); setFilterStatus(''); }}
+                  className="flex items-center gap-1 px-3 py-2.5 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 text-xs font-black hover:bg-red-100 transition-colors">
+                  <X size={12} /> Clear
+                </button>
+              )}
 
-          {/* Audit rows */}
-          {filteredExams.length === 0 ? (
-            <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-20 border border-slate-100 dark:border-slate-800 text-center">
-              <FileText className="text-slate-200 dark:text-slate-700 mx-auto mb-3" size={40} />
-              <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">
-                {uploadedExams.length === 0 ? 'No exams uploaded yet' : 'No results match your filters'}
+              <p className="ml-auto text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                {filteredExams.length} result{filteredExams.length !== 1 ? 's' : ''}
               </p>
             </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredExams.map((exam) => {
-                const id = exam.examId || exam.id || exam.uploadedAt;
-                return (
-                  <AuditRow
-                    key={id}
-                    exam={exam}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    expanded={expandedRow === id}
-                    onToggle={() => setExpandedRow(expandedRow === id ? null : id)}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+
+            {/* Audit rows */}
+            {filteredExams.length === 0 ? (
+              <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-20 border border-slate-100 dark:border-slate-800 text-center">
+                <FileText className="text-slate-200 dark:text-slate-700 mx-auto mb-3" size={40} />
+                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">
+                  {uploadedExams.length === 0 ? 'No exams uploaded yet' : 'No results match your filters'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredExams.map((exam) => {
+                  const id = exam.examId || exam.id || exam.uploadedAt;
+                  return (
+                    <AuditRow
+                      key={id}
+                      exam={exam}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      expanded={expandedRow === id}
+                      onToggle={() => setExpandedRow(expandedRow === id ? null : id)}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )
+      }
 
       {/* Edit modal */}
-      {editingExam && (
-        <EditExamModal
-          exam={editingExam}
-          onSave={handleSaveEdit}
-          onClose={() => setEditingExam(null)}
-        />
-      )}
+      {
+        editingExam && (
+          <EditExamModal
+            exam={editingExam}
+            onSave={handleSaveEdit}
+            onClose={() => setEditingExam(null)}
+          />
+        )
+      }
 
       {/* Logout */}
       <button onClick={handleLogout}
         className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white dark:bg-slate-900 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-slate-400 hover:text-rose-600 transition-all font-black border border-slate-200 dark:border-slate-800 mt-12 text-xs uppercase tracking-widest">
         <LogOut size={16} /> Close Session
       </button>
-    </div>
+    </div >
   );
 }
 
@@ -1023,7 +1152,7 @@ function FileDropZone({ id, file, onChange, icon, label, accentColor = 'indigo' 
           {file ? <CheckCircle2 className="text-green-500" size={40} /> : icon}
         </div>
         <p className="text-lg font-black">{file ? file.name : label}</p>
-        <p className="text-[10px] uppercase font-black tracking-widest opacity-40 mt-2">{file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'PDF FORMAT ONLY · MAX 20MB'}</p>
+        <p className="text-[10px] uppercase font-black tracking-widest opacity-40 mt-2">{file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'MS WORD FORMAT ONLY · MAX 2MB'}</p>
       </label>
     </div>
   );
