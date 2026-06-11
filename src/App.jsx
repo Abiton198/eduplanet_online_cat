@@ -191,17 +191,9 @@ function App() {
               <div className="relative">
                 <img
                   src={logo} alt="Eduket"
-                  className="h-12 w-12 rounded-xl shadow-lg ring-4 ring-white/50 dark:ring-gray-800/50 group-hover:scale-110 transition-transform duration-300 dark:invert dark:hue-rotate-180"
+                  className="h-15 w-15 rounded-xl shadow-lg ring-4 ring-white/50 dark:ring-gray-800/50 group-hover:scale-110 transition-transform duration-300 dark:invert dark:hue-rotate-180"
                 />
                 <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 opacity-30 blur-xl group-hover:opacity-60 transition" />
-              </div>
-              <div className="hidden md:block text-left">
-                <h1 className="text-2xl font-bold text-gray-800 dark:text-white tracking-tight leading-none">
-                  Eduket
-                </h1>
-                <p className="text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 font-bold">
-                  Smart Learning
-                </p>
               </div>
             </Link>
 
@@ -378,7 +370,7 @@ function App() {
         </main>
 
         <footer className="py-8 text-center text-gray-400 text-sm border-t dark:border-gray-800">
-          © {new Date().getFullYear()} EduCAT Smart Learning Portal • Secure Personalized Learning • Developed by Nextgen Skills Development
+          © {new Date().getFullYear()} Eduket Smart Learning Portal • Developed by Nextgen Skills Development
         </footer>
       </div>
     </SchoolProvider>

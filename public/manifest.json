@@ -1,13 +1,13 @@
 {
-  "name": "EduCAT",
-  "short_name": "EduCAT",
+  "name": "Eduket",
+  "short_name": "Eduket",
   "start_url": "/?source=pwa",
   "display": "standalone",
   "theme_color": "#004aad",
   "background_color": "#ffffff",
   "scope": "/",
   "orientation": "portrait",
-  "description": "Access CAT online revision exams,AI Tutoring, results and student dashboard.",
+  "description": "AI Powered Learning and Exam Platform",
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -26,7 +26,7 @@
     {
       "name": "Take Exam",
       "short_name": "Exam",
-      "description": "Start your CAT exam now",
+      "description": "Start your exam now",
       "url": "/exam?source=pwa",
       "icons": [
         {

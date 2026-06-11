@@ -76,25 +76,6 @@ export default function ExamRules() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-8 transition-colors duration-500">
-      {/* Header Bar */}
-      <div className="max-w-6xl mx-auto flex items-center justify-between mb-12">
-        <div className="flex items-center gap-3">
-          <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-200">
-            <ShieldCheck className="text-white w-6 h-6" />
-          </div>
-          <h1 className="text-2xl font-black tracking-tighter uppercase text-slate-800 dark:text-white">
-            EduCAT <span className="text-indigo-600">Secure Core</span>
-          </h1>
-        </div>
-
-        <button
-          onClick={handleExit}
-          className="flex items-center gap-2 px-6 py-2 rounded-xl bg-white dark:bg-slate-900 text-rose-600 font-bold border border-rose-100 dark:border-rose-900/30 hover:bg-rose-600 hover:text-white transition-all duration-300 shadow-sm"
-        >
-          <LogOut size={18} />
-          <span>Exit Center</span>
-        </button>
-      </div>
 
       <div className="max-w-6xl mx-auto grid lg:grid-cols-3 gap-8">
 
@@ -168,6 +149,23 @@ export default function ExamRules() {
           </div>
         </div>
 
+
+        {/* Header Bar */}
+        <div className="max-w-6xl mx-auto flex items-center justify-between mb-12">
+          <div className="flex items-center gap-3">
+            <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-200">
+              <ShieldCheck className="text-white w-6 h-6" />
+            </div>
+          </div>
+
+          <button
+            onClick={handleExit}
+            className="flex items-center gap-2 px-6 py-2 rounded-xl bg-white dark:bg-slate-900 text-rose-600 font-bold border border-rose-100 dark:border-rose-900/30 hover:bg-rose-600 hover:text-white transition-all duration-300 shadow-sm"
+          >
+            <LogOut size={18} />
+            <span>Exit Center</span>
+          </button>
+        </div>
       </div>
     </div>
   );

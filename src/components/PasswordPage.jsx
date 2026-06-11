@@ -448,7 +448,7 @@ export default function AuthPage({ setStudentInfo }) {
     <div className={`min-h-screen transition-all duration-700 relative overflow-hidden ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
 
       {/* ── Header ── */}
-      <header className="p-6 flex justify-between items-center max-w-7xl mx-auto relative z-20">
+      <header className="mt-40 p-6 flex justify-between items-center max-w-7xl mx-auto relative z-20">
         <div className="flex items-center gap-3">
           <div className="bg-indigo-600 p-2 rounded-2xl rotate-3 shadow-lg">
             <BrainCircuit className="text-white w-7 h-7" />
@@ -468,23 +468,32 @@ export default function AuthPage({ setStudentInfo }) {
       </header>
 
       {/* ── Hero ── */}
-      <main className="relative z-10 flex flex-col items-center pt-24 px-4 text-center">
+      <main className="relative z-10 flex flex-col items-center pt-5 px-4 text-center">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase border border-indigo-200 dark:border-indigo-800 mb-8 animate-bounce">
           <Zap className="w-3 h-3 fill-current" /> Agentic AI v3.0 Live
         </div>
         <h1 className="text-6xl md:text-8xl font-black mb-8 leading-[1.1]">
-          Know where every student<br />
+          Know where every learner<br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-500 to-rose-500">
-            stands, before the exam.
+            stands, before it matters.
           </span>
         </h1>
         <p className="text-xl md:text-2xl opacity-70 max-w-3xl mb-10 leading-relaxed font-medium mx-auto">
           <span className="text-indigo-600 dark:text-indigo-400 font-bold">Eduket OS</span>{' '}
-          tracks every answer, predicts outcomes, and adapts to each learner.
+          tracks every answer, predicts outcomes, and adapts to each learner — across schools, colleges, and universities worldwide.
         </p>
         <div className="flex flex-wrap justify-center gap-3 mb-16 text-sm">
-          {['Upload PDF or Word', 'Auto-mark with memo', 'Predictive outcome tracking', 'Agentic study planner', 'CAPS & IEB aligned'].map((tag) => (
-            <span key={tag} className="px-4 py-2 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 bg-indigo-500/5 font-medium">
+          {[
+            'Upload PDF or Word Doc',
+            'Auto-mark with memo',
+            'Predictive outcome tracking',
+            'Agentic study planner',
+            'Any curriculum, anywhere',
+          ].map((tag) => (
+            <span
+              key={tag}
+              className="px-4 py-2 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 bg-indigo-500/5 font-medium"
+            >
               {tag}
             </span>
           ))}

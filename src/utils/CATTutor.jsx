@@ -1,83 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useStudentId } from "./StudentId";
+import { doc, onSnapshot } from "firebase/firestore";
 
 const API_BASE = "https://chatbot-backend-educat.onrender.com";
-
-// ─── Subject catalogue ────────────────────────────────────────────────────────
-const SUBJECTS = {
-  CAT: {
-    label: "Computer Applications Technology",
-    topics: ["Spreadsheets", "Databases", "HTML & Web", "Networks", "Internet Safety", "Word Processing"],
-    suggest: [
-      "What is a primary key in a database?",
-      "Explain how VLOOKUP works in a spreadsheet.",
-      "What is the difference between RAM and ROM?",
-      "How does a LAN differ from a WAN?",
-      "What is phishing and how do I avoid it?",
-      "Explain how HTML tables are structured.",
-    ],
-  },
-  Mathematics: {
-    label: "Mathematics",
-    topics: ["Algebra", "Calculus", "Statistics", "Geometry", "Trigonometry", "Functions"],
-    suggest: [
-      "How do I solve a quadratic equation?",
-      "Explain differentiation from first principles.",
-      "What is the difference between mean, median and mode?",
-      "How do I find the area under a curve?",
-      "Explain the sine rule and when to use it.",
-      "What is a geometric sequence?",
-    ],
-  },
-  Physics: {
-    label: "Physical Sciences – Physics",
-    topics: ["Mechanics", "Waves", "Electricity", "Magnetism", "Optics", "Nuclear"],
-    suggest: [
-      "Explain Newton's second law with an example.",
-      "What is the difference between series and parallel circuits?",
-      "How does refraction work?",
-      "What is the Doppler effect?",
-      "Explain electromagnetic induction.",
-      "What is radioactive decay?",
-    ],
-  },
-  Accounting: {
-    label: "Accounting",
-    topics: ["Trial Balance", "Income Statement", "Balance Sheet", "VAT", "Debtors", "Cash Flow"],
-    suggest: [
-      "What is the accounting equation?",
-      "How do I prepare a trial balance?",
-      "Explain the difference between debtors and creditors.",
-      "What is VAT and how is it calculated?",
-      "How does depreciation affect the balance sheet?",
-      "What is the difference between profit and cash flow?",
-    ],
-  },
-  English: {
-    label: "English Home Language",
-    topics: ["Essay Writing", "Literature", "Grammar", "Poetry", "Comprehension", "Language"],
-    suggest: [
-      "How do I structure an argumentative essay?",
-      "What are the main literary devices I should know?",
-      "Explain the difference between active and passive voice.",
-      "How do I analyse a poem effectively?",
-      "What makes a good topic sentence?",
-      "Explain the difference between a simile and a metaphor.",
-    ],
-  },
-  "Life Sciences": {
-    label: "Life Sciences",
-    topics: ["Cells", "Evolution", "Genetics", "Ecosystems", "Human Body", "DNA"],
-    suggest: [
-      "What is the difference between mitosis and meiosis?",
-      "Explain how photosynthesis works.",
-      "What is natural selection?",
-      "How is DNA structured?",
-      "Explain the role of the liver in the body.",
-      "What is an ecosystem and how do food webs work?",
-    ],
-  },
-};
 
 // ─── Performance context helper ───────────────────────────────────────────────
 function getPerformanceContext(subject, examHistory = {}) {
@@ -108,7 +33,7 @@ function getPerformanceContext(subject, examHistory = {}) {
 
 // ─── Build system prompt per subject + performance ────────────────────────────
 function buildSystemPrompt(subject, studentName, examHistory = {}) {
-  const subj = SUBJECTS[subject] || SUBJECTS.CAT;
+  const subj = subjects[subject] || subjects.CAT;
   const ctx = getPerformanceContext(subject, examHistory);
   return `You are Eduket, a warm, intelligent AI tutor for South African high school students.
 Subject focus: ${subj.label} (${subject}).
@@ -337,6 +262,32 @@ export default function CATTutor() {
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const containerRef = useRef(null);
+  const [subjects, setSubjects] = useState([]);
+  const [student, setStudent] = useState(null);
+
+  //   fetch student profile
+  useEffect(() => {
+
+    if (!user?.uid) return;
+
+    const unsub = onSnapshot(
+      doc(db, "students", user.uid),
+      (snap) => {
+
+        if (!snap.exists()) return;
+
+        const data = snap.data();
+
+        setStudent(data);
+
+        setSubjects(data.subjects || []);
+
+      }
+    );
+
+    return unsub;
+
+  }, [user]);
 
   // ── Load student profile ───────────────────────────────────────────────────
   useEffect(() => {
@@ -445,7 +396,7 @@ export default function CATTutor() {
     setShowWelcome(false);
 
     const ctx = getPerformanceContext(subject, studentProfile?.examHistory || {});
-    const subjectData = SUBJECTS[subject] || SUBJECTS.CAT;
+    const subjectData = subjects[subject] || subjects.CAT;
     const quickReplies = (subjectData.suggest || []).slice(0, 3);
 
     const greeting = `Hi ${studentProfile?.name || STUDENT_ID}! 👋\n\n${ctx.greeting}\n\nHere are some ideas to get started — or just type your own question below!`;
@@ -457,11 +408,11 @@ export default function CATTutor() {
     setCurrentSubject(subject);
     stopSpeaking();
     const ctx = getPerformanceContext(subject, studentProfile?.examHistory || {});
-    const subjectData = SUBJECTS[subject] || SUBJECTS.CAT;
+    const subjectData = subjects[subject] || subjects.CAT;
     const quickReplies = (subjectData.suggest || []).slice(0, 3);
     setMessages((m) => [...m, {
       role: "assistant",
-      text: `Switched to **${subject}** — ${SUBJECTS[subject]?.label}.\n\n${ctx.greeting}`,
+      text: `Switched to **${subject}** — ${subjectData?.label}.\n\n${ctx.greeting}`,
       id: Date.now(),
       quickReplies,
     }]);
@@ -559,7 +510,7 @@ export default function CATTutor() {
     if (!showWelcome || profileLoading) return null;
     const subject = welcomeSubject || "CAT";
     const ctx = getPerformanceContext(subject, studentProfile?.examHistory || {});
-    const enrolledSubjects = studentProfile?.enrolledSubjects || Object.keys(SUBJECTS);
+    const enrolledSubjects = studentProfile?.enrolledSubjects || Object.keys(subjects);
     const badge = perfBadgeStyle(ctx.type);
     const icon = ctx.type === "good" ? "🏆" : ctx.type === "improve" ? "📈" : "🎓";
 
@@ -659,7 +610,7 @@ export default function CATTutor() {
 
   // ─── Subject Switcher Bar ─────────────────────────────────────────────────
   const SubjectBar = () => {
-    const enrolled = studentProfile?.enrolledSubjects || Object.keys(SUBJECTS);
+    const enrolled = subjects;
     if (enrolled.length <= 1) return null;
     return (
       <div style={{ display: "flex", gap: 6, padding: "8px 16px", overflowX: "auto", borderBottom: dark ? "1px solid #1e293b" : "1px solid #f3f4f6", background: dark ? "#0f172a" : "#fafafa", flexShrink: 0 }}>
@@ -680,7 +631,7 @@ export default function CATTutor() {
 
   // ─── Topic Chips ──────────────────────────────────────────────────────────
   const TopicChips = () => {
-    const subjectData = SUBJECTS[currentSubject] || SUBJECTS.CAT;
+    const subjectData = subjects[currentSubject] || subjects.CAT;
     return (
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
         {subjectData.topics.slice(0, 5).map((t) => (
@@ -762,7 +713,7 @@ export default function CATTutor() {
           </button>
         </div>
         <p style={{ textAlign: "center", fontSize: 10, color: dark ? "#334155" : "#d1d5db", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", marginTop: 8 }}>
-          Powered by Eduket AI · {currentSubject && (SUBJECTS[currentSubject]?.label || currentSubject)}
+          Powered by Eduket AI · {currentSubject && (subjects[currentSubject]?.label || currentSubject)}
         </p>
       </div>
     </div>
@@ -770,7 +721,7 @@ export default function CATTutor() {
 
   // ─── Message List ─────────────────────────────────────────────────────────
   const MessageList = () => {
-    const subjectData = SUBJECTS[currentSubject] || SUBJECTS.CAT;
+    const subjectData = subjects[currentSubject] || subjects.CAT;
     return (
       <div style={{ flex: 1, overflowY: "auto", padding: "16px", maxWidth: 700, margin: "0 auto", width: "100%" }}>
 
@@ -869,7 +820,7 @@ export default function CATTutor() {
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 800, fontSize: 15, color: "#e2e8f0", letterSpacing: "-.3px" }}>Eduket AI Tutor</div>
             <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700 }}>
-              {currentSubject && SUBJECTS[currentSubject]?.label}
+              {currentSubject && subjects[currentSubject]?.label}
             </div>
           </div>
           <ToolBar />
@@ -894,7 +845,7 @@ export default function CATTutor() {
           Eduket AI Tutor
         </h1>
         <p style={{ fontSize: 10, color: dark ? "#475569" : "#9ca3af", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".2em", marginTop: 4 }}>
-          {currentSubject ? `${currentSubject} · ${SUBJECTS[currentSubject]?.label}` : "Your Personal Study Partner"}
+          {currentSubject ? `${currentSubject} · ${subjects[currentSubject]?.label}` : "Your Personal Study Partner"}
         </p>
       </div>
 
