@@ -10,10 +10,11 @@ import { questions } from "../utils/Questions";
 import { ensureStudentProfile } from "../utils/pointsSystem/ensureStudentProfile";
 import { awardPointsFromExamHistory } from "../utils/pointsSystem/awardPointsFromExamHistory";
 import FloatingStudyHub from "../utils/FloatingStudyHub";
-import { Sun, Moon, LogOut, Clock, BookOpen, Sparkles, X } from "lucide-react";
+import { Sun, Moon, LogOut, Clock, BookOpen, Sparkles, X, FileText } from "lucide-react";
 import CATTutor from '../utils/CATTutor';
 import AIExamMocker from '../utils/AIExamMocker';
 import { ResultsTab } from './ResultsTab';
+
 
 
 
@@ -51,6 +52,7 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
   const [focusStrikes, setFocusStrikes] = useState(0);
   const [disqualified, setDisqualified] = useState(false);
   const [showTutor, setShowTutor] = useState(false);
+  const [activeTool, setActiveTool] = useState(null); // 'tutor' | 'exam' | null
 
   const questionRefs = useRef({});
   const isSubmittingRef = useRef(false);
@@ -394,23 +396,170 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
       {/* ─── AI TUTOR OVERLAY ─── */}
       {showTutor && (
         <div className="fixed inset-0 z-[100] bg-white dark:bg-gray-950 flex flex-col animate-in fade-in duration-300">
+
+          {/* Header */}
           <div className="p-4 border-b dark:border-gray-800 flex justify-between items-center">
             <div className="flex items-center gap-3">
               <Sparkles className="text-indigo-600" size={24} />
-              <h2 className="text-xl font-black dark:text-white uppercase tracking-tighter">AI Learning Hub</h2>
+              <h2 className="text-xl font-black dark:text-white uppercase tracking-tighter">
+                AI Learning Hub
+              </h2>
             </div>
-            <button onClick={() => setShowTutor(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full dark:text-white">
+            {/* Only allow closing if no active tool OR confirm exit */}
+            <button
+              onClick={() => {
+                if (activeTool === 'exam') {
+                  const confirm = window.confirm(
+                    'You are currently in an exam. Closing this window will NOT submit your exam. Are you sure you want to exit?'
+                  );
+                  if (!confirm) return;
+                }
+                setActiveTool(null);
+                setShowTutor(false);
+              }}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full dark:text-white"
+            >
               <X size={32} />
             </button>
           </div>
-          <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-3xl p-4 overflow-y-auto border dark:border-gray-800 shadow-inner">
-              <CATTutor />
+
+          {/* Tool selector — shown only when no tool is active */}
+          {activeTool === null && (
+            <div className="flex-1 flex flex-col items-center justify-center gap-8 p-8">
+              <div className="text-center mb-4">
+                <h3 className="text-2xl font-black dark:text-white mb-2">
+                  What would you like to do?
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Choose one — you cannot switch between tools once you start.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+
+                {/* Tutor Card */}
+                <button
+                  onClick={() => setActiveTool('tutor')}
+                  className="group flex flex-col items-center gap-4 p-8 bg-indigo-50 dark:bg-indigo-900/30
+                       border-2 border-indigo-200 dark:border-indigo-700 rounded-3xl
+                       hover:border-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-900/50
+                       transition-all shadow-sm hover:shadow-lg text-left"
+                >
+                  <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center">
+                    <Sparkles size={32} className="text-white" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-black text-indigo-700 dark:text-indigo-300 mb-1">
+                      AI Tutor
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                      Study concepts, get explanations, and practise with your AI mentor.
+                    </p>
+                  </div>
+                  <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest">
+                    Start Tutoring →
+                  </span>
+                </button>
+
+                {/* Exam Card */}
+                <button
+                  onClick={() => setActiveTool('exam')}
+                  className="group flex flex-col items-center gap-4 p-8 bg-green-50 dark:bg-green-900/30
+                       border-2 border-green-200 dark:border-green-700 rounded-3xl
+                       hover:border-green-500 hover:bg-green-100 dark:hover:bg-green-900/50
+                       transition-all shadow-sm hover:shadow-lg text-left"
+                >
+                  <div className="w-16 h-16 rounded-2xl bg-green-600 flex items-center justify-center">
+                    <FileText size={32} className="text-white" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-black text-green-700 dark:text-green-300 mb-1">
+                      AI Exam
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                      Attempt an AI-generated exam under timed conditions.
+                    </p>
+                  </div>
+                  <span className="text-xs font-bold text-green-500 uppercase tracking-widest">
+                    Start Exam →
+                  </span>
+                </button>
+
+              </div>
+
+              <p className="text-xs text-gray-400 dark:text-gray-600 text-center max-w-md">
+                🔒 For academic integrity, the AI Tutor is completely disabled while you are in an exam,
+                and the exam is disabled while you are using the tutor.
+              </p>
             </div>
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-3xl p-4 overflow-y-auto border dark:border-gray-800 shadow-inner">
-              <AIExamMocker />
+          )}
+
+          {/* Active: Tutor only */}
+          {activeTool === 'tutor' && (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Active tool bar */}
+              <div className="flex items-center justify-between px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 border-b dark:border-gray-800">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={16} className="text-indigo-600" />
+                  <span className="text-sm font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">
+                    AI Tutor — Active
+                  </span>
+                  <span className="text-[10px] bg-indigo-200 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full font-bold">
+                    🔒 Exam locked
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    const confirm = window.confirm('Exit the AI Tutor and return to tool selection?');
+                    if (confirm) setActiveTool(null);
+                  }}
+                  className="text-xs text-gray-500 hover:text-red-500 font-bold px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-red-300 transition-colors"
+                >
+                  ← Back to Menu
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="bg-gray-50 dark:bg-gray-900 rounded-3xl p-4 border dark:border-gray-800 shadow-inner min-h-full">
+                  <CATTutor />
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Active: Exam only */}
+          {activeTool === 'exam' && (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Active tool bar */}
+              <div className="flex items-center justify-between px-4 py-2 bg-green-50 dark:bg-green-900/30 border-b dark:border-gray-800">
+                <div className="flex items-center gap-2">
+                  <FileText size={16} className="text-green-600" />
+                  <span className="text-sm font-black text-green-700 dark:text-green-300 uppercase tracking-widest">
+                    AI Exam — Active
+                  </span>
+                  <span className="text-[10px] bg-green-200 dark:bg-green-800 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full font-bold">
+                    🔒 Tutor locked
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    const confirm = window.confirm(
+                      '⚠️ Are you sure you want to exit the exam? Your current progress may be lost.'
+                    );
+                    if (confirm) setActiveTool(null);
+                  }}
+                  className="text-xs text-gray-500 hover:text-red-500 font-bold px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-red-300 transition-colors"
+                >
+                  ← Exit Exam
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="bg-gray-50 dark:bg-gray-900 rounded-3xl p-4 border dark:border-gray-800 shadow-inner min-h-full">
+                  <AIExamMocker />
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       )}
 
