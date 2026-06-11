@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import {
   collection, query, where, getDocs, doc, getDoc,
@@ -398,7 +398,8 @@ const LegacyResultCard = ({ res, expandedId, setExpandedId }) => {
 const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory }) => {
   const [agentData, setAgentData] = useState(null);
   const [agentQ, setAgentQ] = useState('');
-  const [agentReply, setAgentReply] = useState('');
+  const [chatHistory, setChatHistory] = useState([]);   // { role: 'user'|'assistant', content: string }[]
+  const chatScrollRef = useRef(null);
   const [asking, setAsking] = useState(false);
 
   useEffect(() => {
@@ -491,24 +492,106 @@ const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory
     return recs;
   }, [stats, allWeakAreas]);
 
+
+  // ── Agent Chat with Learning Profile & Latest Attempt Data ─────────
   const askAgent = async () => {
     const q = agentQ.trim();
     if (!q || asking) return;
     setAsking(true);
-    setAgentReply('');
+    setAgentQ('');
+
+    // Append user message immediately
+    const userMsg = { role: 'user', content: q };
+    const updatedHistory = [...chatHistory, userMsg];
+    setChatHistory(updatedHistory);
+
+    // Auto-scroll to bottom
+    setTimeout(() => {
+      if (chatScrollRef.current) {
+        chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+      }
+    }, 50);
+
     try {
+      const latestAttempt = aiAttempts[0] || null;
+
+      const learningProfile = {
+        studentId,
+        totalExams: aiAttempts.length,
+        overallAverage: aiAttempts.length
+          ? Math.round(aiAttempts.reduce((s, a) => s + (a.percentage || 0), 0) / aiAttempts.length)
+          : null,
+        bestScore: aiAttempts.length
+          ? Math.max(...aiAttempts.map(a => a.percentage || 0))
+          : null,
+        subjects: [...new Set(aiAttempts.map(a => a.subject).filter(Boolean))],
+        weakAreas: allWeakAreas.slice(0, 8).map(w => ({
+          question: w.key,
+          timesWrong: w.count,
+          type: w.type,
+          text: w.text,
+        })),
+        recentResults: aiAttempts.slice(0, 5).map(a => ({
+          examTitle: a.examTitle,
+          subject: a.subject,
+          percentage: a.percentage,
+          score: a.score,
+          total: a.total,
+          date: a._tsSeconds ? new Date(a._tsSeconds * 1000).toLocaleDateString() : '—',
+        })),
+      };
+
       const r = await fetch(`${API}/agent-chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ student_id: studentId, message: q }),
+        body: JSON.stringify({
+          student_id: studentId,
+          message: q,
+          learningProfile,
+          latestAttempt: latestAttempt ? {
+            examTitle: latestAttempt.examTitle,
+            subject: latestAttempt.subject,
+            percentage: latestAttempt.percentage,
+            score: latestAttempt.score,
+            total: latestAttempt.total,
+            aiFeedback: latestAttempt.aiFeedback,
+            markedResults: (latestAttempt.markedResults || []).map(r => ({
+              question_number: r.question_number,
+              question: r.question,
+              status: r.status,
+              earned: r.earned,
+              marks: r.marks,
+              student_answer: r.student_answer,
+              correct_answer: r.correct_answer,
+              feedback: r.feedback,
+              concept_gap: r.concept_gap,
+            })),
+          } : {},
+          // ✅ Send full conversation history so backend maintains context
+          history: updatedHistory,
+        }),
       });
+
       const d = await r.json();
-      setAgentReply(d.response || d.answer || 'No response.');
+      const reply = d.response || d.answer || 'No response.';
+
+      // Append assistant reply
+      setChatHistory(prev => [...prev, { role: 'assistant', content: reply }]);
+
+      // Auto-scroll again after reply arrives
+      setTimeout(() => {
+        if (chatScrollRef.current) {
+          chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+        }
+      }, 50);
+
     } catch {
-      setAgentReply('⚠️ Could not reach the agent.');
+      setChatHistory(prev => [...prev, {
+        role: 'assistant',
+        content: '⚠️ Could not reach the agent. Please try again.',
+      }]);
     } finally {
       setAsking(false);
-      setAgentQ('');
     }
   };
 
@@ -603,36 +686,7 @@ const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory
       )}
 
       {/* Weak areas */}
-      <div className="bg-white border rounded-xl p-4 shadow-sm">
-        <p className="text-[10px] font-black uppercase text-gray-400 mb-3 flex items-center gap-2">
-          <Brain size={12} /> Weak Areas — All Exams Combined
-        </p>
-        {allWeakAreas.length === 0 ? (
-          <div className="text-center py-6">
-            <Star size={24} className="mx-auto text-green-400 mb-2" />
-            <p className="text-[11px] text-green-600 font-bold">No significant weak areas detected — excellent work!</p>
-          </div>
-        ) : (
-          <div className="space-y-2.5">
-            {allWeakAreas.map((w, i) => {
-              const barPct = Math.round((w.count / maxWrong) * 100);
-              const col = barPct > 66 ? 'bg-red-500' : barPct > 33 ? 'bg-amber-400' : 'bg-blue-400';
-              return (
-                <div key={i}>
-                  <div className="flex justify-between text-[10px] text-gray-600 mb-0.5">
-                    <span className="font-black">{w.key} <span className="font-normal text-gray-400">({w.type})</span></span>
-                    <span className="text-red-500 font-bold">{w.count}× wrong</span>
-                  </div>
-                  <div className="h-2 bg-gray-100 rounded">
-                    <div className={`h-2 rounded ${col} transition-all`} style={{ width: `${barPct}%` }} />
-                  </div>
-                  {w.text && <p className="text-[9px] text-gray-400 mt-0.5 truncate">{w.text}</p>}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+
 
       {/* Study plan from /dashboard API */}
       {agentData?.study_plan && (
@@ -647,59 +701,126 @@ const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory
 
       {/* AI Academic Mentor */}
       <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 rounded-2xl p-5 text-white shadow-xl">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center">
-            <Bot size={18} />
-          </div>
-          <div>
-            <h3 className="font-black">AI Academic Mentor</h3>
-            <p className="text-[10px] uppercase tracking-wider text-slate-400">
-              Personalised Coaching Based On All Your Assessments
-            </p>
-          </div>
-        </div>
 
-        {agentReply && (
-          <div className="bg-white/10 rounded-xl p-4 mb-4 border border-white/10 whitespace-pre-wrap text-[12px] leading-relaxed">
-            {agentReply}
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center">
+              <Bot size={18} />
+            </div>
+            <div>
+              <h3 className="font-black">AI Academic Mentor</h3>
+              <p className="text-[10px] uppercase tracking-wider text-slate-400">
+                Personalised Coaching Based On All Your Assessments
+              </p>
+            </div>
           </div>
-        )}
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-          {[
-            'What is my weakest concept?',
-            "Create today's study plan",
-            'Explain my last mistakes',
-            'Generate practice questions',
-            'Am I improving?',
-            'Prepare me for my next exam',
-            'How can I reach distinction?',
-            'Test my understanding',
-          ].map((prompt, i) => (
+          {chatHistory.length > 0 && (
             <button
-              key={i}
-              onClick={() => setAgentQ(prompt)}
-              className="bg-white/10 hover:bg-indigo-500 transition-all rounded-lg p-2 text-[10px] text-left"
+              onClick={() => setChatHistory([])}
+              className="text-[10px] text-slate-400 hover:text-red-400 transition-colors px-2 py-1 rounded border border-white/10 hover:border-red-400"
             >
-              {prompt}
+              Clear Chat
             </button>
-          ))}
+          )}
         </div>
 
+        {/* Conversation window */}
+        <div
+          ref={chatScrollRef}
+          className="flex flex-col gap-3 mb-4 max-h-96 overflow-y-auto pr-1"
+          style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}
+        >
+          {chatHistory.length === 0 ? (
+            /* Prompt suggestions — only shown when no conversation yet */
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {[
+                'What is my weakest concept?',
+                'Am I improving?',
+                'Explain my last mistakes',
+                '─────────────────',           // visual divider
+                'Help me study functions',
+                'Teach me networking basics',
+                'Explain databases in detail',
+                'How do spreadsheet formulas work?',
+                'Teach me hardware vs software',
+                'Give me practice questions',
+                'Create a full study guide',
+                'Test my understanding now',
+              ].filter(p => p !== '─────────────────').map((prompt, i) => (
+                <button
+                  key={i}
+                  onClick={() => setAgentQ(prompt)}
+                  className="bg-white/10 hover:bg-indigo-500 transition-all rounded-lg p-2 text-[10px] text-left"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          ) : (
+            chatHistory.map((msg, i) => (
+              <div
+                key={i}
+                className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                {/* Avatar — assistant only */}
+                {msg.role === 'assistant' && (
+                  <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center flex-shrink-0 mt-1">
+                    <Bot size={13} />
+                  </div>
+                )}
+
+                {/* Bubble */}
+                <div
+                  className={`max-w-[80%] rounded-2xl px-4 py-3 text-[12px] leading-relaxed whitespace-pre-wrap
+              ${msg.role === 'user'
+                      ? 'bg-indigo-600 text-white rounded-br-sm'
+                      : 'bg-white/10 text-white border border-white/10 rounded-bl-sm'
+                    }`}
+                >
+                  {msg.content}
+                </div>
+
+                {/* Avatar — user only */}
+                {msg.role === 'user' && (
+                  <div className="w-7 h-7 rounded-full bg-slate-600 flex items-center justify-center flex-shrink-0 mt-1 text-[10px] font-black">
+                    {studentId?.charAt(0)?.toUpperCase() || 'S'}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+
+          {/* Typing indicator */}
+          {asking && (
+            <div className="flex gap-2 justify-start">
+              <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center flex-shrink-0">
+                <Bot size={13} />
+              </div>
+              <div className="bg-white/10 border border-white/10 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Input row */}
         <div className="flex gap-2">
           <input
             value={agentQ}
             onChange={e => setAgentQ(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') askAgent(); }}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); askAgent(); } }}
             placeholder="Ask your AI Mentor anything about your learning..."
-            className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-3 text-sm placeholder-slate-400 outline-none"
+            className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-3 text-sm placeholder-slate-400 outline-none focus:border-indigo-400 transition-colors"
           />
           <button
             onClick={askAgent}
-            disabled={asking}
-            className="bg-indigo-600 hover:bg-indigo-700 px-5 rounded-lg font-bold disabled:opacity-40"
+            disabled={asking || !agentQ.trim()}
+            className="bg-indigo-600 hover:bg-indigo-700 px-5 rounded-lg font-bold disabled:opacity-40 transition-colors"
           >
-            {asking ? 'Thinking...' : 'Ask'}
+            {asking ? '...' : '↑'}
           </button>
         </div>
       </div>
