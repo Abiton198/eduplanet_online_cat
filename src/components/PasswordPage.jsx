@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { ensureUserFirestoreDocs } from '../utils/driveManager';
 import { listSchools } from '../utils/firestoreHelpers';
+import StepGuide from './StepGuide';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -448,21 +449,14 @@ export default function AuthPage({ setStudentInfo }) {
     <div className={`min-h-screen transition-all duration-700 relative overflow-hidden ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
 
       {/* ── Header ── */}
-      <header className="mt-40 p-6 flex justify-between items-center max-w-7xl mx-auto relative z-20">
-        <div className="flex items-center gap-3">
-          <div className="bg-indigo-600 p-2 rounded-2xl rotate-3 shadow-lg">
-            <BrainCircuit className="text-white w-7 h-7" />
-          </div>
-          <span className="font-black text-2xl tracking-tighter uppercase italic">
-            Eduket <span className="text-indigo-600 font-light not-italic">OS</span>
-          </span>
-        </div>
+      <header className="mt-30 p-6 flex justify-between items-center max-w-7xl mx-auto relative z-20">
+
         <div className="flex items-center gap-4">
           <button onClick={toggleTheme} className="p-3 rounded-xl bg-white dark:bg-slate-900 border dark:border-slate-800 transition-transform active:scale-95">
             {isDarkMode ? <Sun className="text-amber-400 w-5 h-5" /> : <Moon className="text-indigo-600 w-5 h-5" />}
           </button>
           <button onClick={() => setIsModalOpen(true)} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 transition-colors">
-            Enter Portal
+            Portal Access
           </button>
         </div>
       </header>
@@ -470,7 +464,7 @@ export default function AuthPage({ setStudentInfo }) {
       {/* ── Hero ── */}
       <main className="relative z-10 flex flex-col items-center pt-5 px-4 text-center">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase border border-indigo-200 dark:border-indigo-800 mb-8 animate-bounce">
-          <Zap className="w-3 h-3 fill-current" /> Agentic AI v3.0 Live
+          <Zap className="w-3 h-3 fill-current" /> The AI-powered school operating system for assessments, analytics, and student success.
         </div>
         <h1 className="text-6xl md:text-8xl font-black mb-8 leading-[1.1]">
           Know where every learner<br />
@@ -482,10 +476,11 @@ export default function AuthPage({ setStudentInfo }) {
           <span className="text-indigo-600 dark:text-indigo-400 font-bold">Eduket OS</span>{' '}
           tracks every answer, predicts outcomes, and adapts to each learner — across schools, colleges, and universities worldwide.
         </p>
-        <div className="flex flex-wrap justify-center gap-3 mb-16 text-sm">
+        <div className="flex flex-wrap justify-center gap-3 mb-3 text-sm">
           {[
-            'Upload PDF or Word Doc',
+            'Upload Word Doc',
             'Auto-mark with memo',
+            'Human Remark Optional',
             'Predictive outcome tracking',
             'Agentic study planner',
             'Any curriculum, anywhere',
@@ -499,6 +494,8 @@ export default function AuthPage({ setStudentInfo }) {
           ))}
         </div>
       </main>
+
+      <StepGuide />
 
       {/* ── AUTH MODAL ── */}
       {isModalOpen && !showProfileSetup && (
