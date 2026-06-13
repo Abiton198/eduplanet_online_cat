@@ -4,13 +4,16 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { db } from "./firebase";
 import {
   collection, addDoc, serverTimestamp, onSnapshot,
-  query, orderBy, getDoc, getDocs, doc, where
+  query, orderBy, getDoc, getDocs, doc, where, setDoc, limit
 } from "firebase/firestore";
+
+
 
 // const API = "https://chatbot-backend-educat.onrender.com";
 const API = import.meta.env.VITE_API_URL;
 import { useStudentId } from "./StudentId";
 import { useParams } from "react-router-dom";
+import { auth } from "./firebase";
 
 // ─── Style tokens ─────────────────────────────────────────────────────────────
 const S = {
@@ -617,6 +620,25 @@ export default function AIExamMocker({ student }) {
   const { examId } = useParams();
   const answersRef = useRef({});
   const STUDENT_ID = useStudentId();
+  // ✅ inside AIExamMocker, after defining STUDENT_ID:
+  const [studentInfo, setStudentInfo] = useState(null);
+
+
+  useEffect(() => {
+    if (!STUDENT_ID || !auth.currentUser) return;
+    const q = query(
+      collection(db, 'students'),
+      where('uid', '==', auth.currentUser.uid),
+      limit(1)
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      if (!snap.empty) {
+        const doc = snap.docs[0];
+        setStudentInfo({ id: doc.id, ...doc.data() });
+      }
+    });
+    return unsub;
+  }, [STUDENT_ID]);
 
   // ── Real-time exam list ────────────────────────────────────────────────────
   useEffect(() => {
@@ -836,7 +858,7 @@ export default function AIExamMocker({ student }) {
         body: JSON.stringify({
           exam_id: selectedExam,
           student_id: STUDENT_ID,
-          answers,                        // send answers directly
+          answers,
         }),
       });
 
@@ -849,7 +871,9 @@ export default function AIExamMocker({ student }) {
 
       const saveData = removeUndefined({
         studentId: STUDENT_ID,
-        examId: selectedExam,
+        studentUid: auth.currentUser?.uid,       // ✅ UID for principal queries
+        schoolId: studentInfo?.schoolId || null, // ✅ critical — scopes to school
+        examId: selectedExam,                    // ✅ already there but now used in doc ID
         subject: data.subject || "",
         answers,
         skipped: [...skipped],
@@ -859,11 +883,11 @@ export default function AIExamMocker({ student }) {
         percentage: data.percentage,
         markedResults: data.results || [],
         aiFeedback: data.feedback || "",
-        analysis: data.analysis || {},                              // ✅ save the full analysis
-        overallSummary: data.analysis?.overallSummary || "",       // ✅ top-level fields
-        strengths: data.analysis?.strengths || [],                 // ✅ from analysis
-        weaknesses: data.analysis?.weaknesses || [],               // ✅ from analysis
-        studyPlan: data.analysis?.studyPlan || [],                 // ✅ from analysis
+        analysis: data.analysis || {},
+        overallSummary: data.analysis?.overallSummary || "",
+        strengths: data.analysis?.strengths || [],
+        weaknesses: data.analysis?.weaknesses || [],
+        studyPlan: data.analysis?.studyPlan || [],
         submittedAt: serverTimestamp(),
         completedAt: serverTimestamp(),
         metadata: {
@@ -871,10 +895,24 @@ export default function AIExamMocker({ student }) {
           generatedAt: new Date().toISOString(),
         },
       });
-      console.log("Before adding to Firestore:", { examId: selectedExam, studentId: STUDENT_ID });
 
-      await addDoc(collection(db, "exam_attempts"), saveData);
+      // ✅ deterministic doc ID prevents duplicate submissions
+      const attemptRef = doc(db, 'exam_attempts', `${STUDENT_ID}_${selectedExam}`);
+      await setDoc(attemptRef, saveData, { merge: true });
       console.log("Saved to Firestore:", saveData);
+
+      // ✅ log to auditLog so principal sees activity
+      await addDoc(collection(db, 'auditLog'), {
+        type: 'ai_mark',
+        description: `Exam submitted and marked`,
+        actorName: STUDENT_ID,
+        studentName: STUDENT_ID,
+        studentUid: auth.currentUser?.uid || null,
+        examTitle: data.subject || selectedExam,
+        examId: selectedExam,
+        schoolId: studentInfo?.schoolId || null,
+        timestamp: serverTimestamp(),
+      });
 
       setResults(data);
       setSubmitted(true);

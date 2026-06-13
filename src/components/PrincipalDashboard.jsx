@@ -102,7 +102,7 @@ function StatCard({ label, value, sub, icon: Icon, color = 'indigo' }) {
 
 function UsageMeter({ label, used, limit, color = '#4f46e5' }) {
     if (limit == null) return null;
-    const pct = Math.min((used / limit) * 100, 100);
+    const pct = Math.min((used / limit) * 100, 100);  // ✅ correct calculation
     const isNear = pct >= 80;
     const isFull = pct >= 100;
     return (
@@ -268,30 +268,25 @@ export default function PrincipalDashboard({ principal }) {
         const uid = getAuth().currentUser?.uid;
         console.log('✅ schoolId:', schoolId, '| uid:', uid);
 
+        // Fetch ALL attempts client-side filtered — handles legacy docs
+        const fetchAllAttempts = async () => {
+            const snap = await getDocs(collection(db, 'exam_attempts'));
+            const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            console.log('📋 all attempts raw:', all.length, all);
+            setAttempts(all); // show everything for now — filter below once we confirm
+        };
+        fetchAllAttempts();
+
         const unsubs = [
             subscribeToSchoolTeachers(schoolId, setTeachers),
             subscribeToSchoolStudents(schoolId, setStudents),
-            subscribeToSchoolExams(schoolId, (fetchedExams) => {
-                setExams(fetchedExams);
-
-                // Once we have exams, fetch attempts by examId
-                if (fetchedExams.length === 0) {
-                    setAttempts([]);
-                    return;
-                }
-                const examIds = fetchedExams.map(e => e.id).slice(0, 10); // Firestore 'in' limit
-                getDocs(query(
-                    collection(db, 'exam_attempts'),
-                    where('examId', 'in', examIds)
-                )).then(snap => {
-                    setAttempts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-                });
-            }),
+            subscribeToSchoolExams(schoolId, setExams),  // ← plain setter, no nested fetch
             subscribeToAuditLog(schoolId, setAuditLog),
         ];
 
         return () => unsubs.forEach(u => u());
     }, [schoolId]);
+
 
     // ── Derived ───────────────────────────────────────────────────────────────
     const gradeCounts = countByGrade(students);
@@ -299,6 +294,10 @@ export default function PrincipalDashboard({ principal }) {
     const overallPassRate = passRate(attempts);
     const subjectGroups = groupBySubject(attempts);
     const allSubjects = [...new Set(students.flatMap(s => s.subjects || []))].sort();
+
+
+    // TEMP DEBUG
+    console.log('📊 state:', { teachers: teachers.length, students: students.length, exams: exams.length, attempts: attempts.length, attempts_data: attempts });
 
     const filteredStudents = students.filter(s => {
         const matchGrade = filterGrade === 'All' || s.grade === filterGrade;
@@ -309,9 +308,17 @@ export default function PrincipalDashboard({ principal }) {
         return matchGrade && matchSubject && matchSearch;
     });
 
-    const studentAttempts = uid => attempts.filter(a => a.studentUid === uid);
-    const examAttempts = id => attempts.filter(a => a.examId === id);
+    // Match by uid OR by studentId name string
+    const studentAttempts = uid => attempts.filter(a =>
+        a.studentUid === uid || a.studentId === uid
+    );
 
+    // Match by examId — also handle attempts that used sourceUploadId as the exam reference
+    const examAttempts = id => attempts.filter(a =>
+        a.examId === id ||
+        a.sourceUploadId === id ||
+        a.exam_id === id
+    );
     const handleUpgrade = useCallback(() => setShowUpgradeModal(true), []);
 
     const exportPDF = useCallback(() => {
@@ -360,6 +367,7 @@ export default function PrincipalDashboard({ principal }) {
     const handlePrint = () => window.print();
     const handleSignOut = async () => { await signOut(auth); navigate('/'); };
 
+
     // ── TABS CONFIG ───────────────────────────────────────────────────────────
     // 'subscriptions' added above 'settings'
     const tabs = [
@@ -379,6 +387,7 @@ export default function PrincipalDashboard({ principal }) {
 
     // Bottom nav for mobile (only top 5 to keep it tight)
     const mobileBottomTabs = tabs.slice(0, 5);
+
 
     // ── SIDEBAR CONTENT (shared between desktop sidebar & mobile drawer) ──────
     const SidebarContent = ({ onNavClick }) => (
@@ -898,19 +907,26 @@ export default function PrincipalDashboard({ principal }) {
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody>
-                                                                        {atts.map(a => (
-                                                                            <tr key={a.id} className="border-b border-slate-50 dark:border-slate-700/50">
-                                                                                <td className="px-3 py-2 font-bold text-slate-700 dark:text-slate-200">{a.studentName || a.studentUid}</td>
-                                                                                <td className="px-3 py-2"><ScoreBadge score={a.score} /></td>
-                                                                                <td className="px-3 py-2">
-                                                                                    <span className={`text-[9px] font-black ${(a.score || 0) >= 40 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                                                        {(a.score || 0) >= 40 ? 'PASS' : 'FAIL'}
-                                                                                    </span>
-                                                                                </td>
-                                                                                <td className="px-3 py-2 text-slate-400">{a.markedBy || 'AI'}</td>
-                                                                                <td className="px-3 py-2 text-slate-400">{a.submittedAt?.toDate?.().toLocaleDateString('en-ZA') || '—'}</td>
-                                                                            </tr>
-                                                                        ))}
+                                                                        {atts.map(a => {
+                                                                            const pct = a.percentage ?? a.score ?? 0;  // ✅ define pct per row
+                                                                            return (
+                                                                                <tr key={a.id} className="border-b border-slate-50 dark:border-slate-700/50">
+                                                                                    <td className="px-3 py-2 font-bold text-slate-700 dark:text-slate-200">
+                                                                                        {a.studentName || a.studentId || a.studentUid || '—'}
+                                                                                    </td>
+                                                                                    <td className="px-3 py-2"><ScoreBadge score={a.score ?? a.percentage} /></td>
+                                                                                    <td className="px-3 py-2">
+                                                                                        <span className={`text-[9px] font-black ${pct >= 40 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                                                            {pct >= 40 ? 'PASS' : 'FAIL'}
+                                                                                        </span>
+                                                                                    </td>
+                                                                                    <td className="px-3 py-2 text-slate-400">{a.markedBy || 'AI'}</td>
+                                                                                    <td className="px-3 py-2 text-slate-400">
+                                                                                        {a.submittedAt?.toDate?.().toLocaleDateString('en-ZA') || '—'}
+                                                                                    </td>
+                                                                                </tr>
+                                                                            );
+                                                                        })}
                                                                     </tbody>
                                                                 </table>
                                                             </div>

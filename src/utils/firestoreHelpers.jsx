@@ -162,16 +162,6 @@ export async function createExam(teacherUid, schoolId, examData) {
     return ref.id;
 }
 
-export function subscribeToSchoolExams(schoolId, callback) {
-    const q = query(
-        collection(db, 'exams'),
-        where('schoolId', '==', schoolId),
-        orderBy('createdAt', 'desc')
-    );
-    return onSnapshot(q, (snap) => {
-        callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
-}
 
 export function subscribeToStudentExams(schoolId, subjects, callback) {
     const q = query(
@@ -185,16 +175,24 @@ export function subscribeToStudentExams(schoolId, subjects, callback) {
     });
 }
 
-export function subscribeToTeacherExams(teacherUid, callback) {
+
+export function subscribeToSchoolExams(schoolId, callback) {
     const q = query(
         collection(db, 'exams'),
-        where('teacherUid', '==', teacherUid),
-        orderBy('createdAt', 'desc')
+        where('schoolId', '==', schoolId)
+        // removed orderBy('createdAt') — field may not exist on all docs
     );
     return onSnapshot(q, (snap) => {
-        callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        const exams = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        console.log('📚 exams loaded:', exams.length, exams);
+        // in subscribeToSchoolExams callback temporarily
+        console.log('exam IDs:', exams.map(e => e.id));
+        console.log('attempt examIds:', attempts.map(a => ({ examId: a.examId, sourceUploadId: a.sourceUploadId, exam_id: a.exam_id })));
+        callback(exams);
     });
 }
+
+
 
 // ── Attempts ──────────────────────────────────────────────────────────────────
 
@@ -245,35 +243,25 @@ export function subscribeToSchoolAttempts(schoolId, callback) {
         query(collection(db, 'exams'), where('schoolId', '==', schoolId)),
         async (examSnap) => {
             const examIds = examSnap.docs.map((d) => d.id);
-            if (examIds.length === 0) { callback([]); return; }
 
-            // Also try fetching by schoolId directly for backfilled docs
-            const [byExamId, bySchoolId] = await Promise.all([
-                Promise.all(
-                    chunkArray(examIds, 10).map(chunk =>
-                        getDocs(query(collection(db, 'exam_attempts'), where('examId', 'in', chunk)))
-                    )
-                ),
-                getDocs(query(collection(db, 'exam_attempts'), where('schoolId', '==', schoolId)))
-            ]);
+            // Fetch ALL attempts then filter client-side
+            // This handles legacy docs with no examId/schoolId
+            const allSnap = await getDocs(collection(db, 'exam_attempts'));
 
-            // Merge and deduplicate by doc id
-            const seen = new Set();
-            const attempts = [];
-            [...byExamId.flat(), bySchoolId].forEach(snap => {
-                snap.docs?.forEach(d => {
-                    if (!seen.has(d.id)) {
-                        seen.add(d.id);
-                        attempts.push({ id: d.id, ...d.data() });
-                    }
-                });
-            });
+            const attempts = allSnap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(a =>
+                    a.schoolId === schoolId ||           // new docs with schoolId
+                    examIds.includes(a.examId) ||        // docs with matching examId
+                    examIds.includes(a.sourceUploadId)   // legacy docs using sourceUploadId
+                );
 
             callback(attempts);
         }
     );
     return examUnsub;
 }
+
 
 function chunkArray(arr, size) {
     const chunks = [];
@@ -326,8 +314,9 @@ export function groupBySubject(attempts) {
     }, {});
 }
 
+
 export function passRate(attempts) {
     if (!attempts.length) return 0;
-    const passed = attempts.filter((a) => (a.score || 0) >= 40).length;
+    const passed = attempts.filter(a => (a.score ?? a.percentage ?? 0) >= 40).length;
     return Math.round((passed / attempts.length) * 100);
 }
