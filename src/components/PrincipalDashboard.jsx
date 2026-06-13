@@ -8,6 +8,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../utils/firebase';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 import {
     Users, BookOpen, FileText, TrendingUp, Award, AlertTriangle,
@@ -27,7 +29,7 @@ import { useSchool } from '../utils/schoolContext';
 import { TIERS, getTierConfig, isFeatureAllowed, isAtLimit, getUsagePercent } from '../utils/tierConfig';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { onSnapshot, collection, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { onSnapshot, collection, getDocs, query, where } from 'firebase/firestore';
 
 
 // ─── GRADE ORDER ──────────────────────────────────────────────────────────────
@@ -256,57 +258,38 @@ export default function PrincipalDashboard({ principal }) {
     const schoolId = principal?.schoolId || principal?.uid;
     const printRef = useRef();
 
-    useEffect(() => {
-        if (!schoolId) return;
 
-        const unsub = onSnapshot(
-            collection(db, "students"),
-            (snap) => {
-                const data = snap.docs.map(d => d.data());
-                setStudents(data);
-            }
-        );
 
-        return () => unsub();
-    }, [schoolId]);
+
 
     useEffect(() => {
         if (!schoolId) return;
 
-        const unsub = onSnapshot(
-            collection(db, "exams"),
-            (snap) => {
-                const data = snap.docs.map(d => d.data());
-                setExams(data);
-            }
-        );
+        const uid = getAuth().currentUser?.uid;
+        console.log('✅ schoolId:', schoolId, '| uid:', uid);
 
-        return () => unsub();
-    }, [schoolId]);
-
-    useEffect(() => {
-        if (!schoolId) return;
-
-        const unsub = onSnapshot(
-            collection(db, "teachers"),
-            (snap) => {
-                const data = snap.docs.map(d => d.data());
-                setTeachers(data);
-            }
-        );
-
-        return () => unsub();
-    }, [schoolId]);
-
-    useEffect(() => {
-        if (!schoolId) return;
         const unsubs = [
             subscribeToSchoolTeachers(schoolId, setTeachers),
             subscribeToSchoolStudents(schoolId, setStudents),
-            subscribeToSchoolExams(schoolId, setExams),
-            subscribeToSchoolAttempts(schoolId, setAttempts),
+            subscribeToSchoolExams(schoolId, (fetchedExams) => {
+                setExams(fetchedExams);
+
+                // Once we have exams, fetch attempts by examId
+                if (fetchedExams.length === 0) {
+                    setAttempts([]);
+                    return;
+                }
+                const examIds = fetchedExams.map(e => e.id).slice(0, 10); // Firestore 'in' limit
+                getDocs(query(
+                    collection(db, 'exam_attempts'),
+                    where('examId', 'in', examIds)
+                )).then(snap => {
+                    setAttempts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+                });
+            }),
             subscribeToAuditLog(schoolId, setAuditLog),
         ];
+
         return () => unsubs.forEach(u => u());
     }, [schoolId]);
 

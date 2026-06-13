@@ -1,68 +1,49 @@
 // ─── firestoreHelpers.js ──────────────────────────────────────────────────────
-// All data reads/writes go through here so no user ever sees another user's data.
-// Every query is scoped: schoolId + userId where applicable.
 
 import {
     doc, getDoc, setDoc, updateDoc, deleteDoc,
     collection, query, where, orderBy, limit,
-    getDocs, onSnapshot, serverTimestamp, addDoc,
+    getDocs, onSnapshot, serverTimestamp, addDoc, arrayUnion,
 } from 'firebase/firestore';
 import { db } from '../utils/firebase';
 
-/**
- * Updates the audit log status of a specific examination paper.* @param {string} examId - The unique document ID of the target exam
- * @param {string} status - The new operational status (e.g., 'Draft', 'Pending Approval', 'Live', 'Marked')
- * @param {Object} operatorInfo - Metadata detailing who initiated the status shift
- * @param {string} operatorInfo.uid - The user ID of the teacher/principal
- * @param {string} operatorInfo.name - The name or title of the operator
- * @param {string} [customMessage] - Optional developer or user comment describing the context
- */
+// ── Exam Audit ────────────────────────────────────────────────────────────────
 
 export async function updateExamStatusInAudit(examId, status, updatedBy) {
     const examRef = doc(db, 'exams', examId);
-
     return await updateDoc(examRef, {
-        status: status,
+        status,
         updatedAt: serverTimestamp(),
         auditLog: arrayUnion({
             status,
             timestamp: new Date().toISOString(),
             actionedBy: updatedBy,
-            message: `Exam status transitioned to ${status}`
-        })
+            message: `Exam status transitioned to ${status}`,
+        }),
     });
 }
 
-export async function updateExamInAudit(examId, status, operatorInfo = {}, customMessage = "") {
-    if (!examId) throw new Error("[FirestoreHelpers] Cannot update audit logs without a valid examId.");
-
+export async function updateExamInAudit(examId, status, operatorInfo = {}, customMessage = '') {
+    if (!examId) throw new Error('[FirestoreHelpers] Cannot update audit logs without a valid examId.');
     const examRef = doc(db, 'exams', examId);
-
-    // Clean default fallbacks to prevent undefined values from crashing the write payload
     const operatorUid = operatorInfo.uid || 'system-fallback';
     const operatorName = operatorInfo.name || 'Anonymous Staff';
     const displayMessage = customMessage || `Exam status transitioned to ${status}.`;
-
     return await updateDoc(examRef, {
-        status: status,
+        status,
         updatedAt: serverTimestamp(),
         auditLog: arrayUnion({
-            status: status,
+            status,
             timestamp: new Date().toISOString(),
             actionedBy: operatorName,
             operatorId: operatorUid,
-            message: displayMessage
-        })
+            message: displayMessage,
+        }),
     });
 }
 
-
 // ── School ────────────────────────────────────────────────────────────────────
 
-/**
- * Register a new school.
- * The principal's uid becomes the schoolId (1-to-1 ownership).
- */
 export async function registerSchool(principalUid, schoolData) {
     const schoolRef = doc(db, 'schools', principalUid);
     await setDoc(schoolRef, {
@@ -71,7 +52,15 @@ export async function registerSchool(principalUid, schoolData) {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
     }, { merge: true });
-    return principalUid; // schoolId === principalUid
+
+    await setDoc(doc(db, 'users', principalUid), {
+        uid: principalUid,
+        role: 'principal',
+        schoolId: principalUid,
+        updatedAt: serverTimestamp(),
+    }, { merge: true });
+
+    return principalUid;
 }
 
 export async function updateSchool(schoolId, data) {
@@ -86,10 +75,6 @@ export async function getSchool(schoolId) {
     return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
-/**
- * List all schools (for teacher/student registration dropdowns).
- * Returns [{id, name, province, district, curricula}]
- */
 export async function listSchools() {
     const snap = await getDocs(collection(db, 'schools'));
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -97,10 +82,6 @@ export async function listSchools() {
 
 // ── Users ─────────────────────────────────────────────────────────────────────
 
-/**
- * Save or update a user profile in the correct collection.
- * Also writes a cross-reference in /users for role lookups.
- */
 export async function saveUserProfile(uid, role, profile) {
     const col = role === 'principal' ? 'principals' : role === 'teacher' ? 'teachers' : 'students';
     await setDoc(doc(db, col, uid), {
@@ -123,34 +104,30 @@ export async function getUserRole(uid) {
     return snap.exists() ? snap.data().role : null;
 }
 
-// ── School Members ─────────────────────────────────────────────────────────────
+// ── School Members ────────────────────────────────────────────────────────────
 
-/** All teachers belonging to a school — scoped by schoolId */
+/** All teachers belonging to a school */
 export function subscribeToSchoolTeachers(schoolId, callback) {
     const q = query(
         collection(db, 'teachers'),
-        where('schoolId', '==', schoolId),
-        orderBy('surname')
+        where('schoolId', '==', schoolId)
     );
     return onSnapshot(q, (snap) => {
         callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
 }
 
-/** All students belonging to a school — scoped by schoolId */
+/** All students belonging to a school */
 export function subscribeToSchoolStudents(schoolId, callback) {
     const q = query(
         collection(db, 'students'),
-        where('schoolId', '==', schoolId),
-        orderBy('grade'),
-        orderBy('surname')
+        where('schoolId', '==', schoolId)
     );
     return onSnapshot(q, (snap) => {
         callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
 }
 
-/** Students filtered by grade */
 export async function getStudentsByGrade(schoolId, grade) {
     const q = query(
         collection(db, 'students'),
@@ -161,7 +138,6 @@ export async function getStudentsByGrade(schoolId, grade) {
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
-/** Students filtered by subject */
 export async function getStudentsBySubject(schoolId, subject) {
     const q = query(
         collection(db, 'students'),
@@ -174,10 +150,6 @@ export async function getStudentsBySubject(schoolId, subject) {
 
 // ── Exams ─────────────────────────────────────────────────────────────────────
 
-/**
- * Upload exam metadata (teacher-scoped).
- * storagePath references Firebase Storage; marking is done server-side.
- */
 export async function createExam(teacherUid, schoolId, examData) {
     const ref = await addDoc(collection(db, 'exams'), {
         ...examData,
@@ -190,7 +162,6 @@ export async function createExam(teacherUid, schoolId, examData) {
     return ref.id;
 }
 
-/** All exams for a school — for principal dashboard */
 export function subscribeToSchoolExams(schoolId, callback) {
     const q = query(
         collection(db, 'exams'),
@@ -202,12 +173,11 @@ export function subscribeToSchoolExams(schoolId, callback) {
     });
 }
 
-/** Exams visible to a student — matches their subjects + school */
 export function subscribeToStudentExams(schoolId, subjects, callback) {
     const q = query(
         collection(db, 'exams'),
         where('schoolId', '==', schoolId),
-        where('subject', 'in', subjects.slice(0, 10)), // Firestore 'in' limit = 10
+        where('subject', 'in', subjects.slice(0, 10)),
         orderBy('createdAt', 'desc')
     );
     return onSnapshot(q, (snap) => {
@@ -215,7 +185,6 @@ export function subscribeToStudentExams(schoolId, subjects, callback) {
     });
 }
 
-/** Exams uploaded by a specific teacher */
 export function subscribeToTeacherExams(teacherUid, callback) {
     const q = query(
         collection(db, 'exams'),
@@ -229,30 +198,25 @@ export function subscribeToTeacherExams(teacherUid, callback) {
 
 // ── Attempts ──────────────────────────────────────────────────────────────────
 
-/**
- * Save a student's exam attempt.
- * Scoped to studentUid + examId — no cross-student visibility.
- */
-export async function saveAttempt(studentUid, examId, attemptData) {
-    const ref = doc(db, 'attempts', `${studentUid}_${examId}`);
+export async function saveAttempt(studentUid, examId, schoolId, attemptData) {
+    const ref = doc(db, 'exam_attempts', `${studentUid}_${examId}`);
     await setDoc(ref, {
         ...attemptData,
         studentUid,
+        schoolId,
         examId,
         submittedAt: serverTimestamp(),
     }, { merge: true });
 }
 
-/** A student's own attempt for one exam */
 export async function getStudentAttempt(studentUid, examId) {
-    const snap = await getDoc(doc(db, 'attempts', `${studentUid}_${examId}`));
+    const snap = await getDoc(doc(db, 'exam_attempts', `${studentUid}_${examId}`));
     return snap.exists() ? snap.data() : null;
 }
 
-/** All attempts for a specific exam — for teacher/principal analysis */
 export async function getExamAttempts(examId, schoolId) {
     const q = query(
-        collection(db, 'attempts'),
+        collection(db, 'exam_attempts'),
         where('examId', '==', examId),
         where('schoolId', '==', schoolId)
     );
@@ -260,10 +224,9 @@ export async function getExamAttempts(examId, schoolId) {
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
-/** All attempts by a student — for their personal history */
 export function subscribeToStudentAttempts(studentUid, callback) {
     const q = query(
-        collection(db, 'attempts'),
+        collection(db, 'exam_attempts'),
         where('studentUid', '==', studentUid),
         orderBy('submittedAt', 'desc')
     );
@@ -272,24 +235,54 @@ export function subscribeToStudentAttempts(studentUid, callback) {
     });
 }
 
-/** All attempts within a school — for principal reporting */
+/**
+ * Fetches attempts for a school by matching examIds.
+ * Uses a live listener on exams, then one-time fetch of attempts.
+ * Falls back gracefully when no exams exist.
+ */
 export function subscribeToSchoolAttempts(schoolId, callback) {
-    const q = query(
-        collection(db, 'attempts'),
-        where('schoolId', '==', schoolId),
-        orderBy('submittedAt', 'desc')
+    const examUnsub = onSnapshot(
+        query(collection(db, 'exams'), where('schoolId', '==', schoolId)),
+        async (examSnap) => {
+            const examIds = examSnap.docs.map((d) => d.id);
+            if (examIds.length === 0) { callback([]); return; }
+
+            // Also try fetching by schoolId directly for backfilled docs
+            const [byExamId, bySchoolId] = await Promise.all([
+                Promise.all(
+                    chunkArray(examIds, 10).map(chunk =>
+                        getDocs(query(collection(db, 'exam_attempts'), where('examId', 'in', chunk)))
+                    )
+                ),
+                getDocs(query(collection(db, 'exam_attempts'), where('schoolId', '==', schoolId)))
+            ]);
+
+            // Merge and deduplicate by doc id
+            const seen = new Set();
+            const attempts = [];
+            [...byExamId.flat(), bySchoolId].forEach(snap => {
+                snap.docs?.forEach(d => {
+                    if (!seen.has(d.id)) {
+                        seen.add(d.id);
+                        attempts.push({ id: d.id, ...d.data() });
+                    }
+                });
+            });
+
+            callback(attempts);
+        }
     );
-    return onSnapshot(q, (snap) => {
-        callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    return examUnsub;
 }
 
-// ── Audit / Remarks ───────────────────────────────────────────────────────────
+function chunkArray(arr, size) {
+    const chunks = [];
+    for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+    return chunks;
+}
 
-/**
- * Log a marking event (AI mark, teacher remark, modification).
- * Scoped by schoolId for principal visibility.
- */
+// ── Audit Log ─────────────────────────────────────────────────────────────────
+
 export async function logMarkingEvent(schoolId, event) {
     await addDoc(collection(db, 'auditLog'), {
         ...event,
@@ -298,12 +291,10 @@ export async function logMarkingEvent(schoolId, event) {
     });
 }
 
-/** All audit events for a school */
 export function subscribeToAuditLog(schoolId, callback) {
     const q = query(
         collection(db, 'auditLog'),
         where('schoolId', '==', schoolId),
-        orderBy('timestamp', 'desc'),
         limit(200)
     );
     return onSnapshot(q, (snap) => {
@@ -313,7 +304,6 @@ export function subscribeToAuditLog(schoolId, callback) {
 
 // ── Analytics Helpers ─────────────────────────────────────────────────────────
 
-/** Compute per-grade student counts from a students array */
 export function countByGrade(students) {
     return students.reduce((acc, s) => {
         acc[s.grade] = (acc[s.grade] || 0) + 1;
@@ -321,14 +311,12 @@ export function countByGrade(students) {
     }, {});
 }
 
-/** Compute average score from attempts array */
 export function averageScore(attempts) {
     const scored = attempts.filter((a) => typeof a.score === 'number');
     if (!scored.length) return null;
     return Math.round(scored.reduce((sum, a) => sum + a.score, 0) / scored.length);
 }
 
-/** Group attempts by subject */
 export function groupBySubject(attempts) {
     return attempts.reduce((acc, a) => {
         const s = a.subject || 'Unknown';
@@ -338,7 +326,6 @@ export function groupBySubject(attempts) {
     }, {});
 }
 
-/** Pass rate (score >= 40) */
 export function passRate(attempts) {
     if (!attempts.length) return 0;
     const passed = attempts.filter((a) => (a.score || 0) >= 40).length;

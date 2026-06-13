@@ -509,7 +509,7 @@ export default function AuthPage({ setStudentInfo }) {
             <p className="text-slate-500 text-sm mb-8">
               {isRegistering
                 ? 'Create an account to start your AI journey.'
-                : "Access South Africa's most powerful learning OS."}
+                : "Access the world's most powerful learning OS."}
             </p>
 
             {error && <ErrorBox message={error} />}

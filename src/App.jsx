@@ -3,8 +3,9 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { Home, FileText, BarChart3, School, Sparkles, LayoutDashboard } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, query, where, collection } from 'firebase/firestore';
 import { auth, db } from './utils/firebase';
+
 
 // ── Existing components ────────────────────────────────────────────────────────
 import PasswordPage from './components/PasswordPage';
@@ -79,6 +80,8 @@ function App() {
   }, []);
 
   // ── Firebase auth listener — loads role + full profile for all user types ──
+
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!firebaseUser) {
@@ -88,24 +91,39 @@ function App() {
         return;
       }
 
+      await firebaseUser.getIdToken(true);
+
+      // ── TEMPORARY DEBUG ──────────────────────────────────────
+      const testCols = ['teachers', 'students', 'exams', 'exam_attempts', 'auditLog'];
+      for (const c of testCols) {
+        try {
+          const snap = await getDocs(
+            query(collection(db, c), where('schoolId', '==', firebaseUser.uid))
+          );
+          console.log(`✅ ${c}: ${snap.size} docs`);
+        } catch (e) {
+          console.log(`❌ ${c}: DENIED —`, e.message);
+        }
+      }
+      // ── END DEBUG ────────────────────────────────────────────
+
       setUser(firebaseUser);
 
       try {
         const userSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
         if (userSnap.exists()) {
           const { role, schoolId } = userSnap.data();
-          const col =
+          const profileCol =
             role === 'principal' ? 'principals' :
               role === 'teacher' ? 'teachers' : 'students';
 
-          const profSnap = await getDoc(doc(db, col, firebaseUser.uid));
+          const profSnap = await getDoc(doc(db, profileCol, firebaseUser.uid));
           const profile = profSnap.exists()
             ? { ...profSnap.data(), role, schoolId }
             : { role, schoolId };
 
           setUserProfile(profile);
 
-          // Keep legacy studentInfo in sync so existing components still work
           if (role === 'student') {
             setStudentInfo(profile);
             localStorage.setItem('user-session', JSON.stringify(profile));
@@ -191,7 +209,7 @@ function App() {
               <div className="relative">
                 <img
                   src={logo} alt="Eduket"
-                  className="h-15 w-15 rounded-xl shadow-lg ring-4 ring-white/50 dark:ring-gray-800/50 group-hover:scale-110 transition-transform duration-300 dark:invert dark:hue-rotate-180"
+                  className="h-10 w-15 rounded-xl shadow-lg ring-4 ring-white/50 dark:ring-gray-800/50 group-hover:scale-110 transition-transform duration-300 dark:invert dark:hue-rotate-180"
                 />
                 <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 opacity-30 blur-xl group-hover:opacity-60 transition" />
               </div>
