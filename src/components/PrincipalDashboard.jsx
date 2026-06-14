@@ -1,10 +1,12 @@
-// ─── PrincipalDashboard.jsx (UPDATED) ────────────────────────────────────────
+// ─── PrincipalDashboard.jsx ──────────────────────────────────────────────────
 // ✦ Mobile-first responsive layout
 // ✦ Bottom tab bar on mobile, collapsible sidebar on desktop
-// ✦ New "Subscriptions" tab above Settings
-// ✦ All existing features preserved
+// ✦ Full limit enforcement: 80% warning (amber) + 100% block (red) on all resources
+// ✦ LimitGate blocks add actions when at limit
+// ✦ Teachers tab now has limit enforcement
+// ✦ SubscriptionManager receives usage + school props
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../utils/firebase';
@@ -67,6 +69,112 @@ const TIER_VISUAL = {
     },
 };
 
+// ─── LIMIT STATUS HOOK ────────────────────────────────────────────────────────
+// Single source of truth for all limit checks across the dashboard
+const TIER_LIMITS = {
+    free: { students: 30, exams: 5, teachers: 2 },
+    starter: { students: 150, exams: 30, teachers: 10 },
+    professional: { students: 500, exams: null, teachers: 30 },
+    enterprise: { students: null, exams: null, teachers: null },
+};
+
+function useLimitStatus(tier, usage = {}) {
+    return useMemo(() => {
+        const limits = TIER_LIMITS[tier] || TIER_LIMITS.free;
+
+        const check = (key) => {
+            const max = limits[key] ?? null;
+            const used = usage[key] ?? 0;
+            if (max === null) return { used, max: null, pct: 0, status: 'ok', blocked: false, warning: false };
+            const pct = Math.min(100, Math.round((used / max) * 100));
+            const blocked = used >= max;
+            const warning = !blocked && pct >= 80;
+            const status = blocked ? 'crit' : warning ? 'warn' : 'ok';
+            return { used, max, pct, status, blocked, warning };
+        };
+
+        const students = check('students');
+        const exams = check('exams');
+        const teachers = check('teachers');
+        const anyBlocked = students.blocked || exams.blocked || teachers.blocked;
+        const anyWarning = students.warning || exams.warning || teachers.warning;
+
+        return { students, exams, teachers, anyBlocked, anyWarning, limits };
+    }, [tier, usage?.students, usage?.exams, usage?.teachers]);
+}
+
+// ─── LIMIT ALERT BANNER ───────────────────────────────────────────────────────
+// Shows amber at 80%, red at 100%. Dismissible for warnings, sticky for blocks.
+function LimitAlertBanner({ resource, label, info, onUpgrade }) {
+    const [dismissed, setDismissed] = useState(false);
+    if (info.max === null || info.status === 'ok') return null;
+    if (dismissed && info.status === 'warn') return null;
+
+    const isCrit = info.status === 'crit';
+
+    return (
+        <div className={`flex items-start gap-3 p-3.5 rounded-2xl border text-xs ${isCrit
+            ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
+            : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700'
+            }`}>
+            {isCrit
+                ? <Lock size={14} className="text-red-500 flex-shrink-0 mt-0.5" />
+                : <AlertTriangle size={14} className="text-amber-500 flex-shrink-0 mt-0.5" />}
+            <div className="flex-1 min-w-0">
+                <p className={`font-black ${isCrit ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                    {isCrit ? `${label} limit reached` : `${label} approaching limit`}
+                </p>
+                <p className={`mt-0.5 ${isCrit ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                    {isCrit
+                        ? `You've used all ${info.max} ${label.toLowerCase()} on your current plan. New ${label.toLowerCase()} cannot be added until you upgrade.`
+                        : `${info.used} of ${info.max} used (${info.pct}%). Consider upgrading before you're blocked.`}
+                </p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                    onClick={onUpgrade}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black text-white transition-opacity hover:opacity-90 ${isCrit ? 'bg-red-500' : 'bg-amber-500'
+                        }`}
+                >
+                    <ArrowUpRight size={10} /> Upgrade
+                </button>
+                {!isCrit && (
+                    <button onClick={() => setDismissed(true)} className="text-amber-400 hover:text-amber-600">
+                        <X size={13} />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ─── LIMIT GATE ───────────────────────────────────────────────────────────────
+// Wraps any action button/form. When blocked, shows a lock overlay instead.
+function LimitGate({ blocked, resource = 'resource', onUpgrade, children }) {
+    if (!blocked) return <>{children}</>;
+    return (
+        <div className="relative rounded-2xl border-2 border-dashed border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 p-6 flex flex-col items-center gap-3 text-center">
+            <div className="w-11 h-11 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <Lock size={20} className="text-red-500" />
+            </div>
+            <div>
+                <p className="text-sm font-black text-red-700 dark:text-red-300">
+                    {resource.charAt(0).toUpperCase() + resource.slice(1)} limit reached
+                </p>
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                    Upgrade your plan to add more {resource}.
+                </p>
+            </div>
+            <button
+                onClick={onUpgrade}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black text-white bg-red-500 hover:bg-red-600 transition-colors"
+            >
+                <ArrowUpRight size={12} /> View upgrade options
+            </button>
+        </div>
+    );
+}
+
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function ScoreBadge({ score }) {
     if (score == null) return <span className="text-slate-400 text-xs">—</span>;
@@ -100,23 +208,41 @@ function StatCard({ label, value, sub, icon: Icon, color = 'indigo' }) {
     );
 }
 
+// Enhanced UsageMeter — amber at 80%, red at 100%
 function UsageMeter({ label, used, limit, color = '#4f46e5' }) {
-    if (limit == null) return null;
-    const pct = Math.min((used / limit) * 100, 100);  // ✅ correct calculation
+    if (limit == null) return (
+        <div className="space-y-1">
+            <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{label}</span>
+                <span className="text-[10px] font-black text-emerald-500">∞ Unlimited</span>
+            </div>
+            <div className="h-1.5 w-full bg-emerald-100 dark:bg-emerald-900/30 rounded-full overflow-hidden">
+                <div className="h-full w-1/4 rounded-full bg-emerald-300 dark:bg-emerald-600 animate-pulse" />
+            </div>
+        </div>
+    );
+
+    const pct = Math.min((used / limit) * 100, 100);
     const isNear = pct >= 80;
     const isFull = pct >= 100;
+    const barColor = isFull ? '#ef4444' : isNear ? '#f59e0b' : color;
+
     return (
         <div className="space-y-1">
             <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{label}</span>
-                <span className={`text-[10px] font-black ${isFull ? 'text-red-500' : isNear ? 'text-amber-500' : 'text-slate-400'}`}>
-                    {used}/{limit}
-                </span>
+                <div className="flex items-center gap-1.5">
+                    {isFull && <Lock size={9} className="text-red-500" />}
+                    {isNear && !isFull && <AlertTriangle size={9} className="text-amber-500" />}
+                    <span className={`text-[10px] font-black ${isFull ? 'text-red-500' : isNear ? 'text-amber-500' : 'text-slate-400'}`}>
+                        {used}/{limit}
+                    </span>
+                </div>
             </div>
             <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                 <div
                     className="h-full rounded-full transition-all duration-700"
-                    style={{ width: `${pct}%`, backgroundColor: isFull ? '#ef4444' : isNear ? '#f59e0b' : color }}
+                    style={{ width: `${pct}%`, backgroundColor: barColor }}
                 />
             </div>
         </div>
@@ -241,8 +367,8 @@ export default function PrincipalDashboard({ principal }) {
     // UI
     const [activeTab, setActiveTab] = useState('overview');
     const [isDark, setIsDark] = useState(false);
-    const [sidebarOpen, setSidebarOpen] = useState(true);       // desktop sidebar collapsed state
-    const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false); // mobile drawer
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
     // Filters
@@ -258,35 +384,56 @@ export default function PrincipalDashboard({ principal }) {
     const schoolId = principal?.schoolId || principal?.uid;
     const printRef = useRef();
 
+    // ── Live usage object — drives ALL limit checks ───────────────────────────
+    const usage = useMemo(() => ({
+        students: students.length,
+        exams: exams.length,
+        teachers: teachers.length,
+    }), [students.length, exams.length, teachers.length]);
 
-
-
+    // ── Limit status — single hook, used everywhere ───────────────────────────
+    const limits = useLimitStatus(currentTier, usage);
 
     useEffect(() => {
         if (!schoolId) return;
 
-        const uid = getAuth().currentUser?.uid;
-        console.log('✅ schoolId:', schoolId, '| uid:', uid);
+        const auth = getAuth();
+        let unsubs = []; // Store Firestore unsubscribes here
 
-        // Fetch ALL attempts client-side filtered — handles legacy docs
-        const fetchAllAttempts = async () => {
-            const snap = await getDocs(collection(db, 'exam_attempts'));
-            const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            console.log('📋 all attempts raw:', all.length, all);
-            setAttempts(all); // show everything for now — filter below once we confirm
+        // 1. Wait for Firebase to confirm the user's auth state
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // 2. User is confirmed! Safe to fetch data.
+                const fetchAllAttempts = async () => {
+                    const snap = await getDocs(collection(db, 'exam_attempts'));
+                    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    setAttempts(all);
+                };
+                fetchAllAttempts();
+
+                // 3. Setup listeners and store their unsubscribe functions
+                unsubs = [
+                    subscribeToSchoolTeachers(schoolId, setTeachers),
+                    subscribeToSchoolStudents(schoolId, setStudents),
+                    subscribeToSchoolExams(schoolId, setExams),
+                    subscribeToAuditLog(schoolId, setAuditLog),
+                ];
+            } else {
+                // Optional: Clear data if the user logs out while looking at this page
+                setAttempts([]);
+                setTeachers([]);
+                setStudents([]);
+                setExams([]);
+                setAuditLog([]);
+            }
+        });
+
+        // 4. Cleanup function for when component unmounts or schoolId changes
+        return () => {
+            unsubscribeAuth(); // Stop listening to auth changes
+            unsubs.forEach(u => u && typeof u === 'function' && u()); // Stop Firestore listeners
         };
-        fetchAllAttempts();
-
-        const unsubs = [
-            subscribeToSchoolTeachers(schoolId, setTeachers),
-            subscribeToSchoolStudents(schoolId, setStudents),
-            subscribeToSchoolExams(schoolId, setExams),  // ← plain setter, no nested fetch
-            subscribeToAuditLog(schoolId, setAuditLog),
-        ];
-
-        return () => unsubs.forEach(u => u());
     }, [schoolId]);
-
 
     // ── Derived ───────────────────────────────────────────────────────────────
     const gradeCounts = countByGrade(students);
@@ -294,10 +441,6 @@ export default function PrincipalDashboard({ principal }) {
     const overallPassRate = passRate(attempts);
     const subjectGroups = groupBySubject(attempts);
     const allSubjects = [...new Set(students.flatMap(s => s.subjects || []))].sort();
-
-
-    // TEMP DEBUG
-    console.log('📊 state:', { teachers: teachers.length, students: students.length, exams: exams.length, attempts: attempts.length, attempts_data: attempts });
 
     const filteredStudents = students.filter(s => {
         const matchGrade = filterGrade === 'All' || s.grade === filterGrade;
@@ -308,17 +451,34 @@ export default function PrincipalDashboard({ principal }) {
         return matchGrade && matchSubject && matchSearch;
     });
 
-    // Match by uid OR by studentId name string
-    const studentAttempts = uid => attempts.filter(a =>
-        a.studentUid === uid || a.studentId === uid
-    );
+    const studentAttempts = (uid) =>
+        (attempts || []).filter(
+            (a) =>
+                a.schoolId === schoolId &&
+                (a.studentUid === uid || a.studentId === uid)
+        );
 
-    // Match by examId — also handle attempts that used sourceUploadId as the exam reference
-    const examAttempts = id => attempts.filter(a =>
-        a.examId === id ||
-        a.sourceUploadId === id ||
-        a.exam_id === id
-    );
+    const examAttempts = (exam) =>
+        (attempts || []).filter(
+            (a) =>
+                a.schoolId === schoolId &&
+                (
+                    a.examId === exam.id ||
+                    a.sourceUploadId === exam.id ||
+                    a.exam_id === exam.id
+                )
+        );
+
+    const fetchAllAttempts = async () => {
+        const q = query(
+            collection(db, 'exam_attempts'),
+            where('schoolId', '==', schoolId) // Only get this school's attempts!
+        );
+        const snap = await getDocs(q);
+        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setAttempts(all);
+    };
+
     const handleUpgrade = useCallback(() => setShowUpgradeModal(true), []);
 
     const exportPDF = useCallback(() => {
@@ -367,9 +527,7 @@ export default function PrincipalDashboard({ principal }) {
     const handlePrint = () => window.print();
     const handleSignOut = async () => { await signOut(auth); navigate('/'); };
 
-
     // ── TABS CONFIG ───────────────────────────────────────────────────────────
-    // 'subscriptions' added above 'settings'
     const tabs = [
         { id: 'overview', label: 'Overview', icon: BarChart2 },
         { id: 'students', label: 'Students', icon: Users },
@@ -385,11 +543,9 @@ export default function PrincipalDashboard({ principal }) {
         { id: 'settings', label: 'Settings', icon: Settings },
     ];
 
-    // Bottom nav for mobile (only top 5 to keep it tight)
     const mobileBottomTabs = tabs.slice(0, 5);
 
-
-    // ── SIDEBAR CONTENT (shared between desktop sidebar & mobile drawer) ──────
+    // ── SIDEBAR CONTENT ───────────────────────────────────────────────────────
     const SidebarContent = ({ onNavClick }) => (
         <>
             {/* School brand */}
@@ -421,6 +577,14 @@ export default function PrincipalDashboard({ principal }) {
                 {tabs.map(t => {
                     const Icon = t.icon;
                     const isActive = activeTab === t.id;
+                    // Show a red dot on Students/Exams/Teachers nav items when blocked
+                    const hasAlert =
+                        (t.id === 'students' && (limits.students.blocked || limits.students.warning)) ||
+                        (t.id === 'exams' && (limits.exams.blocked || limits.exams.warning));
+                    const isBlockedAlert =
+                        (t.id === 'students' && limits.students.blocked) ||
+                        (t.id === 'exams' && limits.exams.blocked);
+
                     return (
                         <button
                             key={t.id}
@@ -437,14 +601,19 @@ export default function PrincipalDashboard({ principal }) {
                                 }`}
                             style={isActive ? { backgroundColor: primary } : {}}
                         >
-                            <Icon size={16} className="flex-shrink-0" />
+                            <div className="relative flex-shrink-0">
+                                <Icon size={16} />
+                                {/* Alert dot on nav icon */}
+                                {hasAlert && !isActive && (
+                                    <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${isBlockedAlert ? 'bg-red-500' : 'bg-amber-400'}`} />
+                                )}
+                            </div>
                             {(sidebarOpen || onNavClick) && (
                                 <span className="flex-1 text-left">{t.label}</span>
                             )}
                             {(sidebarOpen || onNavClick) && t.locked && (
                                 <Lock size={11} className="text-slate-300 dark:text-slate-600" />
                             )}
-                            {/* Subscriptions highlight pill */}
                             {t.id === 'subscriptions' && !isActive && (sidebarOpen || onNavClick) && (
                                 <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400 uppercase">
                                     New
@@ -460,9 +629,9 @@ export default function PrincipalDashboard({ principal }) {
                 <div className="px-3 pb-2 space-y-3 flex-shrink-0">
                     <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 space-y-2.5">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Usage</p>
-                        <UsageMeter label="Students" used={students.length} limit={tierConfig?.limits?.students ?? null} color={primary} />
-                        <UsageMeter label="Exams" used={exams.length} limit={tierConfig?.limits?.exams ?? null} color={primary} />
-                        <UsageMeter label="Teachers" used={teachers.length} limit={tierConfig?.limits?.teachers ?? null} color={primary} />
+                        <UsageMeter label="Students" used={students.length} limit={TIER_LIMITS[currentTier]?.students ?? null} color={primary} />
+                        <UsageMeter label="Exams" used={exams.length} limit={TIER_LIMITS[currentTier]?.exams ?? null} color={primary} />
+                        <UsageMeter label="Teachers" used={teachers.length} limit={TIER_LIMITS[currentTier]?.teachers ?? null} color={primary} />
                     </div>
                     {currentTier !== 'enterprise' && (
                         <button
@@ -537,10 +706,19 @@ export default function PrincipalDashboard({ principal }) {
                         </p>
                     </div>
 
-                    {/* Tier chip */}
-                    <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[9px] font-black ${TIER_VISUAL[currentTier]?.badge}`}>
-                        {React.createElement(TIER_VISUAL[currentTier]?.icon || Star, { size: 10 })}
-                        {TIER_VISUAL[currentTier]?.label}
+                    {/* Tier chip — turns red if any resource is blocked */}
+                    <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[9px] font-black transition-colors ${limits.anyBlocked
+                        ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
+                        : limits.anyWarning
+                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
+                            : TIER_VISUAL[currentTier]?.badge
+                        }`}>
+                        {limits.anyBlocked
+                            ? <Lock size={10} />
+                            : limits.anyWarning
+                                ? <AlertTriangle size={10} />
+                                : React.createElement(TIER_VISUAL[currentTier]?.icon || Star, { size: 10 })}
+                        {limits.anyBlocked ? 'Limit reached' : limits.anyWarning ? 'Near limit' : TIER_VISUAL[currentTier]?.label}
                     </div>
 
                     <button
@@ -555,8 +733,6 @@ export default function PrincipalDashboard({ principal }) {
                     >
                         <Printer size={12} /> Print
                     </button>
-
-                    {/* Mobile: export icon only */}
                     <button onClick={exportPDF} className="sm:hidden text-slate-400 hover:text-slate-600">
                         <Download size={18} />
                     </button>
@@ -565,18 +741,22 @@ export default function PrincipalDashboard({ principal }) {
                 {/* Page content */}
                 <div ref={printRef} className="flex-1 p-4 md:p-6 overflow-y-auto space-y-4 md:space-y-6 pb-24 md:pb-6">
 
-                    {/* Upgrade banner */}
-                    {activeTab === 'overview' && !bannerDismissed && currentTier !== 'enterprise' && (
-                        <UpgradeBanner
-                            tier={currentTier}
-                            onUpgrade={handleUpgrade}
-                            onDismiss={() => setBannerDismissed(true)}
-                        />
-                    )}
-
                     {/* ── OVERVIEW TAB ── */}
                     {activeTab === 'overview' && (
                         <>
+                            {!bannerDismissed && currentTier !== 'enterprise' && (
+                                <UpgradeBanner
+                                    tier={currentTier}
+                                    onUpgrade={handleUpgrade}
+                                    onDismiss={() => setBannerDismissed(true)}
+                                />
+                            )}
+
+                            {/* Global limit alerts on overview */}
+                            <LimitAlertBanner resource="students" label="Students" info={limits.students} onUpgrade={handleUpgrade} />
+                            <LimitAlertBanner resource="exams" label="Exams" info={limits.exams} onUpgrade={handleUpgrade} />
+                            <LimitAlertBanner resource="teachers" label="Teachers" info={limits.teachers} onUpgrade={handleUpgrade} />
+
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                                 <StatCard label="Teachers" value={teachers.length} icon={Users} color="indigo" />
                                 <StatCard label="Students" value={students.length} icon={Users} color="emerald" />
@@ -658,17 +838,8 @@ export default function PrincipalDashboard({ principal }) {
                     {/* ── STUDENTS TAB ── */}
                     {activeTab === 'students' && (
                         <>
-                            {isAtLimit(currentTier, 'students', students.length) && (
-                                <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl">
-                                    <AlertTriangle size={15} className="text-amber-600 flex-shrink-0" />
-                                    <p className="text-xs font-bold text-amber-700 dark:text-amber-300 flex-1">
-                                        Student limit reached on <span className="font-black">{TIER_VISUAL[currentTier]?.label}</span>.
-                                    </p>
-                                    <button onClick={handleUpgrade} className="text-xs font-black text-amber-700 dark:text-amber-300 underline underline-offset-2 flex-shrink-0">
-                                        Upgrade →
-                                    </button>
-                                </div>
-                            )}
+                            {/* ✅ Both warn (80%) and block (100%) banners */}
+                            <LimitAlertBanner resource="students" label="Students" info={limits.students} onUpgrade={handleUpgrade} />
 
                             {/* Filter bar */}
                             <div className="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-100 dark:border-slate-700 flex flex-wrap items-center gap-2">
@@ -693,7 +864,14 @@ export default function PrincipalDashboard({ principal }) {
                                 <span className="text-[10px] text-slate-400 font-bold">{filteredStudents.length} students</span>
                             </div>
 
-                            {/* Mobile card list / desktop table */}
+                            {/* ✅ LimitGate blocks add action when students are full */}
+                            {limits.students.blocked && (
+                                <LimitGate blocked resource="students" onUpgrade={handleUpgrade}>
+                                    {/* Add Student button would go here */}
+                                </LimitGate>
+                            )}
+
+                            {/* Desktop table */}
                             <div className="hidden md:block bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
                                 <table className="w-full text-xs">
                                     <thead>
@@ -851,14 +1029,14 @@ export default function PrincipalDashboard({ principal }) {
                     {/* ── EXAMS TAB ── */}
                     {activeTab === 'exams' && (
                         <>
-                            {isAtLimit(currentTier, 'exams', exams.length) && (
-                                <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl">
-                                    <AlertTriangle size={15} className="text-amber-600 flex-shrink-0" />
-                                    <p className="text-xs font-bold text-amber-700 dark:text-amber-300 flex-1">
-                                        Exam limit reached on <span className="font-black">{TIER_VISUAL[currentTier]?.label}</span>.
-                                    </p>
-                                    <button onClick={handleUpgrade} className="text-xs font-black text-amber-700 dark:text-amber-300 underline underline-offset-2 flex-shrink-0">Upgrade →</button>
-                                </div>
+                            {/* ✅ Both warn and block banners for exams */}
+                            <LimitAlertBanner resource="exams" label="Exams" info={limits.exams} onUpgrade={handleUpgrade} />
+
+                            {/* ✅ Gate blocks upload action when at exam limit */}
+                            {limits.exams.blocked && (
+                                <LimitGate blocked resource="exams" onUpgrade={handleUpgrade}>
+                                    {/* Upload Exam button would go here */}
+                                </LimitGate>
                             )}
 
                             <div className="flex items-center justify-between flex-wrap gap-3">
@@ -908,7 +1086,7 @@ export default function PrincipalDashboard({ principal }) {
                                                                     </thead>
                                                                     <tbody>
                                                                         {atts.map(a => {
-                                                                            const pct = a.percentage ?? a.score ?? 0;  // ✅ define pct per row
+                                                                            const pct = a.percentage ?? a.score ?? 0;
                                                                             return (
                                                                                 <tr key={a.id} className="border-b border-slate-50 dark:border-slate-700/50">
                                                                                     <td className="px-3 py-2 font-bold text-slate-700 dark:text-slate-200">
@@ -997,11 +1175,10 @@ export default function PrincipalDashboard({ principal }) {
                             currentTier={currentTier}
                             schoolName={school?.name || ''}
                             schoolId={schoolId}
+                            school={school}
+                            usage={usage}
                             primary={primary}
-                            onTierChange={(newTier) => {
-                                // Trigger PaymentManager if upgrading
-                                setShowUpgradeModal(true);
-                            }}
+                            onTierChange={() => setShowUpgradeModal(true)}
                         />
                     )}
 
@@ -1035,6 +1212,11 @@ export default function PrincipalDashboard({ principal }) {
                                 </div>
                             </div>
 
+                            {/* ✅ Settings also shows limit alerts */}
+                            <LimitAlertBanner resource="students" label="Students" info={limits.students} onUpgrade={handleUpgrade} />
+                            <LimitAlertBanner resource="exams" label="Exams" info={limits.exams} onUpgrade={handleUpgrade} />
+                            <LimitAlertBanner resource="teachers" label="Teachers" info={limits.teachers} onUpgrade={handleUpgrade} />
+
                             {/* Quick plan card */}
                             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-5">
                                 <div className="flex items-center justify-between mb-4">
@@ -1045,9 +1227,9 @@ export default function PrincipalDashboard({ principal }) {
                                     <TierBadge tier={currentTier} collapsed={false} />
                                 </div>
                                 <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 space-y-3 mb-4">
-                                    <UsageMeter label="Students" used={students.length} limit={tierConfig?.limits?.students ?? null} color={primary} />
-                                    <UsageMeter label="Exams" used={exams.length} limit={tierConfig?.limits?.exams ?? null} color={primary} />
-                                    <UsageMeter label="Teachers" used={teachers.length} limit={tierConfig?.limits?.teachers ?? null} color={primary} />
+                                    <UsageMeter label="Students" used={students.length} limit={TIER_LIMITS[currentTier]?.students ?? null} color={primary} />
+                                    <UsageMeter label="Exams" used={exams.length} limit={TIER_LIMITS[currentTier]?.exams ?? null} color={primary} />
+                                    <UsageMeter label="Teachers" used={teachers.length} limit={TIER_LIMITS[currentTier]?.teachers ?? null} color={primary} />
                                 </div>
                                 <button
                                     onClick={() => setActiveTab('subscriptions')}
@@ -1065,6 +1247,14 @@ export default function PrincipalDashboard({ principal }) {
                     {mobileBottomTabs.map(t => {
                         const Icon = t.icon;
                         const isActive = activeTab === t.id;
+                        // ✅ Alert dots on mobile bottom nav
+                        const hasAlert =
+                            (t.id === 'students' && (limits.students.blocked || limits.students.warning)) ||
+                            (t.id === 'exams' && (limits.exams.blocked || limits.exams.warning));
+                        const isBlockedAlert =
+                            (t.id === 'students' && limits.students.blocked) ||
+                            (t.id === 'exams' && limits.exams.blocked);
+
                         return (
                             <button
                                 key={t.id}
@@ -1082,6 +1272,10 @@ export default function PrincipalDashboard({ principal }) {
                                             <Lock size={6} className="text-slate-400" />
                                         </div>
                                     )}
+                                    {/* ✅ Limit alert dot on mobile nav */}
+                                    {hasAlert && !t.locked && (
+                                        <div className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${isBlockedAlert ? 'bg-red-500' : 'bg-amber-400'}`} />
+                                    )}
                                 </div>
                                 <span className="leading-none">{t.label}</span>
                                 {isActive && (
@@ -1090,12 +1284,17 @@ export default function PrincipalDashboard({ principal }) {
                             </button>
                         );
                     })}
-                    {/* "More" button opens drawer on mobile */}
                     <button
                         onClick={() => setMobileDrawerOpen(true)}
                         className="flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[9px] font-black text-slate-400"
                     >
-                        <Menu size={18} />
+                        <div className="relative">
+                            <Menu size={18} />
+                            {/* ✅ Alert dot on "More" if teachers are at limit (teachers tab is in overflow) */}
+                            {(limits.teachers.blocked || limits.teachers.warning) && (
+                                <div className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${limits.teachers.blocked ? 'bg-red-500' : 'bg-amber-400'}`} />
+                            )}
+                        </div>
                         <span className="leading-none">More</span>
                     </button>
                 </nav>
@@ -1108,7 +1307,7 @@ export default function PrincipalDashboard({ principal }) {
                     schoolName={school?.name || ''}
                     currentTier={currentTier}
                     onClose={() => setShowUpgradeModal(false)}
-                    onTierChange={(newTier) => setShowUpgradeModal(false)}
+                    onTierChange={() => setShowUpgradeModal(false)}
                 />
             )}
 

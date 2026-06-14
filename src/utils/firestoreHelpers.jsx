@@ -175,6 +175,12 @@ export function subscribeToStudentExams(schoolId, subjects, callback) {
     });
 }
 
+export const processExams = (state) => {
+    const { attempts } = state; // Or attempts_data
+    return state.exams_data.map(exam => {
+        console.log(attempts);
+    });
+}
 
 export function subscribeToSchoolExams(schoolId, callback) {
     const q = query(
@@ -182,12 +188,13 @@ export function subscribeToSchoolExams(schoolId, callback) {
         where('schoolId', '==', schoolId)
         // removed orderBy('createdAt') — field may not exist on all docs
     );
+
     return onSnapshot(q, (snap) => {
         const exams = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         console.log('📚 exams loaded:', exams.length, exams);
-        // in subscribeToSchoolExams callback temporarily
-        console.log('exam IDs:', exams.map(e => e.id));
-        console.log('attempt examIds:', attempts.map(a => ({ examId: a.examId, sourceUploadId: a.sourceUploadId, exam_id: a.exam_id })));
+
+        // Removed the broken console.log referencing 'attempt'
+
         callback(exams);
     });
 }
@@ -239,27 +246,29 @@ export function subscribeToStudentAttempts(studentUid, callback) {
  * Falls back gracefully when no exams exist.
  */
 export function subscribeToSchoolAttempts(schoolId, callback) {
-    const examUnsub = onSnapshot(
-        query(collection(db, 'exams'), where('schoolId', '==', schoolId)),
-        async (examSnap) => {
-            const examIds = examSnap.docs.map((d) => d.id);
+    if (!schoolId) return () => { };
 
-            // Fetch ALL attempts then filter client-side
-            // This handles legacy docs with no examId/schoolId
-            const allSnap = await getDocs(collection(db, 'exam_attempts'));
+    const q = query(
+        collection(db, "exam_attempts"),
+        where("schoolId", "==", schoolId)
+    );
 
-            const attempts = allSnap.docs
-                .map(d => ({ id: d.id, ...d.data() }))
-                .filter(a =>
-                    a.schoolId === schoolId ||           // new docs with schoolId
-                    examIds.includes(a.examId) ||        // docs with matching examId
-                    examIds.includes(a.sourceUploadId)   // legacy docs using sourceUploadId
-                );
+    return onSnapshot(
+        q,
+        (snap) => {
+            const attempts = snap.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+
+            console.log("✅ School attempts:", attempts.length);
 
             callback(attempts);
+        },
+        (err) => {
+            console.error("❌ School attempts listener:", err);
         }
     );
-    return examUnsub;
 }
 
 
