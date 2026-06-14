@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { doc, updateDoc, addDoc, collection, query, where, orderBy, getDocs, serverTimestamp } from 'firebase/firestore';
 import { db } from './../utils/firebase';
-import { TIERS, TIER_ORDER, getTier, getTierPrice } from './../utils/tierConfig';
+import { TIERS, getTierPrice, getTier, getTierConfig } from './../utils/tierConfig';
 import TierSelection from './TierSelection';
 import {
     X, CreditCard, Lock, CheckCircle2, Loader2, Receipt,
@@ -263,7 +263,7 @@ export default function PaymentManager({ schoolId, schoolName, currentTier, onCl
                                         onClick={() => setBillingCycle('yearly')}
                                         className={`px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 ${billingCycle === 'yearly' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-400'}`}
                                     >
-                                        Yearly <span className="bg-emerald-500 text-white text-[9px] px-1.5 py-0.5 rounded">1 Month Free</span>
+                                        Yearly <span className="bg-emerald-500 text-white text-[9px] px-1.5 py-0.5 rounded">2 Month Free</span>
                                     </button>
                                 </div>
                             )}

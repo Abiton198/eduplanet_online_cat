@@ -13,105 +13,59 @@ import {
     onSnapshot, addDoc, updateDoc, doc, serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../utils/firebase';
+import { getTierPrice, getTierConfig, TIERS as TIER_PLANS, TIER_ORDER } from '../utils/tierConfig';
 
-// ─── TIER CONFIG ──────────────────────────────────────────────────────────────
-const TIER_PLANS = [
-    {
-        id: 'free',
-        label: 'Free',
-        icon: Star,
-        monthlyPrice: 0,
-        annualPrice: 0,
-        gradient: 'from-slate-400 to-slate-500',
-        gradientBg: 'from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-750',
-        accentColor: '#64748b',
-        badge: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
-        ring: 'ring-2 ring-slate-300 dark:ring-slate-600',
-        features: ['30 students', '5 exams', '2 teachers', 'Basic AI marking', 'Email support'],
-        limits: { students: 30, exams: 5, teachers: 2 },
-    },
-    {
-        id: 'starter',
-        label: 'Starter',
-        icon: Zap,
-        monthlyPrice: 799,
-        annualPrice: 7990,
-        gradient: 'from-blue-500 to-cyan-500',
-        gradientBg: 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20',
-        accentColor: '#3b82f6',
-        badge: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-        ring: 'ring-2 ring-blue-400',
-        features: ['150 students', '30 exams', '10 teachers', 'Audit log', 'Advanced AI marking', 'Priority email support'],
-        limits: { students: 150, exams: 30, teachers: 10 },
-        popular: false,
-    },
-    {
-        id: 'professional',
-        label: 'Professional',
-        icon: Sparkles,
-        monthlyPrice: 1399,
-        annualPrice: 13990,
-        gradient: 'from-violet-500 to-purple-600',
-        gradientBg: 'from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20',
-        accentColor: '#8b5cf6',
-        badge: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
-        ring: 'ring-2 ring-violet-400',
-        features: ['500 students', 'Unlimited exams', '30 teachers', 'Full audit log', 'Advanced analytics', 'Custom branding', 'Priority phone support'],
-        limits: { students: 500, exams: null, teachers: 30 },
-        popular: true,
-    },
-    {
-        id: 'enterprise',
-        label: 'Enterprise',
-        icon: Crown,
-        monthlyPrice: 2999,
-        annualPrice: 29990,
-        gradient: 'from-amber-400 to-orange-500',
-        gradientBg: 'from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20',
-        accentColor: '#f59e0b',
-        badge: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-        ring: 'ring-2 ring-amber-400',
-        features: ['Unlimited students', 'Unlimited exams', 'Unlimited teachers', 'Multi-school management', 'SLA support', 'Custom branding', 'Dedicated account manager', 'On-site training'],
-        limits: { students: null, exams: null, teachers: null },
-    },
-];
-
-const PLAN_PRICES = { free: 0, starter: 799, professional: 1399, enterprise: 2999 };
 
 // ─── REAL BILLING HOOK ────────────────────────────────────────────────────────
 function useBillingHistory(schoolId) {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // PUT THE USEEFFECT HERE, INSIDE THE HOOK FUNCTION
     useEffect(() => {
-        if (!schoolId) { setLoading(false); return; }
+        if (!schoolId) {
+            setLoading(false);
+            return;
+        }
+
+        let isSubscribed = true;
         const q = query(
             collection(db, 'billing'),
             where('schoolId', '==', schoolId),
             orderBy('date', 'desc'),
             limit(12)
         );
+
         const unsub = onSnapshot(q, (snap) => {
+            if (!isSubscribed) return;
+
             setRecords(snap.docs.map(d => {
                 const data = d.data();
                 return {
                     ...data,
                     id: data.invoiceId || d.id,
-                    // normalise Firestore Timestamp → JS Date
                     date: data.date?.toDate?.() ?? new Date(data.date ?? Date.now()),
                 };
             }));
             setLoading(false);
-        }, () => setLoading(false));
-        return () => unsub();
-    }, [schoolId]);
+        }, (err) => {
+            if (isSubscribed) console.error("Snapshot error:", err);
+            setLoading(false);
+        });
+
+        return () => {
+            isSubscribed = false;
+            unsub();
+        };
+    }, [schoolId]); // Dependencies go here
 
     return { records, loading };
 }
 
 // ─── WRITE BILLING RECORD (call after payment succeeds) ───────────────────────
 export async function recordBillingPayment(schoolId, tier, paymentMethod = 'Card •••• 4242') {
-    const amount = PLAN_PRICES[tier] ?? 0;
+    const tierConfig = getTierConfig(tier);
+    const amount = tierConfig.monthlyPrice ?? 0;
     if (amount === 0) return;
 
     const now = new Date();
@@ -129,12 +83,7 @@ export async function recordBillingPayment(schoolId, tier, paymentMethod = 'Card
         invoiceId: `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${schoolId.slice(0, 6).toUpperCase()}`,
     });
 
-    await updateDoc(doc(db, 'schools', schoolId), {
-        tier,
-        subscribedAt: serverTimestamp(),
-        nextBillingDate: next.toISOString(),
-        updatedAt: serverTimestamp(),
-    });
+
 }
 
 // ─── COUNTDOWN HOOK ───────────────────────────────────────────────────────────
@@ -426,10 +375,15 @@ function AccountStatement({ records, tier, schoolName, accentColor }) {
 }
 
 // ─── CHANGE PLAN MODAL ────────────────────────────────────────────────────────
-function ChangePlanModal({ targetPlan, currentTier, onConfirm, onCancel }) {
-    const tiers = ['free', 'starter', 'professional', 'enterprise'];
-    const isUpgrade = tiers.indexOf(targetPlan.id) > tiers.indexOf(currentTier);
+function ChangePlanModal({ targetPlan, currentTier, onConfirm, onCancel, billingCycle = 'monthly' }) {
+    // 1. Use the new Source of Truth for tier order
+    const isUpgrade = TIER_ORDER.indexOf(targetPlan.id) > TIER_ORDER.indexOf(currentTier);
     const Icon = targetPlan.icon;
+
+    // 2. Dynamically calculate price display
+    const displayPrice = billingCycle === 'annual'
+        ? Math.round(targetPlan.annualPrice / 12)
+        : targetPlan.monthlyPrice;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
@@ -442,7 +396,7 @@ function ChangePlanModal({ targetPlan, currentTier, onConfirm, onCancel }) {
                 </h2>
                 <p className="text-xs text-slate-400 text-center mb-6">
                     {isUpgrade
-                        ? `You'll be billed R${targetPlan.monthlyPrice.toLocaleString()}/month starting today.`
+                        ? `You'll be billed R${displayPrice.toLocaleString()}/month ${billingCycle === 'annual' ? '(billed yearly)' : ''} starting today.`
                         : 'Your current plan remains active until the end of the billing period.'}
                 </p>
 
@@ -490,6 +444,35 @@ function ChangePlanModal({ targetPlan, currentTier, onConfirm, onCancel }) {
     );
 }
 
+// Add this new hook to your SubscriptionManager.jsx
+function useCurrentTier(schoolId) {
+    const [status, setStatus] = useState({ tier: 'free', loading: true });
+
+    useEffect(() => {
+        if (!schoolId) { setStatus({ tier: 'free', loading: false }); return; }
+
+        const q = query(
+            collection(db, 'billing'),
+            where('schoolId', '==', schoolId),
+            orderBy('createdAt', 'desc'), // Use the timestamp field
+            limit(1)
+        );
+
+        const unsub = onSnapshot(q, (snap) => {
+            if (!snap.empty) {
+                const latest = snap.docs[0].data();
+                setStatus({ tier: latest.tier, loading: false });
+            } else {
+                setStatus({ tier: 'free', loading: false });
+            }
+        });
+
+        return () => unsub();
+    }, [schoolId]);
+
+    return status;
+}
+
 // ─── MAIN EXPORT ──────────────────────────────────────────────────────────────
 export default function SubscriptionManager({
     currentTier = 'free',
@@ -503,7 +486,10 @@ export default function SubscriptionManager({
     const [activeSection, setActiveSection] = useState('plan');
     const [selectedPlan, setSelectedPlan] = useState(null);
 
-    const plan = TIER_PLANS.find(p => p.id === currentTier) || TIER_PLANS[0];
+    // 🐛 FIX: Always prioritize the real-time school document's tier over the prop
+    const { tier: activeTier, loading: tierLoading } = useCurrentTier(schoolId);
+
+    const plan = TIER_PLANS.find(p => p.id === activeTier) || TIER_PLANS[0];
     const accentColor = plan.accentColor;
 
     // ── Real billing records from Firestore ───────────────────────────────
@@ -511,21 +497,21 @@ export default function SubscriptionManager({
 
     // ── Next billing date — from Firestore school doc, not computed ───────
     const nextBillingDate = useMemo(() => {
+        // 1. Determine the anchor point (safely handle Firestore Timestamps)
         const anchor = school?.nextBillingDate || school?.billingStartDate || school?.subscribedAt;
-        if (!anchor) {
-            // No billing data yet — fallback to 1 month from now
-            const d = new Date();
-            d.setMonth(d.getMonth() + 1);
-            return d;
-        }
-        // Handle Firestore Timestamp or ISO string
-        const base = anchor?.toDate?.() ? anchor.toDate() : new Date(anchor);
-        // Advance from anchor until next future date
+
+        // 2. Normalize to a JS Date object
+        const base = anchor?.toDate?.() ? anchor.toDate() : (anchor ? new Date(anchor) : new Date());
+
+        // 3. Advance to the first future date
         const next = new Date(base);
         const now = new Date();
+
+        // This loop effectively handles renewals (e.g., if it's been months since the last payment)
         while (next <= now) {
             next.setMonth(next.getMonth() + 1);
         }
+
         return next;
     }, [school?.nextBillingDate, school?.billingStartDate, school?.subscribedAt]);
 
@@ -590,7 +576,7 @@ export default function SubscriptionManager({
                         {plan.monthlyPrice === 0 ? 'Free forever' : `R${plan.monthlyPrice.toLocaleString()}/month`}
                     </p>
                 </div>
-                {currentTier !== 'enterprise' && (
+                {activeTier !== 'enterprise' && (
                     <button onClick={() => setActiveSection('plan')}
                         className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black text-white hover:opacity-90 transition-opacity"
                         style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)` }}>
@@ -600,10 +586,10 @@ export default function SubscriptionManager({
             </div>
 
             {/* Countdown — only for paid tiers */}
-            {currentTier !== 'free' && (
+            {activeTier !== 'free' && (
                 <CountdownCard
                     nextBillingDate={nextBillingDate}
-                    tier={currentTier}
+                    tier={activeTier}
                     accentColor={accentColor}
                 />
             )}
@@ -625,28 +611,41 @@ export default function SubscriptionManager({
             {activeSection === 'plan' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {TIER_PLANS.map(p => (
-                        <PlanCard key={p.id} plan={p} currentTier={currentTier}
-                            onSelect={handlePlanSelect} billingCycle={billingCycle} />
+                        <PlanCard
+                            key={p.id}
+                            plan={p}
+                            currentTier={activeTier}
+                            onSelect={handlePlanSelect}
+                            billingCycle={billingCycle}
+                        />
                     ))}
                 </div>
             )}
 
             {/* BILLING SECTION */}
             {activeSection === 'billing' && (
-                <BillingHistory records={billingRecords} loading={billingLoading} accentColor={accentColor} />
+                <BillingHistory
+                    records={billingRecords}
+                    loading={billingLoading}
+                    accentColor={accentColor}
+                />
             )}
 
             {/* STATEMENT SECTION */}
             {activeSection === 'statement' && (
-                <AccountStatement records={billingRecords} tier={currentTier}
-                    schoolName={schoolName} accentColor={accentColor} />
+                <AccountStatement
+                    records={billingRecords}
+                    tier={activeTier}
+                    schoolName={schoolName}
+                    accentColor={accentColor}
+                />
             )}
 
-            {/* Change plan modal */}
+            {/* MODAL */}
             {selectedPlan && (
                 <ChangePlanModal
                     targetPlan={selectedPlan}
-                    currentTier={currentTier}
+                    currentTier={activeTier}
                     onConfirm={handleConfirmChange}
                     onCancel={() => setSelectedPlan(null)}
                 />

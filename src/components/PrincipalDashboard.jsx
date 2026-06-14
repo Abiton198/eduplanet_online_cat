@@ -18,14 +18,14 @@ import {
     ChevronDown, ChevronRight, Filter, Download, Printer, LogOut,
     Search, X, Eye, BarChart2, CheckCircle2, Clock, RefreshCw,
     School, Settings, Moon, Sun, Menu, Zap, Lock, ArrowUpRight,
-    Sparkles, Crown, Star, CreditCard, ChevronLeft,
+    Sparkles, Crown, Star, CreditCard, ChevronLeft, Shield
 } from 'lucide-react';
 import PaymentManager from './PaymentManager';
 import SubscriptionManager from './SubscriptionManager';
 import {
     subscribeToSchoolTeachers, subscribeToSchoolStudents,
     subscribeToSchoolExams, subscribeToSchoolAttempts, subscribeToAuditLog,
-    countByGrade, averageScore, groupBySubject, passRate,
+    countByGrade, averageScore, groupBySubject, passRate, useActiveTier
 } from '../utils/firestoreHelpers';
 import { useSchool } from '../utils/schoolContext';
 import { TIERS, getTierConfig, isFeatureAllowed, isAtLimit, getUsagePercent } from '../utils/tierConfig';
@@ -34,53 +34,25 @@ import autoTable from 'jspdf-autotable';
 import { onSnapshot, collection, getDocs, query, where } from 'firebase/firestore';
 
 
+
 // ─── GRADE ORDER ──────────────────────────────────────────────────────────────
 const GRADE_ORDER = ['Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
 
 // ─── TIER VISUAL META ─────────────────────────────────────────────────────────
-const TIER_VISUAL = {
-    free: {
-        label: 'Free',
-        icon: Star,
-        gradient: 'from-slate-400 to-slate-500',
-        badge: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
-        ring: 'ring-slate-300',
-    },
-    starter: {
-        label: 'Starter',
-        icon: Zap,
-        gradient: 'from-blue-500 to-cyan-500',
-        badge: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-        ring: 'ring-blue-400',
-    },
-    professional: {
-        label: 'Professional',
-        icon: Sparkles,
-        gradient: 'from-violet-500 to-purple-600',
-        badge: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
-        ring: 'ring-violet-400',
-    },
-    enterprise: {
-        label: 'Enterprise',
-        icon: Crown,
-        gradient: 'from-amber-400 to-orange-500',
-        badge: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-        ring: 'ring-amber-400',
-    },
-};
+const TIER_VISUAL = TIERS.map(tier => ({
+    label: tier.label,
+    icon: tier.icon,
+    gradient: tier.gradient,
+    badge: tier.gradientBg,
+    ring: tier.gradientBg,
+}));
 
 // ─── LIMIT STATUS HOOK ────────────────────────────────────────────────────────
 // Single source of truth for all limit checks across the dashboard
-const TIER_LIMITS = {
-    free: { students: 30, exams: 5, teachers: 2 },
-    starter: { students: 150, exams: 30, teachers: 10 },
-    professional: { students: 500, exams: null, teachers: 30 },
-    enterprise: { students: null, exams: null, teachers: null },
-};
 
 function useLimitStatus(tier, usage = {}) {
     return useMemo(() => {
-        const limits = TIER_LIMITS[tier] || TIER_LIMITS.free;
+        const limits = getTierConfig(tier).limits;
 
         const check = (key) => {
             const max = limits[key] ?? null;
@@ -121,10 +93,10 @@ function LimitAlertBanner({ resource, label, info, onUpgrade }) {
                 ? <Lock size={14} className="text-red-500 flex-shrink-0 mt-0.5" />
                 : <AlertTriangle size={14} className="text-amber-500 flex-shrink-0 mt-0.5" />}
             <div className="flex-1 min-w-0">
-                <p className={`font-black ${isCrit ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                <p className={`font-black ${isCrit ? 'text-red-700 dark:text-red-300' : 'text-black dark:text-amber-300'}`}>
                     {isCrit ? `${label} limit reached` : `${label} approaching limit`}
                 </p>
-                <p className={`mt-0.5 ${isCrit ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                <p className={`mt-0.5 ${isCrit ? 'text-red-600 dark:text-red-400' : 'text-black dark:text-amber-400'}`}>
                     {isCrit
                         ? `You've used all ${info.max} ${label.toLowerCase()} on your current plan. New ${label.toLowerCase()} cannot be added until you upgrade.`
                         : `${info.used} of ${info.max} used (${info.pct}%). Consider upgrading before you're blocked.`}
@@ -242,7 +214,7 @@ function UsageMeter({ label, used, limit, color = '#4f46e5' }) {
             <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                 <div
                     className="h-full rounded-full transition-all duration-700"
-                    style={{ width: `${pct}%`, backgroundColor: barColor }}
+                    style={{ width: `${pct}%`, backgroundColor: barColor, color: 'black' }}
                 />
             </div>
         </div>
@@ -250,32 +222,44 @@ function UsageMeter({ label, used, limit, color = '#4f46e5' }) {
 }
 
 function TierBadge({ tier, collapsed }) {
-    const vis = TIER_VISUAL[tier] || TIER_VISUAL.free;
-    const Icon = vis.icon;
+    // Fetch the config directly from our unified source of truth
+    const config = getTierConfig(tier);
+    const Icon = config.icon;
+
     if (collapsed) {
         return (
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center bg-gradient-to-br ${vis.gradient} mx-auto`}>
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center bg-gradient-to-br ${config.gradient} mx-auto`}>
                 <Icon size={14} className="text-white" />
             </div>
         );
     }
+
     return (
-        <div className={`flex items-center gap-2 px-2 py-1.5 rounded-xl ${vis.badge}`}>
-            <div className={`w-5 h-5 rounded-lg flex items-center justify-center bg-gradient-to-br ${vis.gradient} flex-shrink-0`}>
+        <div className={`flex items-center gap-2 px-2 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700`}>
+            <div className={`w-5 h-5 rounded-lg flex items-center justify-center bg-gradient-to-br ${config.gradient} flex-shrink-0`}>
                 <Icon size={10} className="text-white" />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-wider">{vis.label} Plan</span>
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                {config.label} Plan
+            </span>
         </div>
     );
 }
 
 function UpgradeBanner({ tier, onUpgrade, onDismiss }) {
-    if (tier === 'enterprise') return null;
+    // 1. Enterprise has no upsell
+    if (tier === 'platinum') return null;
+
+    // 2. Define messages based on the TIER_PLANS structure
+    // This keeps it aligned with your TIER_CONFIG constant
     const messages = {
         free: "You're on the Free plan. Upgrade to unlock more students, exams & AI marking.",
-        starter: 'Upgrade to Professional for unlimited exams, advanced analytics & priority support.',
-        professional: 'Upgrade to Enterprise for multi-school management, SLA support & custom branding.',
+        silver: 'Upgrade to Gold for unlimited exams, advanced analytics & priority support.',
+        gold: 'Upgrade to Platinum for multi-school management, SLA support & custom branding.',
     };
+
+    // 3. Fallback check: if the tier isn't in our list, don't show a potentially wrong message
+    if (!messages[tier]) return null;
     return (
         <div className="relative bg-gradient-to-r from-violet-600 to-indigo-600 rounded-2xl p-4 flex items-center gap-3 overflow-hidden print:hidden">
             <div className="absolute inset-0 opacity-10">
@@ -286,7 +270,7 @@ function UpgradeBanner({ tier, onUpgrade, onDismiss }) {
                 <Zap size={16} className="text-white" />
             </div>
             <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-black text-white leading-snug">{messages[tier] || messages.free}</p>
+                <p className="text-[11px] font-black text-white leading-snug">{messages[tier]}</p>
             </div>
             <button
                 onClick={onUpgrade}
@@ -353,8 +337,6 @@ export default function PrincipalDashboard({ principal }) {
     const { school } = useSchool();
     const primary = school?.primary || '#4f46e5';
 
-    const currentTier = school?.tier || 'free';
-    const tierConfig = getTierConfig(currentTier);
     const [bannerDismissed, setBannerDismissed] = useState(false);
 
     // Data
@@ -384,6 +366,8 @@ export default function PrincipalDashboard({ principal }) {
     const schoolId = principal?.schoolId || principal?.uid;
     const printRef = useRef();
 
+    const { tier: activeTier, loading } = useActiveTier(schoolId);
+    const config = getTierConfig(activeTier);
     // ── Live usage object — drives ALL limit checks ───────────────────────────
     const usage = useMemo(() => ({
         students: students.length,
@@ -392,7 +376,9 @@ export default function PrincipalDashboard({ principal }) {
     }), [students.length, exams.length, teachers.length]);
 
     // ── Limit status — single hook, used everywhere ───────────────────────────
-    const limits = useLimitStatus(currentTier, usage);
+    const activeTierConfig = getTierConfig(activeTier);
+    const limits = activeTierConfig.limits;
+
 
     useEffect(() => {
         if (!schoolId) return;
@@ -490,7 +476,7 @@ export default function PrincipalDashboard({ principal }) {
         pdf.setTextColor(100, 100, 100);
         pdf.text(`Generated: ${new Date().toLocaleDateString('en-ZA')}`, 20, 27);
         pdf.text(`Principal: ${principal?.title || ''} ${principal?.name || ''} ${principal?.surname || ''}`, 20, 33);
-        pdf.text(`Plan: ${TIER_VISUAL[currentTier]?.label || currentTier}`, 20, 39);
+        pdf.text(`Plan: ${TIER_VISUAL[activeTier]?.label || activeTier}`, 20, 39);
 
         let y = 48;
         autoTable(pdf, {
@@ -522,7 +508,7 @@ export default function PrincipalDashboard({ principal }) {
         });
 
         pdf.save(`${school?.name || 'report'}_${new Date().toISOString().split('T')[0]}.pdf`);
-    }, [school, principal, teachers, students, exams, attempts, filteredStudents, avgScore, overallPassRate, currentTier]);
+    }, [school, principal, teachers, students, exams, attempts, filteredStudents, avgScore, overallPassRate, activeTier]);
 
     const handlePrint = () => window.print();
     const handleSignOut = async () => { await signOut(auth); navigate('/'); };
@@ -536,7 +522,7 @@ export default function PrincipalDashboard({ principal }) {
             id: 'audit',
             label: 'Audit Log',
             icon: AlertTriangle,
-            locked: !isFeatureAllowed(currentTier, 'auditLog'),
+            locked: !isFeatureAllowed(activeTier, 'auditLog'),
             requiredTier: 'starter',
         },
         { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
@@ -568,7 +554,7 @@ export default function PrincipalDashboard({ principal }) {
                     )}
                 </div>
                 <div className={`mt-3 ${(sidebarOpen || onNavClick) ? '' : 'flex justify-center'}`}>
-                    <TierBadge tier={currentTier} collapsed={!sidebarOpen && !onNavClick} />
+                    <TierBadge tier={activeTier} collapsed={!sidebarOpen && !onNavClick} />
                 </div>
             </div>
 
@@ -629,11 +615,29 @@ export default function PrincipalDashboard({ principal }) {
                 <div className="px-3 pb-2 space-y-3 flex-shrink-0">
                     <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 space-y-2.5">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Usage</p>
-                        <UsageMeter label="Students" used={students.length} limit={TIER_LIMITS[currentTier]?.students ?? null} color={primary} />
-                        <UsageMeter label="Exams" used={exams.length} limit={TIER_LIMITS[currentTier]?.exams ?? null} color={primary} />
-                        <UsageMeter label="Teachers" used={teachers.length} limit={TIER_LIMITS[currentTier]?.teachers ?? null} color={primary} />
+
+                        {/* Using activeTier here ensures accurate limit calculation */}
+                        <UsageMeter
+                            label="Students"
+                            used={students.length}
+                            limit={limits.students ?? null}
+                            color={primary}
+                        />
+                        <UsageMeter
+                            label="Exams"
+                            used={exams.length}
+                            limit={limits.exams ?? null}
+                            color={primary}
+                        />
+                        <UsageMeter
+                            label="Teachers"
+                            used={teachers.length}
+                            limit={limits.teachers ?? null}
+                            color={primary}
+                        />
                     </div>
-                    {currentTier !== 'enterprise' && (
+
+                    {activeTier && activeTier !== 'enterprise' && (
                         <button
                             onClick={handleUpgrade}
                             className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:opacity-90 transition-opacity"
@@ -711,14 +715,14 @@ export default function PrincipalDashboard({ principal }) {
                         ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
                         : limits.anyWarning
                             ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
-                            : TIER_VISUAL[currentTier]?.badge
+                            : TIER_VISUAL[activeTier]?.badge
                         }`}>
                         {limits.anyBlocked
                             ? <Lock size={10} />
                             : limits.anyWarning
                                 ? <AlertTriangle size={10} />
-                                : React.createElement(TIER_VISUAL[currentTier]?.icon || Star, { size: 10 })}
-                        {limits.anyBlocked ? 'Limit reached' : limits.anyWarning ? 'Near limit' : TIER_VISUAL[currentTier]?.label}
+                                : React.createElement(TIER_VISUAL[activeTier]?.icon || Star, { size: 10 })}
+                        {limits.anyBlocked ? 'Limit reached' : limits.anyWarning ? 'Near limit' : TIER_VISUAL[activeTier]?.label}
                     </div>
 
                     <button
@@ -744,9 +748,9 @@ export default function PrincipalDashboard({ principal }) {
                     {/* ── OVERVIEW TAB ── */}
                     {activeTab === 'overview' && (
                         <>
-                            {!bannerDismissed && currentTier !== 'enterprise' && (
+                            {!bannerDismissed && activeTier !== 'enterprise' && (
                                 <UpgradeBanner
-                                    tier={currentTier}
+                                    tier={activeTier}
                                     onUpgrade={handleUpgrade}
                                     onDismiss={() => setBannerDismissed(true)}
                                 />
@@ -762,6 +766,7 @@ export default function PrincipalDashboard({ principal }) {
                                 <StatCard label="Students" value={students.length} icon={Users} color="emerald" />
                                 <StatCard label="Exams" value={exams.length} icon={FileText} color="amber" />
                                 <StatCard label="Avg Score" value={avgScore != null ? `${avgScore}%` : '—'} icon={TrendingUp} color="rose" sub={`Pass: ${overallPassRate}%`} />
+
                             </div>
 
                             {/* Grade chart */}
@@ -1126,7 +1131,7 @@ export default function PrincipalDashboard({ principal }) {
 
                     {/* ── AUDIT LOG TAB ── */}
                     {activeTab === 'audit' && (
-                        isFeatureAllowed(currentTier, 'auditLog')
+                        isFeatureAllowed(activeTier, 'auditLog')
                             ? (
                                 <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
                                     <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
@@ -1172,7 +1177,7 @@ export default function PrincipalDashboard({ principal }) {
                     {/* ── SUBSCRIPTIONS TAB ── */}
                     {activeTab === 'subscriptions' && (
                         <SubscriptionManager
-                            currentTier={currentTier}
+                            activeTier={activeTier}
                             schoolName={school?.name || ''}
                             schoolId={schoolId}
                             school={school}
@@ -1224,12 +1229,27 @@ export default function PrincipalDashboard({ principal }) {
                                         <h2 className="text-sm font-black text-slate-800 dark:text-white">Plan & Billing</h2>
                                         <p className="text-xs text-slate-400 mt-0.5">Manage subscription and usage.</p>
                                     </div>
-                                    <TierBadge tier={currentTier} collapsed={false} />
+                                    <TierBadge tier={activeTier} collapsed={false} />
                                 </div>
                                 <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 space-y-3 mb-4">
-                                    <UsageMeter label="Students" used={students.length} limit={TIER_LIMITS[currentTier]?.students ?? null} color={primary} />
-                                    <UsageMeter label="Exams" used={exams.length} limit={TIER_LIMITS[currentTier]?.exams ?? null} color={primary} />
-                                    <UsageMeter label="Teachers" used={teachers.length} limit={TIER_LIMITS[currentTier]?.teachers ?? null} color={primary} />
+                                    <UsageMeter
+                                        label="Students"
+                                        used={students.length}
+                                        limit={limits.students ?? null}
+                                        color={primary}
+                                    />
+                                    <UsageMeter
+                                        label="Exams"
+                                        used={exams.length}
+                                        limit={limits.exams ?? null}
+                                        color={primary}
+                                    />
+                                    <UsageMeter
+                                        label="Teachers"
+                                        used={teachers.length}
+                                        limit={limits.teachers ?? null}
+                                        color={primary}
+                                    />
                                 </div>
                                 <button
                                     onClick={() => setActiveTab('subscriptions')}
@@ -1305,7 +1325,7 @@ export default function PrincipalDashboard({ principal }) {
                 <PaymentManager
                     schoolId={schoolId}
                     schoolName={school?.name || ''}
-                    currentTier={currentTier}
+                    activeTier={activeTier}
                     onClose={() => setShowUpgradeModal(false)}
                     onTierChange={() => setShowUpgradeModal(false)}
                 />

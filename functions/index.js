@@ -3,6 +3,42 @@ const { defineSecret } = require("firebase-functions/params");
 
 const groqKey = defineSecret("GROQ_API_KEY");
 
+
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+admin.initializeApp();
+
+exports.processBillingUpdate = functions.firestore
+    .document('billing/{docId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+
+        // Only trigger if status is "pending" (or however you initiate)
+        if (data.status !== 'pending') return null;
+
+        const db = admin.firestore();
+        const schoolRef = db.collection('schools').doc(data.schoolId);
+
+        // Calculate next billing date
+        const nextDate = new Date();
+        nextDate.setMonth(nextDate.getMonth() + 1);
+
+        try {
+            // Update the school's tier based on the billing data
+            await schoolRef.update({
+                tier: data.tier,
+                subscribedAt: admin.firestore.FieldValue.serverTimestamp(),
+                nextBillingDate: nextDate.toISOString(),
+            });
+
+            // Mark billing as paid
+            return snap.ref.update({ status: 'paid' });
+        } catch (error) {
+            console.error("Error syncing tier:", error);
+            return null;
+        }
+    });
+
 // ── Repair common AI JSON mistakes ────────────────────────────────────────────
 function repairJson(raw) {
     let text = raw.replace(/```json|```/g, "").trim();

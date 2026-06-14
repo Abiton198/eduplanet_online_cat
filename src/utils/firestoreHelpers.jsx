@@ -6,6 +6,7 @@ import {
     getDocs, onSnapshot, serverTimestamp, addDoc, arrayUnion,
 } from 'firebase/firestore';
 import { db } from '../utils/firebase';
+import { useState, useEffect, useCallback } from 'react';
 
 // ── Exam Audit ────────────────────────────────────────────────────────────────
 
@@ -328,4 +329,38 @@ export function passRate(attempts) {
     if (!attempts.length) return 0;
     const passed = attempts.filter(a => (a.score ?? a.percentage ?? 0) >= 40).length;
     return Math.round((passed / attempts.length) * 100);
+}
+
+// ── Active Tier Hook ─────────────────────────────────────────────────────────────
+export function useActiveTier(schoolId) {
+    const [status, setStatus] = useState({ tier: 'free', loading: true });
+
+    useEffect(() => {
+        if (!schoolId) { setStatus({ tier: 'free', loading: false }); return; }
+
+        const q = query(
+            collection(db, 'billing'),
+            where('schoolId', '==', schoolId),
+            orderBy('createdAt', 'desc'),
+            limit(1)
+        );
+
+        const unsub = onSnapshot(q, (snap) => {
+            if (!snap.empty) {
+                const latest = snap.docs[0].data();
+                setStatus({ tier: latest.tier, loading: false });
+            } else {
+                setStatus({ tier: 'free', loading: false });
+            }
+        });
+
+        return () => unsub();
+    }, [schoolId]);
+
+    return status;
+}
+
+export function getTierPrice(tierId, cycle) {
+    const tier = getTierConfig(tierId);
+    return cycle === 'annual' ? tier.annualPrice : tier.monthlyPrice;
 }

@@ -1,80 +1,102 @@
-// ─── tierConfig.js ────────────────────────────────────────────────────────────
-// Single source of truth for tier definitions, limits, and feature flags.
-// Imported by: PrincipalDashboard, PaymentManager, TierSelection, tierEnforcer.
+import { Star, Zap, Sparkles, Crown } from 'lucide-react';
 
 export const TIERS = [
     {
         id: 'free',
-        name: 'Free',
-        price: 0,
-        period: null,
-        tagline: 'Get started at no cost',
-        limits: { students: 30, teachers: 3, exams: 10 },
-        features: { auditLog: false, advancedAnalytics: false, customBranding: false, prioritySupport: false, multiSchool: false, aiMarking: true, basicAnalytics: true, pdfExport: true },
+        label: 'Free',
+        monthlyPrice: 0,
+        annualPrice: 0,
+        icon: Star,
+        gradient: 'from-slate-400 to-slate-500',
+        gradientBg: 'from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-750',
+        accentColor: '#64748b',
+        limits: { students: 30, teachers: 2, exams: 5 },
+        features: ['30 students', '5 exams', '2 teachers', 'Basic AI marking', 'Email support'],
     },
     {
-        id: 'starter',
-        name: 'Starter',
-        price: 499,
-        period: 'month',
-        tagline: 'Perfect for small schools',
-        limits: { students: 150, teachers: 10, exams: 50 },
-        features: { auditLog: true, advancedAnalytics: false, customBranding: false, prioritySupport: false, multiSchool: false, aiMarking: true, basicAnalytics: true, pdfExport: true },
+        id: 'silver',
+        label: 'Silver',
+        monthlyPrice: 799,
+        annualPrice: 7990,
+        icon: Zap,
+        gradient: 'from-blue-500 to-cyan-500',
+        gradientBg: 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20',
+        accentColor: '#3b82f6',
+        limits: { students: 150, teachers: 10, exams: 30 },
+        features: ['150 students', '30 exams', '10 teachers', 'Audit log', 'Advanced AI marking'],
     },
     {
-        id: 'professional',
-        name: 'Professional',
-        price: 1299,
-        period: 'month',
-        tagline: 'Full power for growing schools',
+        id: 'gold',
+        label: 'Gold',
+        monthlyPrice: 1399,
+        annualPrice: 13990,
+        icon: Sparkles,
+        gradient: 'from-violet-500 to-purple-600',
+        gradientBg: 'from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20',
+        accentColor: '#8b5cf6',
+        limits: { students: 500, teachers: 30, exams: 120 },
+        features: ['500 students', '120 exams', '30 teachers', 'Full audit log', 'Advanced analytics'],
         popular: true,
-        limits: { students: 500, teachers: 30, exams: null },
-        features: { auditLog: true, advancedAnalytics: true, customBranding: true, prioritySupport: true, multiSchool: false, aiMarking: true, basicAnalytics: true, pdfExport: true },
     },
     {
         id: 'platinum',
-        name: 'Platinum',
-        price: 2499,
-        period: 'month',
-        tagline: 'Premium plan for ultimate flexibility',
-        popular: true,
-        limits: { students: 1000, teachers: 100, exams: null },
-        features: { auditLog: true, advancedAnalytics: true, customBranding: true, prioritySupport: true, multiSchool: false, aiMarking: true, basicAnalytics: true, pdfExport: true },
-    },
-    {
-        id: 'enterprise',
-        name: 'Enterprise',
-        price: null,
-        period: null,
-        tagline: 'Tailored for districts & groups',
-        limits: { students: null, teachers: null, exams: null },
-        features: { auditLog: true, advancedAnalytics: true, customBranding: true, prioritySupport: true, multiSchool: true, aiMarking: true, basicAnalytics: true, pdfExport: true },
-    },
+        label: 'Platinum',
+        monthlyPrice: 2999,
+        annualPrice: 29990,
+        icon: Crown,
+        gradient: 'from-amber-400 to-orange-500',
+        gradientBg: 'from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20',
+        accentColor: '#f59e0b',
+        limits: { students: 1000, teachers: 100, exams: 500 },
+        features: ['1000 students', '500 exams', '100 teachers', 'Full audit log', 'Advanced analytics'],
+    }
 ];
 
-export const TIER_ORDER = ['free', 'starter', 'professional', 'platinum', 'enterprise'];
+export const TIER_ORDER = ['free', 'silver', 'gold', 'platinum'];
 
+
+// Calculates price based on cycle using the new unified structure
+export function getTierPrice(tier, billingCycle) {
+    if (!tier) return 0;
+    return billingCycle === 'annual' ? tier.annualPrice : tier.monthlyPrice;
+}
+
+// Logic helpers required by your components
+export function isUpgrade(currentTierId, newTierId) {
+    return TIER_ORDER.indexOf(newTierId) > TIER_ORDER.indexOf(currentTierId);
+}
+
+export function isAtLimit(tierId, limitKey, currentCount) {
+    const limit = getTierConfig(tierId).limits[limitKey];
+    return limit !== null && currentCount >= limit;
+}
+
+export function getUsagePercent(tierId, limitKey, currentCount) {
+    const limit = getTierConfig(tierId).limits[limitKey];
+    if (limit === null) return null;
+    return Math.min(Math.round((currentCount / limit) * 100), 100);
+}
+
+export function isFeatureAllowed(tierId, featureKey) {
+    const tier = getTierConfig(tierId);
+    // If you add a "features" object to your tier definitions later, 
+    // this will be the central gatekeeper
+    return tier.features?.includes(featureKey) ?? false;
+}
+
+export function getStorageLimit(tierId) {
+    const tier = getTierConfig(tierId);
+    return tier.limits.storageGB || 1; // Default 1GB for free, check your definitions
+}
+
+export function getBandwidthLimit(tierId) {
+    const tier = getTierConfig(tierId);
+    return tier.limits.bandwidthGB || 1;
+}
+
+// Helper to get any tier by ID
 export function getTierConfig(tierId) {
     return TIERS.find((t) => t.id === tierId) ?? TIERS[0];
 }
 
 export const getTier = getTierConfig;
-
-/**
- * Calculates dynamic tier price based on subscription cycle
- * Yearly cycles grant a 1-month discount (Price * 11)
- * * @param {object} tier 
- * @param {string} billingCycle 'monthly' | 'yearly'
- * @returns {number|null}
- */
-export function getTierPrice(tier, billingCycle) {
-    if (!tier || tier.price === null || tier.price === undefined) return null;
-    if (tier.id === 'free') return 0;
-    return billingCycle === 'yearly' ? tier.price * 11 : tier.price;
-}
-
-// ─── EXTRACTED UNCHANGED HELPER CODES FOR CONTEXT ─────────────────────────────
-export function isUpgrade(currentTier, newTier) { return TIER_ORDER.indexOf(newTier) > TIER_ORDER.indexOf(currentTier); }
-export function isFeatureAllowed(tierId, featureKey) { return getTierConfig(tierId).features[featureKey] === true; }
-export function isAtLimit(tierId, limitKey, currentCount) { const l = getTierConfig(tierId).limits[limitKey]; return (l === null || l === undefined) ? false : currentCount >= l; }
-export function getUsagePercent(tierId, limitKey, currentCount) { const l = getTierConfig(tierId).limits[limitKey]; return (l === null || l === undefined) ? null : Math.min(Math.round((currentCount / l) * 100), 100); }
