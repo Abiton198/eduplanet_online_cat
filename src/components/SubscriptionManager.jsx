@@ -2,43 +2,67 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-    Crown, Zap, Sparkles, Star, ChevronDown, ChevronUp,
+    ChevronDown, ChevronUp,
     ArrowUpRight, ArrowDownRight, CheckCircle2, XCircle,
-    Clock, CreditCard, Receipt, FileText, Download,
+    CreditCard, Receipt, FileText, Download,
     AlertTriangle, RefreshCw, CalendarClock, TrendingUp,
-    Shield, Infinity, Lock, ChevronRight, ExternalLink,
+    Shield, Zap, X
 } from 'lucide-react';
 import {
     collection, query, where, orderBy, limit,
     onSnapshot, addDoc, updateDoc, doc, serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../utils/firebase';
-import { getTierPrice, getTierConfig, TIERS as TIER_PLANS, TIER_ORDER } from '../utils/tierConfig';
+import {
+    TIERS, TIER_ORDER, getTierConfig, getTierPrice, isUpgrade as isTierUpgrade,
+    useCurrentTier
+} from '../utils/tierConfig';
 
+// ─── WRITE BILLING RECORD ─────────────────────────────────────────────────────
+export async function recordBillingPayment(schoolId, tierId, paymentMethod = 'Card •••• 4242') {
+    const tier = getTierConfig(tierId);
+    const amount = tier.monthlyPrice ?? 0;
+    if (amount === 0) return;
+
+    const now = new Date();
+    const next = new Date(now);
+    next.setMonth(next.getMonth() + 1);
+
+    await addDoc(collection(db, 'billing'), {
+        schoolId,
+        tier: tierId,
+        amount,
+        date: serverTimestamp(),
+        description: `${tier.label} Plan — Monthly`,
+        status: 'paid',
+        method: paymentMethod,
+        invoiceId: `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${schoolId.slice(0, 6).toUpperCase()}`,
+    });
+
+    await updateDoc(doc(db, 'schools', schoolId), {
+        tier: tierId,
+        subscribedAt: serverTimestamp(),
+        nextBillingDate: next.toISOString(),
+        updatedAt: serverTimestamp(),
+    });
+}
 
 // ─── REAL BILLING HOOK ────────────────────────────────────────────────────────
 function useBillingHistory(schoolId) {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // PUT THE USEEFFECT HERE, INSIDE THE HOOK FUNCTION
     useEffect(() => {
-        if (!schoolId) {
-            setLoading(false);
-            return;
-        }
-
-        let isSubscribed = true;
+        if (!schoolId) { setLoading(false); return; }
+        let active = true;
         const q = query(
             collection(db, 'billing'),
             where('schoolId', '==', schoolId),
             orderBy('date', 'desc'),
             limit(12)
         );
-
         const unsub = onSnapshot(q, (snap) => {
-            if (!isSubscribed) return;
-
+            if (!active) return;
             setRecords(snap.docs.map(d => {
                 const data = d.data();
                 return {
@@ -48,42 +72,11 @@ function useBillingHistory(schoolId) {
                 };
             }));
             setLoading(false);
-        }, (err) => {
-            if (isSubscribed) console.error("Snapshot error:", err);
-            setLoading(false);
-        });
-
-        return () => {
-            isSubscribed = false;
-            unsub();
-        };
-    }, [schoolId]); // Dependencies go here
+        }, () => { if (active) setLoading(false); });
+        return () => { active = false; unsub(); };
+    }, [schoolId]);
 
     return { records, loading };
-}
-
-// ─── WRITE BILLING RECORD (call after payment succeeds) ───────────────────────
-export async function recordBillingPayment(schoolId, tier, paymentMethod = 'Card •••• 4242') {
-    const tierConfig = getTierConfig(tier);
-    const amount = tierConfig.monthlyPrice ?? 0;
-    if (amount === 0) return;
-
-    const now = new Date();
-    const next = new Date(now);
-    next.setMonth(next.getMonth() + 1);
-
-    await addDoc(collection(db, 'billing'), {
-        schoolId,
-        tier,
-        amount,
-        date: serverTimestamp(),
-        description: `${tier.charAt(0).toUpperCase() + tier.slice(1)} Plan — Monthly`,
-        status: 'paid',
-        method: paymentMethod,
-        invoiceId: `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${schoolId.slice(0, 6).toUpperCase()}`,
-    });
-
-
 }
 
 // ─── COUNTDOWN HOOK ───────────────────────────────────────────────────────────
@@ -94,7 +87,7 @@ function useCountdown(targetDate) {
         if (!targetDate) return;
         const calc = () => {
             const diff = new Date(targetDate) - new Date();
-            if (diff <= 0) return setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+            if (diff <= 0) { setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 }); return; }
             setTimeLeft({
                 days: Math.floor(diff / 86400000),
                 hours: Math.floor((diff % 86400000) / 3600000),
@@ -105,31 +98,26 @@ function useCountdown(targetDate) {
         calc();
         const id = setInterval(calc, 1000);
         return () => clearInterval(id);
-    }, [targetDate]);
+    }, [String(targetDate)]);
 
     return timeLeft;
 }
 
 // ─── COUNTDOWN CARD ───────────────────────────────────────────────────────────
-function CountdownCard({ nextBillingDate, tier, accentColor }) {
+function CountdownCard({ nextBillingDate, tierId, accentColor }) {
     const t = useCountdown(nextBillingDate);
-    const amount = PLAN_PRICES[tier] ?? 0;
+    const tier = getTierConfig(tierId);
+    const amount = tier.monthlyPrice ?? 0;
 
     return (
-        <div
-            className="relative rounded-2xl p-5 overflow-hidden"
-            style={{ background: `linear-gradient(135deg, ${accentColor}18, ${accentColor}08)`, border: `1px solid ${accentColor}30` }}
-        >
-            <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-10"
-                style={{ background: accentColor }} />
-
+        <div className="relative rounded-2xl p-5 overflow-hidden"
+            style={{ background: `linear-gradient(135deg, ${accentColor}18, ${accentColor}08)`, border: `1px solid ${accentColor}30` }}>
+            <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-10" style={{ background: accentColor }} />
             <div className="flex items-start justify-between mb-4">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
                         <CalendarClock size={14} style={{ color: accentColor }} />
-                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            Next Billing
-                        </span>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Next Billing</span>
                     </div>
                     <p className="text-sm font-black text-slate-800 dark:text-white">
                         {nextBillingDate
@@ -139,12 +127,9 @@ function CountdownCard({ nextBillingDate, tier, accentColor }) {
                 </div>
                 <div className="text-right">
                     <p className="text-[10px] text-slate-400 font-bold">Amount due</p>
-                    <p className="text-lg font-black text-slate-800 dark:text-white">
-                        R{amount.toLocaleString()}
-                    </p>
+                    <p className="text-lg font-black text-slate-800 dark:text-white">R{amount.toLocaleString()}</p>
                 </div>
             </div>
-
             <div className="grid grid-cols-4 gap-2">
                 {[
                     { value: t.days, label: 'Days' },
@@ -156,9 +141,7 @@ function CountdownCard({ nextBillingDate, tier, accentColor }) {
                         <p className="text-xl font-black tabular-nums text-slate-800 dark:text-white leading-none">
                             {String(value ?? 0).padStart(2, '0')}
                         </p>
-                        <p className="text-[9px] font-black uppercase tracking-wider mt-1" style={{ color: accentColor }}>
-                            {label}
-                        </p>
+                        <p className="text-[9px] font-black uppercase tracking-wider mt-1" style={{ color: accentColor }}>{label}</p>
                     </div>
                 ))}
             </div>
@@ -167,23 +150,21 @@ function CountdownCard({ nextBillingDate, tier, accentColor }) {
 }
 
 // ─── PLAN CARD ────────────────────────────────────────────────────────────────
-function PlanCard({ plan, currentTier, onSelect, billingCycle }) {
-    const isCurrent = plan.id === currentTier;
-    const tiers = ['free', 'starter', 'professional', 'enterprise'];
-    const isUpgrade = tiers.indexOf(plan.id) > tiers.indexOf(currentTier);
+function PlanCard({ plan, currentTierId, onSelect, billingCycle }) {
+    const isCurrent = plan.id === currentTierId;
+    const isUp = isTierUpgrade(currentTierId, plan.id);
     const Icon = plan.icon;
-    const price = billingCycle === 'annual' ? Math.round(plan.annualPrice / 12) : plan.monthlyPrice;
+    const displayPrice = getTierPrice(plan, billingCycle);
 
     return (
         <div className={`relative rounded-2xl p-5 border transition-all duration-200 ${isCurrent
-            ? `${plan.ring} bg-gradient-to-br ${plan.gradientBg}`
+            ? `ring-2 bg-gradient-to-br ${plan.gradientBg}`
             : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'}`}
+            style={isCurrent ? { '--tw-ring-color': plan.accentColor } : {}}
         >
             {plan.popular && !isCurrent && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider text-white"
-                    style={{ background: plan.accentColor }}>
-                    Most Popular
-                </div>
+                    style={{ background: plan.accentColor }}>Most Popular</div>
             )}
             {isCurrent && (
                 <div className="absolute -top-3 right-4 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider text-white bg-slate-800 dark:bg-slate-600">
@@ -197,28 +178,29 @@ function PlanCard({ plan, currentTier, onSelect, billingCycle }) {
                 <div>
                     <p className="text-sm font-black text-slate-800 dark:text-white">{plan.label}</p>
                     <p className="text-[10px] text-slate-400">
-                        {plan.monthlyPrice === 0 ? 'Free forever' : `R${price}/mo${billingCycle === 'annual' ? ' billed yearly' : ''}`}
+                        {plan.monthlyPrice === 0
+                            ? 'Free forever'
+                            : billingCycle === 'annual'
+                                ? `R${Math.round(plan.annualPrice / 12).toLocaleString()}/mo billed yearly`
+                                : `R${plan.monthlyPrice.toLocaleString()}/mo`}
                     </p>
                 </div>
             </div>
             <ul className="space-y-1.5 mb-5">
                 {plan.features.map((f) => (
                     <li key={f} className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
-                        <CheckCircle2 size={11} style={{ color: plan.accentColor }} className="flex-shrink-0" />
-                        {f}
+                        <CheckCircle2 size={11} style={{ color: plan.accentColor }} className="flex-shrink-0" />{f}
                     </li>
                 ))}
             </ul>
             {!isCurrent && (
-                <button
-                    onClick={() => onSelect(plan)}
-                    className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] font-black transition-all ${isUpgrade
+                <button onClick={() => onSelect(plan)}
+                    className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] font-black transition-all ${isUp
                         ? 'text-white hover:opacity-90'
                         : 'text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600'}`}
-                    style={isUpgrade ? { background: `linear-gradient(135deg, ${plan.accentColor}, ${plan.accentColor}cc)` } : {}}
-                >
-                    {isUpgrade ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                    {isUpgrade ? `Upgrade to ${plan.label}` : `Downgrade to ${plan.label}`}
+                    style={isUp ? { background: `linear-gradient(135deg, ${plan.accentColor}, ${plan.accentColor}cc)` } : {}}>
+                    {isUp ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                    {isUp ? `Upgrade to ${plan.label}` : `Downgrade to ${plan.label}`}
                 </button>
             )}
             {isCurrent && (
@@ -236,24 +218,20 @@ function BillingHistory({ records, loading, accentColor }) {
     const [expanded, setExpanded] = useState(false);
     const shown = expanded ? records : records.slice(0, 4);
 
-    if (loading) {
-        return (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-8 text-center">
-                <RefreshCw size={20} className="text-slate-300 mx-auto mb-2 animate-spin" />
-                <p className="text-xs text-slate-400">Loading billing history…</p>
-            </div>
-        );
-    }
+    if (loading) return (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-8 text-center">
+            <RefreshCw size={20} className="text-slate-300 mx-auto mb-2 animate-spin" />
+            <p className="text-xs text-slate-400">Loading billing history…</p>
+        </div>
+    );
 
-    if (records.length === 0) {
-        return (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-8 text-center">
-                <Receipt size={28} className="text-slate-200 dark:text-slate-600 mx-auto mb-2" />
-                <p className="text-xs text-slate-400 font-bold">No billing history yet.</p>
-                <p className="text-[10px] text-slate-300 dark:text-slate-600 mt-1">Payments will appear here after your first billing cycle.</p>
-            </div>
-        );
-    }
+    if (records.length === 0) return (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-8 text-center">
+            <Receipt size={28} className="text-slate-200 dark:text-slate-600 mx-auto mb-2" />
+            <p className="text-xs text-slate-400 font-bold">No billing history yet.</p>
+            <p className="text-[10px] text-slate-300 dark:text-slate-600 mt-1">Payments appear here after your first billing cycle.</p>
+        </div>
+    );
 
     const total = records.reduce((s, r) => s + (r.amount ?? 0), 0);
 
@@ -273,7 +251,6 @@ function BillingHistory({ records, loading, accentColor }) {
                     </button>
                 </div>
             </div>
-
             <div className="overflow-x-auto">
                 <table className="w-full text-xs min-w-[500px]">
                     <thead>
@@ -286,23 +263,17 @@ function BillingHistory({ records, loading, accentColor }) {
                     <tbody>
                         {shown.map((r) => (
                             <tr key={r.id} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                <td className="px-4 py-3 font-black text-slate-500 text-[10px] font-mono">{r.invoiceId || r.id}</td>
                                 <td className="px-4 py-3">
-                                    <span className="font-black text-slate-500 text-[10px] font-mono">{r.invoiceId || r.id}</span>
-                                </td>
-                                <td className="px-4 py-3">
-                                    <div>
-                                        <p className="font-bold text-slate-700 dark:text-slate-200">{r.description}</p>
-                                        <p className="text-slate-400 text-[10px]">
-                                            {r.date instanceof Date
-                                                ? r.date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })
-                                                : '—'}
-                                        </p>
-                                    </div>
+                                    <p className="font-bold text-slate-700 dark:text-slate-200">{r.description}</p>
+                                    <p className="text-slate-400 text-[10px]">
+                                        {r.date instanceof Date
+                                            ? r.date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })
+                                            : '—'}
+                                    </p>
                                 </td>
                                 <td className="px-4 py-3 text-slate-500">{r.method || '—'}</td>
-                                <td className="px-4 py-3">
-                                    <span className="font-black text-slate-800 dark:text-white">R{(r.amount ?? 0).toLocaleString()}</span>
-                                </td>
+                                <td className="px-4 py-3 font-black text-slate-800 dark:text-white">R{(r.amount ?? 0).toLocaleString()}</td>
                                 <td className="px-4 py-3">
                                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${r.status === 'paid'
                                         ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
@@ -312,22 +283,19 @@ function BillingHistory({ records, loading, accentColor }) {
                                     </span>
                                 </td>
                                 <td className="px-4 py-3">
-                                    <button className="text-slate-300 hover:text-slate-500 transition-colors">
-                                        <Download size={13} />
-                                    </button>
+                                    <button className="text-slate-300 hover:text-slate-500 transition-colors"><Download size={13} /></button>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
-
             {records.length > 4 && (
-                <button
-                    onClick={() => setExpanded(e => !e)}
-                    className="w-full flex items-center justify-center gap-2 py-3 text-[11px] font-black text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors border-t border-slate-100 dark:border-slate-700"
-                >
-                    {expanded ? <><ChevronUp size={13} /> Show less</> : <><ChevronDown size={13} /> Show all {records.length} invoices</>}
+                <button onClick={() => setExpanded(e => !e)}
+                    className="w-full flex items-center justify-center gap-2 py-3 text-[11px] font-black text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors border-t border-slate-100 dark:border-slate-700">
+                    {expanded
+                        ? <><ChevronUp size={13} /> Show less</>
+                        : <><ChevronDown size={13} /> Show all {records.length} invoices</>}
                 </button>
             )}
         </div>
@@ -335,11 +303,12 @@ function BillingHistory({ records, loading, accentColor }) {
 }
 
 // ─── ACCOUNT STATEMENT ────────────────────────────────────────────────────────
-function AccountStatement({ records, tier, schoolName, accentColor }) {
+function AccountStatement({ records, currentTierId, schoolName, billingCycle, accentColor }) {
+    const tier = getTierConfig(currentTierId);
     const totalPaid = records.reduce((s, r) => s + (r.amount ?? 0), 0);
     const monthsActive = records.length;
     const avgMonthly = monthsActive ? Math.round(totalPaid / monthsActive) : 0;
-    const nextPayment = PLAN_PRICES[tier] ?? 0;
+    const nextPayment = getTierPrice(tier, billingCycle);
 
     const stats = [
         { label: 'Total Paid (All Time)', value: `R${totalPaid.toLocaleString()}`, icon: TrendingUp, color: accentColor },
@@ -359,8 +328,7 @@ function AccountStatement({ records, tier, schoolName, accentColor }) {
                 {stats.map(({ label, value, icon: Icon, color }) => (
                     <div key={label} className="rounded-xl p-3 flex items-center gap-3"
                         style={{ background: `${color}10`, border: `1px solid ${color}20` }}>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                            style={{ background: `${color}20` }}>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${color}20` }}>
                             <Icon size={14} style={{ color }} />
                         </div>
                         <div>
@@ -375,15 +343,10 @@ function AccountStatement({ records, tier, schoolName, accentColor }) {
 }
 
 // ─── CHANGE PLAN MODAL ────────────────────────────────────────────────────────
-function ChangePlanModal({ targetPlan, currentTier, onConfirm, onCancel, billingCycle = 'monthly' }) {
-    // 1. Use the new Source of Truth for tier order
-    const isUpgrade = TIER_ORDER.indexOf(targetPlan.id) > TIER_ORDER.indexOf(currentTier);
+function ChangePlanModal({ targetPlan, currentTierId, billingCycle, onConfirm, onCancel }) {
+    const isUp = isTierUpgrade(currentTierId, targetPlan.id);
     const Icon = targetPlan.icon;
-
-    // 2. Dynamically calculate price display
-    const displayPrice = billingCycle === 'annual'
-        ? Math.round(targetPlan.annualPrice / 12)
-        : targetPlan.monthlyPrice;
+    const displayPrice = getTierPrice(targetPlan, billingCycle);
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
@@ -392,15 +355,14 @@ function ChangePlanModal({ targetPlan, currentTier, onConfirm, onCancel, billing
                     <Icon size={28} className="text-white" />
                 </div>
                 <h2 className="text-lg font-black text-slate-800 dark:text-white text-center mb-1">
-                    {isUpgrade ? 'Upgrade to' : 'Downgrade to'} {targetPlan.label}
+                    {isUp ? 'Upgrade to' : 'Downgrade to'} {targetPlan.label}
                 </h2>
                 <p className="text-xs text-slate-400 text-center mb-6">
-                    {isUpgrade
-                        ? `You'll be billed R${displayPrice.toLocaleString()}/month ${billingCycle === 'annual' ? '(billed yearly)' : ''} starting today.`
+                    {isUp
+                        ? `You'll be billed R${displayPrice.toLocaleString()}/month${billingCycle === 'annual' ? ' (billed yearly)' : ''} starting today.`
                         : 'Your current plan remains active until the end of the billing period.'}
                 </p>
-
-                {isUpgrade && (
+                {isUp && (
                     <div className="rounded-xl p-4 mb-5"
                         style={{ background: `${targetPlan.accentColor}10`, border: `1px solid ${targetPlan.accentColor}25` }}>
                         <p className="text-[10px] font-black uppercase tracking-wider mb-2" style={{ color: targetPlan.accentColor }}>
@@ -409,15 +371,13 @@ function ChangePlanModal({ targetPlan, currentTier, onConfirm, onCancel, billing
                         <ul className="space-y-1">
                             {targetPlan.features.slice(0, 4).map(f => (
                                 <li key={f} className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
-                                    <CheckCircle2 size={10} style={{ color: targetPlan.accentColor }} />
-                                    {f}
+                                    <CheckCircle2 size={10} style={{ color: targetPlan.accentColor }} />{f}
                                 </li>
                             ))}
                         </ul>
                     </div>
                 )}
-
-                {!isUpgrade && (
+                {!isUp && (
                     <div className="rounded-xl p-4 mb-5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
                         <div className="flex items-start gap-2">
                             <AlertTriangle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
@@ -427,7 +387,6 @@ function ChangePlanModal({ targetPlan, currentTier, onConfirm, onCancel, billing
                         </div>
                     </div>
                 )}
-
                 <div className="flex gap-3">
                     <button onClick={onCancel}
                         className="flex-1 py-3 rounded-xl text-xs font-black text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
@@ -436,7 +395,7 @@ function ChangePlanModal({ targetPlan, currentTier, onConfirm, onCancel, billing
                     <button onClick={() => onConfirm(targetPlan)}
                         className="flex-1 py-3 rounded-xl text-xs font-black text-white transition-opacity hover:opacity-90"
                         style={{ background: `linear-gradient(135deg, ${targetPlan.accentColor}, ${targetPlan.accentColor}cc)` }}>
-                        {isUpgrade ? 'Confirm Upgrade' : 'Confirm Downgrade'}
+                        {isUp ? 'Confirm Upgrade' : 'Confirm Downgrade'}
                     </button>
                 </div>
             </div>
@@ -444,88 +403,46 @@ function ChangePlanModal({ targetPlan, currentTier, onConfirm, onCancel, billing
     );
 }
 
-// Add this new hook to your SubscriptionManager.jsx
-function useCurrentTier(schoolId) {
-    const [status, setStatus] = useState({ tier: 'free', loading: true });
-
-    useEffect(() => {
-        if (!schoolId) { setStatus({ tier: 'free', loading: false }); return; }
-
-        const q = query(
-            collection(db, 'billing'),
-            where('schoolId', '==', schoolId),
-            orderBy('createdAt', 'desc'), // Use the timestamp field
-            limit(1)
-        );
-
-        const unsub = onSnapshot(q, (snap) => {
-            if (!snap.empty) {
-                const latest = snap.docs[0].data();
-                setStatus({ tier: latest.tier, loading: false });
-            } else {
-                setStatus({ tier: 'free', loading: false });
-            }
-        });
-
-        return () => unsub();
-    }, [schoolId]);
-
-    return status;
-}
-
 // ─── MAIN EXPORT ──────────────────────────────────────────────────────────────
-export default function SubscriptionManager({
-    currentTier = 'free',
-    schoolName = 'My School',
-    schoolId,
-    school,          // ← full school doc passed in so we can read nextBillingDate
-    onTierChange,
-    primary = '#4f46e5',
-}) {
+export default function SubscriptionManager({ currentTier = 'free', schoolName, schoolId, school, onTierChange }) {
     const [billingCycle, setBillingCycle] = useState('monthly');
     const [activeSection, setActiveSection] = useState('plan');
     const [selectedPlan, setSelectedPlan] = useState(null);
 
-    // 🐛 FIX: Always prioritize the real-time school document's tier over the prop
-    const { tier: activeTier, loading: tierLoading } = useCurrentTier(schoolId);
-
-    const plan = TIER_PLANS.find(p => p.id === activeTier) || TIER_PLANS[0];
-    const accentColor = plan.accentColor;
-
-    // ── Real billing records from Firestore ───────────────────────────────
+    // FIX: Unique names to avoid collision
+    const { tier: activeTierId, loading: tierLoading } = useCurrentTier(schoolId);
     const { records: billingRecords, loading: billingLoading } = useBillingHistory(schoolId);
 
-    // ── Next billing date — from Firestore school doc, not computed ───────
+    // Configs derived from the active tier
+    const activeTierConfig = getTierConfig(activeTierId);
+    const accentColor = activeTierConfig.accentColor;
+
+    // Upgrade logic
+    const currentTierIndex = TIER_ORDER.indexOf(activeTierId);
+    const nextTierId = TIER_ORDER[currentTierIndex + 1];
+    const nextTierConfig = getTierConfig(nextTierId);
+
+
+    // Next billing date from Firestore school doc — never computed from today
     const nextBillingDate = useMemo(() => {
-        // 1. Determine the anchor point (safely handle Firestore Timestamps)
-        const anchor = school?.nextBillingDate || school?.billingStartDate || school?.subscribedAt;
-
-        // 2. Normalize to a JS Date object
-        const base = anchor?.toDate?.() ? anchor.toDate() : (anchor ? new Date(anchor) : new Date());
-
-        // 3. Advance to the first future date
+        const raw = school?.nextBillingDate || school?.billingStartDate || school?.subscribedAt;
+        if (!raw) {
+            const d = new Date();
+            d.setMonth(d.getMonth() + 1);
+            return d;
+        }
+        const base = raw?.toDate?.() ? raw.toDate() : new Date(raw);
         const next = new Date(base);
         const now = new Date();
-
-        // This loop effectively handles renewals (e.g., if it's been months since the last payment)
-        while (next <= now) {
-            next.setMonth(next.getMonth() + 1);
-        }
-
+        while (next <= now) next.setMonth(next.getMonth() + 1);
         return next;
     }, [school?.nextBillingDate, school?.billingStartDate, school?.subscribedAt]);
 
-    const handlePlanSelect = (p) => setSelectedPlan(p);
-
-    const handleConfirmChange = async (p) => {
-        onTierChange?.(p.id);
-        // Record billing event if upgrading to paid tier
-        if (p.monthlyPrice > 0 && schoolId) {
-            try {
-                await recordBillingPayment(schoolId, p.id);
-            } catch (e) {
-                console.error('Billing record failed:', e);
-            }
+    const handleConfirmChange = async (plan) => {
+        onTierChange?.(plan.id);
+        if (plan.monthlyPrice > 0 && schoolId) {
+            try { await recordBillingPayment(schoolId, plan.id); }
+            catch (e) { console.error('[Billing] record failed:', e); }
         }
         setSelectedPlan(null);
     };
@@ -543,12 +460,9 @@ export default function SubscriptionManager({
             <div className="flex items-start justify-between flex-wrap gap-3">
                 <div>
                     <h2 className="text-base font-black text-slate-800 dark:text-white flex items-center gap-2">
-                        <Shield size={16} style={{ color: accentColor }} />
-                        Subscriptions
+                        <Shield size={16} style={{ color: accentColor }} /> Subscriptions
                     </h2>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                        Manage your plan, billing history & account statement
-                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Manage your plan, billing history & account statement</p>
                 </div>
                 <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
                     {['monthly', 'annual'].map(cycle => (
@@ -566,32 +480,33 @@ export default function SubscriptionManager({
             {/* Current plan snapshot */}
             <div className="rounded-2xl p-5 flex items-center gap-4 flex-wrap"
                 style={{ background: `linear-gradient(135deg, ${accentColor}15, ${accentColor}08)`, border: `1px solid ${accentColor}25` }}>
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br ${plan.gradient} flex-shrink-0`}>
-                    {React.createElement(plan.icon, { size: 20, className: 'text-white' })}
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br ${activeTierConfig.gradient} flex-shrink-0`}>
+                    {React.createElement(activeTierConfig.icon, { size: 20, className: 'text-white' })}
                 </div>
                 <div className="flex-1 min-w-0">
                     <p className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">Current Plan</p>
-                    <p className="text-base font-black text-slate-800 dark:text-white">{plan.label}</p>
+                    <p className="text-base font-black text-slate-800 dark:text-white">{activeTierConfig.label}</p>
                     <p className="text-[10px] text-slate-400">
-                        {plan.monthlyPrice === 0 ? 'Free forever' : `R${plan.monthlyPrice.toLocaleString()}/month`}
+                        {activeTierConfig.monthlyPrice === 0 ? 'Free forever' : `R${activeTierConfig.monthlyPrice.toLocaleString()}/month`}
                     </p>
                 </div>
-                {activeTier !== 'enterprise' && (
-                    <button onClick={() => setActiveSection('plan')}
+                {activeTierId !== 'platinum' && (
+                    <button
+                        onClick={() => {
+                            setSelectedPlan(nextTierConfig); // Directly set the next tier
+                            // You might want to open the PaymentManager flow here
+                            // If PaymentManager is a modal, trigger the modal state here
+                        }}
                         className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black text-white hover:opacity-90 transition-opacity"
                         style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)` }}>
-                        <ArrowUpRight size={12} /> Upgrade
+                        <ArrowUpRight size={12} /> Upgrade to {nextTierConfig.label}
                     </button>
                 )}
             </div>
 
             {/* Countdown — only for paid tiers */}
-            {activeTier !== 'free' && (
-                <CountdownCard
-                    nextBillingDate={nextBillingDate}
-                    tier={activeTier}
-                    accentColor={accentColor}
-                />
+            {currentTier !== 'free' && (
+                <CountdownCard nextBillingDate={nextBillingDate} tierId={currentTier} accentColor={accentColor} />
             )}
 
             {/* Section tabs */}
@@ -601,51 +516,43 @@ export default function SubscriptionManager({
                         className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-black transition-all ${activeSection === id
                             ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm'
                             : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>
-                        <Icon size={11} />
-                        {label}
+                        <Icon size={11} />{label}
                     </button>
                 ))}
             </div>
 
-            {/* PLAN SECTION */}
+            {/* Plan grid */}
             {activeSection === 'plan' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {TIER_PLANS.map(p => (
-                        <PlanCard
-                            key={p.id}
-                            plan={p}
-                            currentTier={activeTier}
-                            onSelect={handlePlanSelect}
-                            billingCycle={billingCycle}
-                        />
+                    {TIERS.map(p => (
+                        <PlanCard key={p.id} plan={p} currentTierId={currentTier}
+                            onSelect={setSelectedPlan} billingCycle={billingCycle} />
                     ))}
                 </div>
             )}
 
-            {/* BILLING SECTION */}
+            {/* Billing history */}
             {activeSection === 'billing' && (
-                <BillingHistory
-                    records={billingRecords}
-                    loading={billingLoading}
-                    accentColor={accentColor}
-                />
+                <BillingHistory records={billingRecords} loading={billingLoading} accentColor={accentColor} />
             )}
 
-            {/* STATEMENT SECTION */}
+            {/* Account statement */}
             {activeSection === 'statement' && (
                 <AccountStatement
                     records={billingRecords}
-                    tier={activeTier}
+                    currentTierId={currentTier}
                     schoolName={schoolName}
+                    billingCycle={billingCycle}
                     accentColor={accentColor}
                 />
             )}
 
-            {/* MODAL */}
+            {/* Change plan modal */}
             {selectedPlan && (
                 <ChangePlanModal
                     targetPlan={selectedPlan}
-                    currentTier={activeTier}
+                    currentTierId={currentTier}
+                    billingCycle={billingCycle}
                     onConfirm={handleConfirmChange}
                     onCancel={() => setSelectedPlan(null)}
                 />

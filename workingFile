@@ -1,1 +1,10 @@
 Need to work on leaderboard not showing the list
+Make global login - schools from any country can sign up
+if signup is school not in south africa need to add country option 
+on subscriptons if school outside SA only option is currency USD must double current subscription price
+enforce school subscription when teacher tries to upload exam work on teacher dashboard stats to show correct data
+enforce limits on students, teachers, and exams based on subscription plan
+disable teacher account after school subscription expires - opens dashboard to show expired message and link to renew subscription but cant upload exam work
+allow students to attempt exam once only - so when student click on exam it goes to the exam and when they finish it goes to the review page and they cant go back to the exam again
+when student clicks on review it shows the review page and they cant go back to the exam again - they should only be able to click on review 
+if school subscription is cancelled allow teachers and students in dashboard but return to free tier by default

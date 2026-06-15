@@ -71,6 +71,7 @@ router.post('/api/payfast/notify', express.urlencoded({ extended: false }), asyn
         const paymentId = data.m_payment_id;
         const pfPaymentId = data.pf_payment_id;
 
+
         if (!schoolId || !toTier) {
             console.error('[ITN] Missing custom fields');
             return res.status(400).send('Missing fields');
@@ -79,9 +80,18 @@ router.post('/api/payfast/notify', express.urlencoded({ extended: false }), asyn
         const db = admin.firestore();
         const batch = db.batch();
 
-        // 5. Update school tier
+        // 5. Update school tier & Calculate next billing date
+        // Since we are upgrading, we set the next payment date 30 days out (or 1 year for annual)
+        const nextBilling = new Date();
+        if (data.custom_str4 === 'annual') {
+            nextBilling.setFullYear(nextBilling.getFullYear() + 1);
+        } else {
+            nextBilling.setMonth(nextBilling.getMonth() + 1);
+        }
+
         batch.set(db.doc(`schools/${schoolId}`), {
             tier: toTier,
+            nextBillingDate: admin.firestore.Timestamp.fromDate(nextBilling),
             tierUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
             pfPaymentId,
         }, { merge: true });
@@ -89,6 +99,7 @@ router.post('/api/payfast/notify', express.urlencoded({ extended: false }), asyn
         // 6. Update principals collection
         batch.set(db.doc(`principals/${schoolId}`), {
             tier: toTier,
+            nextBillingDate: admin.firestore.Timestamp.fromDate(nextBilling),
             tierUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
 
@@ -115,84 +126,3 @@ router.post('/api/payfast/notify', express.urlencoded({ extended: false }), asyn
 
 module.exports = router;
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PAYMENT RETURN PAGES
-// Create these two routes in your React Router setup:
-//
-//   /payment/success?tier=starter&school=<uid>
-//   /payment/cancel
-//
-// Example minimal components:
-// ─────────────────────────────────────────────────────────────────────────────
-
-/*
-// src/pages/PaymentSuccess.jsx
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { CheckCircle2 } from 'lucide-react';
-
-export default function PaymentSuccess() {
-    const [params] = useSearchParams();
-    const navigate = useNavigate();
-    const tier = params.get('tier');
-
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
-            <div className="bg-white rounded-3xl p-12 shadow-xl text-center max-w-md">
-                <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-                <h1 className="text-2xl font-black text-slate-800 mb-2">Payment Successful!</h1>
-                <p className="text-slate-500 mb-6">
-                    Your school has been upgraded to the <strong className="capitalize">{tier}</strong> plan.
-                </p>
-                <button
-                    onClick={() => navigate('/principal-dashboard')}
-                    className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black hover:bg-indigo-500 transition-colors"
-                >
-                    Go to Dashboard →
-                </button>
-            </div>
-        </div>
-    );
-}
-
-// src/pages/PaymentCancel.jsx
-import { useNavigate } from 'react-router-dom';
-import { XCircle } from 'lucide-react';
-
-export default function PaymentCancel() {
-    const navigate = useNavigate();
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
-            <div className="bg-white rounded-3xl p-12 shadow-xl text-center max-w-md">
-                <XCircle className="w-16 h-16 text-amber-400 mx-auto mb-4" />
-                <h1 className="text-2xl font-black text-slate-800 mb-2">Payment Cancelled</h1>
-                <p className="text-slate-500 mb-6">No charge was made. You can try again any time from your dashboard.</p>
-                <button
-                    onClick={() => navigate('/principal-dashboard')}
-                    className="bg-slate-800 text-white px-8 py-3 rounded-2xl font-black hover:bg-slate-700 transition-colors"
-                >
-                    Back to Dashboard
-                </button>
-            </div>
-        </div>
-    );
-}
-*/
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// .env variables needed
-// ─────────────────────────────────────────────────────────────────────────────
-/*
-# Client-side (REACT_APP_ prefix required for CRA / Vite prefix for Vite)
-REACT_APP_PAYFAST_MERCHANT_ID=your_merchant_id
-REACT_APP_PAYFAST_MERCHANT_KEY=your_merchant_key
-REACT_APP_PAYFAST_PASSPHRASE=your_passphrase_if_set
-REACT_APP_PAYFAST_LIVE=false         # true for production
-REACT_APP_BASE_URL=https://app.yourschool.co.za
-
-# Server-side (cloud function / Express)
-PAYFAST_MERCHANT_ID=your_merchant_id
-PAYFAST_MERCHANT_KEY=your_merchant_key
-PAYFAST_PASSPHRASE=your_passphrase_if_set
-*/

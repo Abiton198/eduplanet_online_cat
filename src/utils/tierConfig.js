@@ -1,4 +1,7 @@
 import { Star, Zap, Sparkles, Crown } from 'lucide-react';
+import { onSnapshot, doc } from "firebase/firestore";
+import { db } from "./firebase";
+import { useState, useEffect } from "react";
 
 export const TIERS = [
     {
@@ -100,3 +103,21 @@ export function getTierConfig(tierId) {
 }
 
 export const getTier = getTierConfig;
+
+export function useCurrentTier(schoolId) {
+    const [tier, setTier] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!schoolId) return;
+
+        const unsubscribe = onSnapshot(doc(db, 'schools', schoolId), (doc) => {
+            setTier(doc.data()?.tier || 'free');
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [schoolId]);
+
+    return { tier, loading };
+}

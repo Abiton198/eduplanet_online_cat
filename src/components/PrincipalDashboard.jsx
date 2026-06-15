@@ -12,6 +12,7 @@ import { signOut } from 'firebase/auth';
 import { auth, db } from '../utils/firebase';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
+import { createPortal } from 'react-dom';
 
 import {
     Users, BookOpen, FileText, TrendingUp, Award, AlertTriangle,
@@ -366,8 +367,8 @@ export default function PrincipalDashboard({ principal }) {
     const schoolId = principal?.schoolId || principal?.uid;
     const printRef = useRef();
 
-    const { tier: activeTier, loading } = useActiveTier(schoolId);
-    const config = getTierConfig(activeTier);
+
+
     // ── Live usage object — drives ALL limit checks ───────────────────────────
     const usage = useMemo(() => ({
         students: students.length,
@@ -376,8 +377,10 @@ export default function PrincipalDashboard({ principal }) {
     }), [students.length, exams.length, teachers.length]);
 
     // ── Limit status — single hook, used everywhere ───────────────────────────
-    const activeTierConfig = getTierConfig(activeTier);
-    const limits = activeTierConfig.limits;
+    const { tier: activeTier, loading: tierLoading } = useActiveTier(schoolId);
+    const tierConfig = getTierConfig(activeTier);  // ← single reference
+    const limits = tierConfig.limits;
+
 
 
     useEffect(() => {
@@ -1321,14 +1324,35 @@ export default function PrincipalDashboard({ principal }) {
             </div>
 
             {/* ── Upgrade modal ── */}
-            {showUpgradeModal && (
-                <PaymentManager
-                    schoolId={schoolId}
-                    schoolName={school?.name || ''}
-                    activeTier={activeTier}
-                    onClose={() => setShowUpgradeModal(false)}
-                    onTierChange={() => setShowUpgradeModal(false)}
-                />
+            {showUpgradeModal && createPortal(
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+                    style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+                    onClick={(e) => { if (e.target === e.currentTarget) setShowUpgradeModal(false); }}
+                >
+                    <div
+                        className="relative bg-white dark:bg-slate-900 rounded-3xl w-full max-w-3xl shadow-2xl border border-slate-100 dark:border-slate-700"
+                        style={{ maxHeight: '90vh', overflowY: 'auto' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={() => setShowUpgradeModal(false)}
+                            className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 transition-colors"
+                        >
+                            <X size={15} />
+                        </button>
+                        <div className="p-6">
+                            <SubscriptionManager
+                                currentTier={activeTier || 'free'}
+                                schoolName={school?.name || ''}
+                                schoolId={schoolId}
+                                school={school}
+                                onTierChange={() => setShowUpgradeModal(false)}
+                            />
+                        </div>
+                    </div>
+                </div>,
+                document.body
             )}
 
             <style>{`
