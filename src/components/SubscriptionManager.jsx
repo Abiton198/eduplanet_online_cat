@@ -17,6 +17,7 @@ import {
     TIERS, TIER_ORDER, getTierConfig, getTierPrice, isUpgrade as isTierUpgrade,
     useCurrentTier
 } from '../utils/tierConfig';
+import PaymentManager from './PaymentManager';
 
 // ─── WRITE BILLING RECORD ─────────────────────────────────────────────────────
 export async function recordBillingPayment(schoolId, tierId, paymentMethod = 'Card •••• 4242') {
@@ -408,6 +409,7 @@ export default function SubscriptionManager({ currentTier = 'free', schoolName, 
     const [billingCycle, setBillingCycle] = useState('monthly');
     const [activeSection, setActiveSection] = useState('plan');
     const [selectedPlan, setSelectedPlan] = useState(null);
+    const [pendingPlan, setPendingPlan] = useState(null);
 
     // FIX: Unique names to avoid collision
     const { tier: activeTierId, loading: tierLoading } = useCurrentTier(schoolId);
@@ -421,6 +423,7 @@ export default function SubscriptionManager({ currentTier = 'free', schoolName, 
     const currentTierIndex = TIER_ORDER.indexOf(activeTierId);
     const nextTierId = TIER_ORDER[currentTierIndex + 1];
     const nextTierConfig = getTierConfig(nextTierId);
+    const [isPaymentOpen, setIsPaymentOpen] = useState(false);
 
 
     // Next billing date from Firestore school doc — never computed from today
@@ -438,13 +441,17 @@ export default function SubscriptionManager({ currentTier = 'free', schoolName, 
         return next;
     }, [school?.nextBillingDate, school?.billingStartDate, school?.subscribedAt]);
 
-    const handleConfirmChange = async (plan) => {
-        onTierChange?.(plan.id);
-        if (plan.monthlyPrice > 0 && schoolId) {
-            try { await recordBillingPayment(schoolId, plan.id); }
-            catch (e) { console.error('[Billing] record failed:', e); }
+    const handleConfirmChange = (plan) => {
+        if (plan.monthlyPrice > 0) {
+            // Close the confirm modal, open PaymentManager with the chosen plan
+            setSelectedPlan(null);
+            setPendingPlan(plan);
+            setIsPaymentOpen(true);
+        } else {
+            // Free tier downgrade — no payment needed, write directly
+            onTierChange?.(plan.id);
+            setSelectedPlan(null);
         }
-        setSelectedPlan(null);
     };
 
     const sections = [
@@ -493,9 +500,7 @@ export default function SubscriptionManager({ currentTier = 'free', schoolName, 
                 {activeTierId !== 'platinum' && (
                     <button
                         onClick={() => {
-                            setSelectedPlan(nextTierConfig); // Directly set the next tier
-                            // You might want to open the PaymentManager flow here
-                            // If PaymentManager is a modal, trigger the modal state here
+                            setSelectedPlan(nextTierConfig);
                         }}
                         className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black text-white hover:opacity-90 transition-opacity"
                         style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)` }}>
@@ -555,6 +560,21 @@ export default function SubscriptionManager({ currentTier = 'free', schoolName, 
                     billingCycle={billingCycle}
                     onConfirm={handleConfirmChange}
                     onCancel={() => setSelectedPlan(null)}
+                />
+            )}
+
+            {isPaymentOpen && (
+                <PaymentManager
+                    schoolId={schoolId}
+                    schoolName={schoolName}
+                    currentTier={activeTierId}
+                    initialTier={pendingPlan}   // ← pass it here
+                    onClose={() => { setIsPaymentOpen(false); setPendingPlan(null); }}
+                    onTierChange={(newTier) => {
+                        onTierChange?.(newTier);
+                        setIsPaymentOpen(false);
+                        setPendingPlan(null);
+                    }}
                 />
             )}
         </div>

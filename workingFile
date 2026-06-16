@@ -8,3 +8,4 @@ disable teacher account after school subscription expires - opens dashboard to s
 allow students to attempt exam once only - so when student click on exam it goes to the exam and when they finish it goes to the review page and they cant go back to the exam again
 when student clicks on review it shows the review page and they cant go back to the exam again - they should only be able to click on review 
 if school subscription is cancelled allow teachers and students in dashboard but return to free tier by default
+Ensure tests or exam uploads accepts diagrams and pictures or tables

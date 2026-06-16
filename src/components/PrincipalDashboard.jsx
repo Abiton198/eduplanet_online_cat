@@ -387,28 +387,38 @@ export default function PrincipalDashboard({ principal }) {
         if (!schoolId) return;
 
         const auth = getAuth();
-        let unsubs = []; // Store Firestore unsubscribes here
 
-        // 1. Wait for Firebase to confirm the user's auth state
+        // FIX 1: Use a ref-like object that cleanup can actually see
+        // (a plain object in the closure, mutated in place — closure sees the same reference)
+        const state = { unsubs: [], active: true };
+
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            // FIX 2: If cleanup already ran before this callback fired, bail immediately
+            if (!state.active) return;
+
             if (user) {
-                // 2. User is confirmed! Safe to fetch data.
                 const fetchAllAttempts = async () => {
-                    const snap = await getDocs(collection(db, 'exam_attempts'));
-                    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    setAttempts(all);
+                    try {
+                        const snap = await getDocs(collection(db, 'exam_attempts'));
+                        // FIX 3: Guard the setState too — fetch is async and may
+                        // resolve after unmount
+                        if (!state.active) return;
+                        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        setAttempts(all);
+                    } catch (e) {
+                        if (state.active) console.error('[fetchAttempts]', e);
+                    }
                 };
                 fetchAllAttempts();
 
-                // 3. Setup listeners and store their unsubscribe functions
-                unsubs = [
+                // FIX 4: Write into state.unsubs — cleanup closure sees this object
+                state.unsubs = [
                     subscribeToSchoolTeachers(schoolId, setTeachers),
                     subscribeToSchoolStudents(schoolId, setStudents),
                     subscribeToSchoolExams(schoolId, setExams),
                     subscribeToAuditLog(schoolId, setAuditLog),
                 ];
             } else {
-                // Optional: Clear data if the user logs out while looking at this page
                 setAttempts([]);
                 setTeachers([]);
                 setStudents([]);
@@ -417,10 +427,12 @@ export default function PrincipalDashboard({ principal }) {
             }
         });
 
-        // 4. Cleanup function for when component unmounts or schoolId changes
         return () => {
-            unsubscribeAuth(); // Stop listening to auth changes
-            unsubs.forEach(u => u && typeof u === 'function' && u()); // Stop Firestore listeners
+            // FIX 5: Mark inactive first — stops any in-flight async callbacks
+            state.active = false;
+            unsubscribeAuth();
+            // Now state.unsubs actually contains the listeners (if auth fired in time)
+            state.unsubs.forEach(u => typeof u === 'function' && u());
         };
     }, [schoolId]);
 
