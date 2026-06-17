@@ -14,6 +14,7 @@ import {
 import TierSelection from './TierSelection';
 import PaymentManager from './PaymentManager';
 import { COUNTRIES, getCountry, getRegions, detectDefaultCountry } from '../utils/countries';
+import { getTierConfig } from '../utils/tierConfig';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 

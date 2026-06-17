@@ -40,26 +40,12 @@ import {
   Sparkles, ChevronDown,
 } from 'lucide-react';
 import { ensureUserFirestoreDocs } from '../utils/driveManager';
-import { listSchools } from '../utils/firestoreHelpers';
 import StepGuide from './StepGuide';
+import { fetchProvinces, fetchDistricts, fetchCountryCurriculumOptions, fetchLevels, fetchTeachingPhases, fetchSubjects } from '../utils/academicResolver';
+import { listSchools, getSchoolUserCount } from '../utils/firestoreHelpers';
+import { getTierConfig } from '../utils/tierConfig';
 
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
-const SA_PROVINCES = [
-  'Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal',
-  'Limpopo', 'Mpumalanga', 'Northern Cape', 'North West', 'Western Cape',
-];
-
-const STANDARD_DBE_SUBJECTS = [
-  "CAT", "IT", "Mathematics", "Mathematical Literacy",
-  "English HL", "English FAL", "Physical Sciences", "Life Sciences",
-  "Accounting", "Business Studies", "Economics", "History", "Geography",
-  "Life Orientation", "Consumer Studies", "Afrikaans HL", "Afrikaans FAL",
-  "isiXhosa HL", "isiXhosa FAL", "isiZulu HL", "isiZulu FAL",
-  "Sepedi HL", "Sepedi FAL", "Sesotho HL", "Sesotho FAL",
-  "Setswana HL", "Setswana FAL", "siSwati HL", "siSwati FAL",
-  "Tshivenda HL", "Tshivenda FAL", "Xitsonga HL", "Xitsonga FAL",
-];
 
 // ─── AUTO-FILL TAG ────────────────────────────────────────────────────────────
 function AutoTag() {
@@ -125,6 +111,7 @@ export default function AuthPage({ setStudentInfo }) {
   const [teachingPhase, setTeachingPhase] = useState('FET');
   const [subjects, setSubjects] = useState([]);
 
+
   // ── Auto-fill tracking ─────────────────────────────────────────────────────
   const [autoFilled, setAutoFilled] = useState({});
   const markAuto = useCallback((fields) => {
@@ -142,6 +129,142 @@ export default function AuthPage({ setStudentInfo }) {
   const [schoolList, setSchoolList] = useState([]);
   const [selectedSchoolId, setSelectedSchoolId] = useState('');
   const [schoolsLoading, setSchoolsLoading] = useState(false);
+
+  const [country, setCountry] = useState('South Africa');
+  const [availableCurricula, setAvailableCurricula] = useState(['CAPS']); // Default SA
+  const [isFetchingCurricula, setIsFetchingCurricula] = useState(false);
+  const [provinces, setProvinces] = useState([]);
+  const [isFetchingProvinces, setIsFetchingProvinces] = useState(false);
+  const [districts, setDistricts] = useState([]);
+  const [isFetchingDistricts, setIsFetchingDistricts] = useState(false);
+  const [levels, setLevels] = useState([]);
+  const [isFetchingLevels, setIsFetchingLevels] = useState(false);
+  const [teachingPhases, setTeachingPhases] = useState([]);
+  const [isFetchingPhases, setIsFetchingPhases] = useState(false);
+  const [subjectList, setSubjectList] = useState([]);
+  const [isFetchingSubjects, setIsFetchingSubjects] = useState(false);
+  const [countries, setCountries] = useState([]);
+  const [isFetchingCountries, setIsFetchingCountries] = useState(false);
+
+
+
+
+  // Handle Country Change and curriculum and provinces 
+  const handleCountryChange = async (newCountry) => {
+    setCountry(newCountry);
+    setIsFetchingCurricula(true);
+    setIsFetchingProvinces(true);
+
+    try {
+      const [currOptions, provOptions] = await Promise.all([
+        fetchCountryCurriculumOptions(newCountry),
+        fetchProvinces(newCountry)
+      ]);
+
+      setAvailableCurricula(currOptions);
+      setProvinces(provOptions);
+      setCurriculum(currOptions[0] || '');
+      setProvince(provOptions[0] || '');
+    } catch (err) {
+      console.error("Failed to fetch regions", err);
+    } finally {
+      setIsFetchingCurricula(false);
+      setIsFetchingProvinces(false);
+    }
+  };
+
+  // Load countries in the dropdown list of all countries -  used in signup page when principal selects country
+  useEffect(() => {
+    const loadCountries = async () => {
+      setIsFetchingCountries(true);
+      try {
+        // Because it's in the public folder, this path works
+        const response = await fetch('/countries.json');
+        const data = await response.json();
+        setCountries(data);
+      } catch (err) {
+        console.error("Failed to load countries:", err);
+      } finally {
+        setIsFetchingCountries(false);
+      }
+    };
+    loadCountries();
+  }, []);
+
+  // Districts
+  useEffect(() => {
+    const loadDistricts = async () => {
+      if (province && country) {
+        setIsFetchingDistricts(true);
+        try {
+          const dOptions = await fetchDistricts(country, province);
+          setDistricts(dOptions);
+        } catch (err) {
+          console.error("Failed to fetch districts", err);
+        } finally {
+          setIsFetchingDistricts(false);
+        }
+      }
+    };
+    loadDistricts();
+  }, [province, country]);
+
+  // Academic Levels
+  useEffect(() => {
+    const loadLevels = async () => {
+      if (curriculum && country) {
+        setIsFetchingLevels(true);
+        try {
+          const lOptions = await fetchLevels(country, curriculum);
+          setLevels(lOptions);
+        } catch (err) {
+          console.error("Failed to fetch levels", err);
+        } finally {
+          setIsFetchingLevels(false);
+        }
+      }
+    };
+    loadLevels();
+  }, [curriculum, country]);
+
+  // Teaching Phases
+  useEffect(() => {
+    const loadPhases = async () => {
+      if (curriculum && country) {
+        setIsFetchingPhases(true);
+        try {
+          const pOptions = await fetchTeachingPhases(country, curriculum);
+          setTeachingPhases(pOptions);
+        } catch (err) {
+          console.error("Failed to fetch phases", err);
+        } finally {
+          setIsFetchingPhases(false);
+        }
+      }
+    };
+    loadPhases();
+  }, [curriculum, country]);
+
+  // Subjects
+  useEffect(() => {
+    const loadSubjects = async () => {
+      // Determine the phase based on role (student grade/level or teacher phase)
+      const activePhase = userRole === 'student' ? grade : teachingPhase;
+
+      if (activePhase && curriculum && country) {
+        setIsFetchingSubjects(true);
+        try {
+          const sOptions = await fetchSubjects(country, curriculum, activePhase);
+          setSubjectList(sOptions);
+        } catch (err) {
+          console.error("Failed to fetch subjects", err);
+        } finally {
+          setIsFetchingSubjects(false);
+        }
+      }
+    };
+    loadSubjects();
+  }, [grade, teachingPhase, curriculum, country, userRole]);
 
   // ── Theme ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -320,6 +443,7 @@ export default function AuthPage({ setStudentInfo }) {
   const finalizeProfile = async (e) => {
     if (e) e.preventDefault();
 
+    // ── Validation ──
     if (!name.trim()) { setError('First name is required.'); return; }
     if (userRole === 'principal' && !school.trim()) { setError('School name is required.'); return; }
     if ((userRole === 'teacher' || userRole === 'student') && !selectedSchoolId) {
@@ -336,20 +460,14 @@ export default function AuthPage({ setStudentInfo }) {
     const uid = tempUser?.uid || auth.currentUser?.uid;
     const finalEmail = tempUser?.email || email;
 
+    // ── Data Resolution ──
     const resolvedSchoolId = userRole === 'principal' ? uid : selectedSchoolId;
     const selectedSchoolDoc = schoolList.find((s) => s.id === selectedSchoolId);
-    const resolvedSchool = userRole === 'principal'
-      ? school.trim()
-      : selectedSchoolDoc?.name || '';
-    const resolvedCurriculum = userRole === 'principal'
-      ? curriculum
-      : (selectedSchoolDoc?.curricula?.[0] || curriculum);
-    const resolvedProvince = userRole === 'principal'
-      ? province
-      : (selectedSchoolDoc?.province || province);
-    const resolvedDistrict = userRole === 'principal'
-      ? district.trim()
-      : (selectedSchoolDoc?.district || district.trim());
+
+    const resolvedSchool = userRole === 'principal' ? school.trim() : selectedSchoolDoc?.name || '';
+    const resolvedCurriculum = userRole === 'principal' ? curriculum : (selectedSchoolDoc?.curricula?.[0] || curriculum);
+    const resolvedProvince = userRole === 'principal' ? province : (selectedSchoolDoc?.province || province);
+    const resolvedDistrict = userRole === 'principal' ? district.trim() : (selectedSchoolDoc?.district || district.trim());
 
     const baseProfile = {
       uid,
@@ -360,6 +478,7 @@ export default function AuthPage({ setStudentInfo }) {
       schoolId: resolvedSchoolId,
       province: resolvedProvince,
       district: resolvedDistrict,
+      country: country,
       role: userRole,
       curriculum: resolvedCurriculum,
       createdAt: serverTimestamp(),
@@ -372,12 +491,29 @@ export default function AuthPage({ setStudentInfo }) {
           { grade, subjects };
 
     const fullProfile = { ...baseProfile, ...roleData };
-    const collectionName =
-      userRole === 'principal' ? 'principals' :
-        userRole === 'teacher' ? 'teachers' : 'students';
+    const collectionName = userRole === 'principal' ? 'principals' : userRole === 'teacher' ? 'teachers' : 'students';
 
+    // ── Subscription Limit Validation ──
+    if (userRole !== 'principal' && selectedSchoolDoc) {
+      const tierConfig = getTierConfig(selectedSchoolDoc.tier || 'free');
+      const limits = tierConfig.limits || { teachers: 5, students: 50 };
+      const roleKey = userRole === 'teacher' ? 'teachers' : 'students';
+      const limit = limits[roleKey] || 50;
+
+      try {
+        const currentCount = await getSchoolUserCount(selectedSchoolId, userRole);
+        if (currentCount >= limit) {
+          setError(`This school is on the ${tierConfig.label} plan and has reached its limit for ${userRole}s (${limit} max).`);
+          setIsSubmitting(false);
+          return;
+        }
+      } catch (err) {
+        console.error("Count check failed:", err);
+      }
+    }
+
+    // ── Persistence ──
     try {
-      // 1. Write users/{uid} FIRST so rules validate correctly
       await setDoc(doc(db, 'users', uid), {
         uid,
         email: finalEmail,
@@ -385,13 +521,8 @@ export default function AuthPage({ setStudentInfo }) {
         schoolId: resolvedSchoolId,
       }, { merge: true });
 
-      // 2. Write role database profile
       await setDoc(doc(db, collectionName, uid), fullProfile);
-
-      // 3. Complete cloud file-system allocation maps
       await silentlyProvisionStorage(uid, resolvedSchoolId, userRole);
-
-      // 4. Fire helper syncer documents last
       await ensureUserFirestoreDocs(uid, userRole, fullProfile);
 
       if (userRole === 'student') setStudentInfo(fullProfile);
@@ -404,12 +535,15 @@ export default function AuthPage({ setStudentInfo }) {
               province,
               district: district.trim(),
               curricula: [curriculum],
+              country,
               principalUid: uid,
               principalTitle: title,
               principalName: name.trim(),
               principalSurname: surname.trim(),
               principalEmail: finalEmail,
               principalProfile: fullProfile,
+              tier: 'free',
+              limits: { teachers: 5, students: 50 }
             },
           },
         });
@@ -625,6 +759,32 @@ export default function AuthPage({ setStudentInfo }) {
                 )}
               </div>
 
+              {/* country and curriculum */}
+              <div>
+                <label className="label-xs block mb-1.5">Country *</label>
+                <div className="relative">
+                  <select
+                    value={country}
+                    onChange={(e) => handleCountryChange(e.target.value)}
+                    className="input-f appearance-none pr-10 text-black"
+                    disabled={isFetchingCountries}
+                    required
+                  >
+                    {isFetchingCountries ? (
+                      <option>Loading countries...</option>
+                    ) : (
+                      <>
+                        <option value="">Select your country...</option>
+                        {countries.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
+              </div>
+
               {(userRole === 'teacher' || userRole === 'principal') && (
                 <div>
                   <p className="label-xs">Title</p>
@@ -634,7 +794,7 @@ export default function AuthPage({ setStudentInfo }) {
                         key={t}
                         type="button"
                         onClick={() => setTitle(t)}
-                        className={`px-4 py-2 rounded-xl text-xs font-black border transition-all ${title === t ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-indigo-400'}`}
+                        className={`px-4 py-2 rounded-xl text-xs font-black border transition-all ${title === t ? 'bg-indigo-600 text-black border-indigo-600' : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-indigo-400'}`}
                       >
                         {t}
                       </button>
@@ -654,7 +814,7 @@ export default function AuthPage({ setStudentInfo }) {
                     value={name}
                     placeholder="e.g. Thabo"
                     required
-                    className="input-f"
+                    className="input-f text-black"
                     onChange={(e) => { setName(e.target.value); clearAuto('name'); }}
                   />
                 </div>
@@ -668,7 +828,7 @@ export default function AuthPage({ setStudentInfo }) {
                     value={surname}
                     placeholder="e.g. Nkosi"
                     required
-                    className="input-f"
+                    className="input-f text-black"
                     onChange={(e) => { setSurname(e.target.value); clearAuto('surname'); }}
                   />
                 </div>
@@ -682,7 +842,7 @@ export default function AuthPage({ setStudentInfo }) {
                     value={school}
                     placeholder="e.g. Hoërskool Randburg"
                     required
-                    className="input-f"
+                    className="input-f text-black"
                     onChange={(e) => setSchool(e.target.value)}
                   />
                 </div>
@@ -702,7 +862,7 @@ export default function AuthPage({ setStudentInfo }) {
                       <select
                         value={selectedSchoolId}
                         onChange={(e) => handleSchoolSelect(e.target.value)}
-                        className="input-f appearance-none pr-10"
+                        className="input-f text-black appearance-none pr-10"
                       >
                         {schoolList.map((s) => (
                           <option key={s.id} value={s.id}>{s.name} — {s.province}</option>
@@ -714,6 +874,20 @@ export default function AuthPage({ setStudentInfo }) {
                 </div>
               )}
 
+              {/* curriculum - will need to be changed later */}
+              <div>
+                <label className="label-xs block mb-1.5">Curriculum *</label>
+                <select
+                  value={curriculum}
+                  onChange={(e) => setCurriculum(e.target.value)}
+                  className="input-f text-black"
+                  disabled={isFetchingCurricula}
+                >
+                  <option value="">Select Curriculum</option>
+                  {availableCurricula.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="label-xs block mb-1.5">Province *</label>
@@ -721,74 +895,138 @@ export default function AuthPage({ setStudentInfo }) {
                     <select
                       value={province}
                       onChange={(e) => setProvince(e.target.value)}
-                      className="input-f appearance-none pr-10"
-                      disabled={userRole !== 'principal'}
+                      className="input-f text-black appearance-none pr-10"
+                      disabled={userRole !== 'principal' || isFetchingProvinces}
                     >
-                      {SA_PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
+                      {isFetchingProvinces ? (
+                        <option>Loading...</option>
+                      ) : (
+                        provinces.map((p) => (
+                          <option key={p} value={p}>
+                            {p}
+                          </option>
+                        ))
+                      )}
                     </select>
                     <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
                 <div>
-                  <label className="label-xs block mb-1.5">District *</label>
-                  <input
-                    type="text"
-                    value={district}
-                    placeholder="e.g. Johannesburg East"
-                    required
-                    className="input-f"
-                    disabled={userRole !== 'principal'}
-                    onChange={(e) => setDistrict(e.target.value)}
-                  />
+                  <label className="label-xs block mb-1.5">District / Region *</label>
+                  <div className="relative">
+                    <select
+                      value={district}
+                      onChange={(e) => setDistrict(e.target.value)}
+                      className="input-f text-black appearance-none pr-10"
+                      disabled={userRole !== 'principal' || isFetchingDistricts || districts.length === 0}
+                    >
+                      {isFetchingDistricts ? (
+                        <option>Loading districts...</option>
+                      ) : districts.length > 0 ? (
+                        <>
+                          <option value="">Select a district...</option>
+                          {districts.map((d) => (
+                            <option key={d} value={d}>{d}</option>
+                          ))}
+                        </>
+                      ) : (
+                        <option value="">No districts found</option>
+                      )}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
                 </div>
               </div>
 
               {userRole === 'student' && (
                 <div>
-                  <label className="label-xs block mb-1.5">Grade *</label>
-                  <select
-                    value={grade}
-                    onChange={(e) => setGrade(e.target.value)}
-                    className="input-f"
-                    required
-                  >
-                    <option value="">Select Grade</option>
-                    {['10', '11', '12'].map((g) => <option key={g} value={g}>Grade {g}</option>)}
-                  </select>
+                  <label className="label-xs block mb-1.5">Grade / Academic Level *</label>
+                  <div className="relative">
+                    <select
+                      value={grade}
+                      onChange={(e) => setGrade(e.target.value)}
+                      className="input-f text-black appearance-none pr-10"
+                      disabled={isFetchingLevels || levels.length === 0}
+                      required
+                    >
+                      {isFetchingLevels ? (
+                        <option>Loading levels...</option>
+                      ) : levels.length > 0 ? (
+                        <>
+                          <option value="">Select Level</option>
+                          {levels.map((l) => (
+                            <option key={l} value={l}>{l}</option>
+                          ))}
+                        </>
+                      ) : (
+                        <option value="">No levels available</option>
+                      )}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
                 </div>
               )}
 
               {userRole === 'teacher' && (
                 <div>
-                  <label className="label-xs block mb-1.5">Teaching Phase *</label>
-                  <select
-                    value={teachingPhase}
-                    onChange={(e) => setTeachingPhase(e.target.value)}
-                    className="input-f"
-                  >
-                    <option value="Senior">Senior Phase (Grade 7-9)</option>
-                    <option value="FET">FET Phase (Grade 10-12)</option>
-                  </select>
+                  <label className="label-xs block mb-1.5">Specialization / Phase *</label>
+                  <div className="relative">
+                    <select
+                      value={teachingPhase}
+                      onChange={(e) => setTeachingPhase(e.target.value)}
+                      className="input-f text-black appearance-none pr-10"
+                      disabled={isFetchingPhases || teachingPhases.length === 0}
+                      required
+                    >
+                      {isFetchingPhases ? (
+                        <option>Loading specializations...</option>
+                      ) : teachingPhases.length > 0 ? (
+                        <>
+                          <option value="">Select Phase</option>
+                          {teachingPhases.map((p) => (
+                            <option key={p} value={p}>{p}</option>
+                          ))}
+                        </>
+                      ) : (
+                        <option value="">No phases available</option>
+                      )}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
                 </div>
               )}
 
               {(userRole === 'student' || userRole === 'teacher') && (
                 <div>
-                  <label className="label-xs block mb-2">Registered Subjects (Select at least 2) *</label>
+                  <label className="label-xs block mb-2">
+                    {userRole === 'student' ? 'Registered Subjects' : 'Subjects Taught'} (Select at least 2) *
+                  </label>
+
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-2 border border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/50">
-                    {STANDARD_DBE_SUBJECTS.map((sub) => {
-                      const active = subjects.includes(sub);
-                      return (
-                        <button
-                          key={sub}
-                          type="button"
-                          onClick={() => toggleSubject(sub)}
-                          className={`p-2.5 text-left text-xs rounded-xl font-bold transition-all border ${active ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700/60 hover:border-slate-300'}`}
-                        >
-                          {active ? '✓ ' : ''}{sub}
-                        </button>
-                      );
-                    })}
+                    {isFetchingSubjects ? (
+                      <div className="col-span-full flex items-center justify-center p-4 text-xs text-slate-400">
+                        <Loader2 size={14} className="animate-spin mr-2" /> Loading subjects...
+                      </div>
+                    ) : subjectList.length > 0 ? (
+                      subjectList.map((sub) => {
+                        const active = subjects.includes(sub);
+                        return (
+                          <button
+                            key={sub}
+                            type="button"
+                            onClick={() => toggleSubject(sub)}
+                            className={`p-2.5 text-left text-xs rounded-xl font-bold transition-all border ${active
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                              : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700/60 hover:border-slate-300'
+                              }`}
+                          >
+                            {active ? '✓ ' : ''}{sub}
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <p className="col-span-full text-center text-xs text-slate-400 p-4">Select level to see subjects</p>
+                    )}
                   </div>
                 </div>
               )}

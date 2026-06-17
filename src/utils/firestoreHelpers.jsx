@@ -3,7 +3,7 @@
 import {
     doc, getDoc, setDoc, updateDoc, deleteDoc,
     collection, query, where, orderBy, limit,
-    getDocs, onSnapshot, serverTimestamp, addDoc, arrayUnion,
+    getDocs, onSnapshot, serverTimestamp, addDoc, arrayUnion, getCountFromServer
 } from 'firebase/firestore';
 import { db } from '../utils/firebase';
 import { useState, useEffect, useCallback } from 'react';
@@ -364,3 +364,12 @@ export function getTierPrice(tierId, cycle) {
     const tier = getTierConfig(tierId);
     return cycle === 'annual' ? tier.annualPrice : tier.monthlyPrice;
 }
+
+export const getSchoolUserCount = async (schoolId, role) => {
+    // role should be 'teacher' or 'student'
+    const collectionName = role === 'teacher' ? 'teachers' : 'students';
+    const q = query(collection(db, collectionName), where("schoolId", "==", schoolId));
+
+    const snapshot = await getCountFromServer(q);
+    return snapshot.data().count;
+};

@@ -1218,6 +1218,7 @@ export default function PrincipalDashboard({ principal }) {
                                 <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {[
                                         ['School Name', school?.name],
+                                        ['Country', school?.country],
                                         ['Motto', school?.motto],
                                         ['Established', school?.established],
                                         ['Province', school?.province],
