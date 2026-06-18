@@ -1,6 +1,8 @@
-// ─── SchoolRegistration.jsx (Global Edition — fixed navigation) ──────────────
-// Layout fix: the card now uses flex-col with a scrollable middle section.
-// Nav buttons are STICKY at the bottom — always visible regardless of content height.
+// ─── SchoolRegistration.jsx (Global Edition — AI-resolved academics) ────────
+// Layout: flex-col card with scrollable middle section, sticky bottom nav.
+// Curricula, provinces, districts, levels, phases, and subjects are now
+// resolved dynamically per-country/curriculum via Groq (see academicResolver.js)
+// instead of static lookup tables.
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -9,21 +11,23 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage
 import { auth, db, storage } from '../utils/firebase';
 import {
     School, Palette, BookOpen, CheckCircle2, ArrowRight,
-    Loader2, X, Image as ImageIcon, Layers, Search, ChevronDown, Save
+    Loader2, X, Image as ImageIcon, Layers, Search, ChevronDown, Save,
+    AlertTriangle, RefreshCw, GraduationCap, MapPin
 } from 'lucide-react';
 import TierSelection from './TierSelection';
 import PaymentManager from './PaymentManager';
-import { COUNTRIES, getCountry, getRegions, detectDefaultCountry } from '../utils/countries';
+import { COUNTRIES, getCountry, detectDefaultCountry } from '../utils/countries';
 import { getTierConfig } from '../utils/tierConfig';
+import {
+    fetchCountryCurriculumOptions,
+    fetchProvinces,
+    fetchDistricts,
+    fetchLevels,
+    fetchTeachingPhases,
+    fetchSubjects,
+} from '../utils/academicResolver';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-
-const CURRICULA_GLOBAL = [
-    'National Curriculum', 'Cambridge International', 'IB (International Baccalaureate)',
-    'CAPS (South Africa)', 'IEB (South Africa)', 'SACAI (South Africa)',
-    'Common Core (USA)', 'A-Levels (UK)', 'GCSE (UK)',
-    'Australian Curriculum', 'CBE (Kenya)', 'Montessori', 'Waldorf / Steiner', 'Other',
-];
 
 const PRESET_COLORS = [
     '#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444',
@@ -37,6 +41,94 @@ const STEPS = [
     { num: 3, label: 'Academics', icon: BookOpen },
     { num: 4, label: 'Plan', icon: Layers },
 ];
+
+// ─── GENERIC AI-FETCH HOOK ────────────────────────────────────────────────────
+// Drives loading/error/empty/data states for any of the academicResolver calls.
+// `deps` are the values the fetch depends on — when any is missing/falsy, the
+// fetch is skipped (e.g. don't fetch districts before a province is chosen).
+
+function useAiList(fetchFn, deps, enabled = true) {
+    const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const depsKey = JSON.stringify(deps);
+
+    useEffect(() => {
+        if (!enabled || deps.some((d) => !d)) {
+            setData([]);
+            setError('');
+            return;
+        }
+        let active = true;
+        setLoading(true);
+        setError('');
+
+        fetchFn(...deps)
+            .then((result) => {
+                if (!active) return;
+                if (!Array.isArray(result)) throw new Error('Malformed response');
+                setData(result);
+            })
+            .catch((err) => {
+                if (!active) return;
+                console.error('[AI fetch failed]', err);
+                setData([]);
+                setError('Could not load suggestions. Please retry.');
+            })
+            .finally(() => { if (active) setLoading(false); });
+
+        return () => { active = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [depsKey, enabled]);
+
+    const retry = () => {
+        if (deps.some((d) => !d)) return;
+        let active = true;
+        setLoading(true);
+        setError('');
+        fetchFn(...deps)
+            .then((result) => {
+                if (!active) return;
+                if (!Array.isArray(result)) throw new Error('Malformed response');
+                setData(result);
+            })
+            .catch((err) => {
+                if (!active) return;
+                console.error('[AI fetch retry failed]', err);
+                setData([]);
+                setError('Could not load suggestions. Please retry.');
+            })
+            .finally(() => { if (active) setLoading(false); });
+    };
+
+    return { data, loading, error, retry };
+}
+
+// ─── AI LIST STATUS ROW (loading / error / retry — shared visual) ────────────
+
+function AiListStatus({ loading, error, onRetry, loadingLabel }) {
+    if (loading) {
+        return (
+            <div className="flex items-center gap-2 text-xs text-slate-400 font-bold py-2">
+                <Loader2 size={13} className="animate-spin" /> {loadingLabel}
+            </div>
+        );
+    }
+    if (error) {
+        return (
+            <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 text-xs font-bold">
+                    <AlertTriangle size={13} /> {error}
+                </div>
+                <button type="button" onClick={onRetry}
+                    className="flex items-center gap-1 text-amber-700 dark:text-amber-300 text-xs font-black hover:opacity-70">
+                    <RefreshCw size={12} /> Retry
+                </button>
+            </div>
+        );
+    }
+    return null;
+}
 
 // ─── COUNTRY SEARCH DROPDOWN ──────────────────────────────────────────────────
 
@@ -133,29 +225,264 @@ function PhoneInput({ countryCode, value, onChange }) {
     );
 }
 
-// ─── REGION FIELD ─────────────────────────────────────────────────────────────
+// ─── REGION FIELD (AI-resolved provinces) ─────────────────────────────────────
+// Replaces the static utils/countries.js regions array — provinces are now
+// fetched live from Groq for the selected country, with a free-text fallback
+// if the fetch fails or returns nothing.
 
-function RegionField({ countryCode, value, onChange, primary }) {
-    const country = getCountry(countryCode);
-    const regions = getRegions(countryCode);
+function RegionField({ country, value, onChange }) {
     const label = country?.regionLabel || 'State / Region';
+    const { data: provinces, loading, error, retry } = useAiList(
+        fetchProvinces,
+        [country?.name],
+        !!country?.name
+    );
 
-    if (regions.length > 0) {
+    if (!country?.name) {
         return (
             <div>
                 <label className="lx">{label}</label>
-                <select value={value} className="if" onChange={(e) => onChange(e.target.value)}>
-                    <option value="">Select {label}...</option>
-                    <option value="">Select {label}...</option>
-                    {regions.map((r) => <option key={r} value={r}>{r}</option>)}
-                </select>
+                <input type="text" value={value} placeholder="Select a country first" disabled className="if opacity-50" />
             </div>
         );
     }
+
     return (
         <div>
-            <label className="lx">{label}</label>
-            <input type="text" value={value} placeholder={`Enter ${label}`} className="if" onChange={(e) => onChange(e.target.value)} />
+            <label className="lx flex items-center gap-1.5">
+                <MapPin size={11} /> {label}
+            </label>
+            {loading && <AiListStatus loading loadingLabel={`Looking up ${label.toLowerCase()}s for ${country.name}...`} />}
+            {!loading && error && <AiListStatus error={error} onRetry={retry} />}
+            {!loading && !error && provinces.length > 0 && (
+                <select value={value} className="if" onChange={(e) => onChange(e.target.value)}>
+                    <option value="">Select {label}...</option>
+                    {provinces.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+            )}
+            {!loading && !error && provinces.length === 0 && (
+                <input type="text" value={value} placeholder={`Enter ${label}`} className="if" onChange={(e) => onChange(e.target.value)} />
+            )}
+        </div>
+    );
+}
+
+// ─── DISTRICT FIELD (AI-resolved, depends on province) ────────────────────────
+
+function DistrictField({ country, province, value, onChange }) {
+    const { data: districts, loading, error, retry } = useAiList(
+        fetchDistricts,
+        [country?.name, province],
+        !!country?.name && !!province
+    );
+
+    if (!province) {
+        return (
+            <div>
+                <label className="lx">District / City</label>
+                <input type="text" value={value} placeholder="Select a province first" disabled className="if opacity-50" />
+            </div>
+        );
+    }
+
+    return (
+        <div>
+            <label className="lx">District / City</label>
+            {loading && <AiListStatus loading loadingLabel={`Looking up districts in ${province}...`} />}
+            {!loading && error && <AiListStatus error={error} onRetry={retry} />}
+            {!loading && !error && districts.length > 0 && (
+                <select value={value} className="if" onChange={(e) => onChange(e.target.value)}>
+                    <option value="">Select District...</option>
+                    {districts.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+            )}
+            {!loading && !error && districts.length === 0 && (
+                <input type="text" value={value} placeholder="Enter district / city" className="if" onChange={(e) => onChange(e.target.value)} />
+            )}
+        </div>
+    );
+}
+
+// ─── CURRICULA PICKER (AI-resolved, replaces static CURRICULA_GLOBAL) ─────────
+
+function CurriculaPicker({ country, selected, onToggle, primary, customCurriculum, setCustomCurriculum, addCustomCurriculum }) {
+    const { data: curriculaOptions, loading, error, retry } = useAiList(
+        fetchCountryCurriculumOptions,
+        [country?.name],
+        !!country?.name
+    );
+
+    if (!country?.name) {
+        return <p className="text-xs text-slate-400 italic">Select a country in Step 1 to load curriculum options.</p>;
+    }
+
+    return (
+        <div>
+            <label className="lx">Curricula Offered * — select all that apply</label>
+
+            {loading && <AiListStatus loading loadingLabel={`Finding curricula used in ${country.name}...`} />}
+            {!loading && error && <AiListStatus error={error} onRetry={retry} />}
+
+            {!loading && !error && (
+                <div className="grid grid-cols-2 gap-2">
+                    {curriculaOptions.map((c) => {
+                        const active = selected.includes(c);
+                        return (
+                            <button key={c} type="button" onClick={() => onToggle(c)}
+                                className={`p-3 rounded-2xl border-2 text-xs font-bold text-left transition-all ${active ? 'border-transparent text-white' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-400'}`}
+                                style={active ? { backgroundColor: primary, borderColor: primary } : {}}>
+                                {active && '✓ '}{c}
+                            </button>
+                        );
+                    })}
+                    {curriculaOptions.length === 0 && (
+                        <p className="text-xs text-slate-400 col-span-2">No suggestions found — add yours below.</p>
+                    )}
+                </div>
+            )}
+
+            {/* Custom curriculum input — always available regardless of AI result */}
+            <div className="mt-3 flex gap-2">
+                <input
+                    type="text" value={customCurriculum}
+                    placeholder="Add custom curriculum..."
+                    className="if flex-1 !py-3"
+                    onChange={(e) => setCustomCurriculum(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomCurriculum(); } }}
+                />
+                <button type="button" onClick={addCustomCurriculum}
+                    className="px-4 py-3 rounded-2xl text-white text-xs font-black whitespace-nowrap"
+                    style={{ backgroundColor: primary }}>
+                    + Add
+                </button>
+            </div>
+
+            {/* Chips for any curriculum not in the AI-fetched list (custom or stale) */}
+            {selected.filter((c) => !curriculaOptions.includes(c)).length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                    {selected.filter((c) => !curriculaOptions.includes(c)).map((c) => (
+                        <span key={c} className="flex items-center gap-1 px-3 py-1 rounded-full text-white text-xs font-bold" style={{ backgroundColor: primary }}>
+                            {c}
+                            <button type="button" onClick={() => onToggle(c)} className="ml-1 opacity-70 hover:opacity-100"><X size={10} /></button>
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            {!selected.length && (
+                <p className="text-xs text-red-500 mt-2 font-bold">Please select or add at least one curriculum.</p>
+            )}
+        </div>
+    );
+}
+
+// ─── TEACHING PHASE PICKER (AI-resolved, depends on country + primary curriculum) ──
+
+function PhasePicker({ country, curriculum, selected, onToggle, primary }) {
+    const { data: phases, loading, error, retry } = useAiList(
+        fetchTeachingPhases,
+        [country?.name, curriculum],
+        !!country?.name && !!curriculum
+    );
+
+    if (!curriculum) {
+        return <p className="text-xs text-slate-400 italic">Select a curriculum above to load teaching phases.</p>;
+    }
+
+    return (
+        <div>
+            <label className="lx">Teaching Phases Offered</label>
+            {loading && <AiListStatus loading loadingLabel={`Finding teaching phases for ${curriculum}...`} />}
+            {!loading && error && <AiListStatus error={error} onRetry={retry} />}
+            {!loading && !error && (
+                <div className="flex flex-wrap gap-2">
+                    {phases.map((p) => {
+                        const active = selected.includes(p);
+                        return (
+                            <button key={p} type="button" onClick={() => onToggle(p)}
+                                className={`px-3 py-2 rounded-xl border-2 text-xs font-bold transition-all ${active ? 'border-transparent text-white' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-400'}`}
+                                style={active ? { backgroundColor: primary, borderColor: primary } : {}}>
+                                {active && '✓ '}{p}
+                            </button>
+                        );
+                    })}
+                    {phases.length === 0 && <p className="text-xs text-slate-400">No phase suggestions available.</p>}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── ACADEMIC LEVELS PICKER (AI-resolved, depends on country + curriculum) ────
+
+function LevelsPicker({ country, curriculum, selected, onToggle, primary }) {
+    const { data: levels, loading, error, retry } = useAiList(
+        fetchLevels,
+        [country?.name, curriculum],
+        !!country?.name && !!curriculum
+    );
+
+    if (!curriculum) {
+        return <p className="text-xs text-slate-400 italic">Select a curriculum above to load academic levels.</p>;
+    }
+
+    return (
+        <div>
+            <label className="lx">Academic Levels Offered</label>
+            {loading && <AiListStatus loading loadingLabel={`Finding academic levels for ${curriculum}...`} />}
+            {!loading && error && <AiListStatus error={error} onRetry={retry} />}
+            {!loading && !error && (
+                <div className="max-h-40 overflow-y-auto grid grid-cols-2 gap-2 pr-1">
+                    {levels.map((lvl) => {
+                        const active = selected.includes(lvl);
+                        return (
+                            <button key={lvl} type="button" onClick={() => onToggle(lvl)}
+                                className={`px-3 py-2 rounded-xl border-2 text-xs font-bold text-left transition-all ${active ? 'border-transparent text-white' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-400'}`}
+                                style={active ? { backgroundColor: primary, borderColor: primary } : {}}>
+                                {active && '✓ '}{lvl}
+                            </button>
+                        );
+                    })}
+                    {levels.length === 0 && <p className="text-xs text-slate-400 col-span-2">No level suggestions available.</p>}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── SUBJECTS PICKER (AI-resolved, depends on country + curriculum + a phase) ──
+
+function SubjectsPicker({ country, curriculum, phase, selected, onToggle, primary }) {
+    const { data: subjects, loading, error, retry } = useAiList(
+        fetchSubjects,
+        [country?.name, curriculum, phase],
+        !!country?.name && !!curriculum && !!phase
+    );
+
+    if (!phase) {
+        return <p className="text-xs text-slate-400 italic">Select a teaching phase above to load subjects.</p>;
+    }
+
+    return (
+        <div>
+            <label className="lx">Subjects Offered — {phase}</label>
+            {loading && <AiListStatus loading loadingLabel={`Finding subjects for ${phase}...`} />}
+            {!loading && error && <AiListStatus error={error} onRetry={retry} />}
+            {!loading && !error && (
+                <div className="flex flex-wrap gap-2">
+                    {subjects.map((s) => {
+                        const active = selected.includes(s);
+                        return (
+                            <button key={s} type="button" onClick={() => onToggle(s)}
+                                className={`px-3 py-2 rounded-xl border-2 text-xs font-bold transition-all ${active ? 'border-transparent text-white' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-400'}`}
+                                style={active ? { backgroundColor: primary, borderColor: primary } : {}}>
+                                {active && '✓ '}{s}
+                            </button>
+                        );
+                    })}
+                    {subjects.length === 0 && <p className="text-xs text-slate-400">No subject suggestions available.</p>}
+                </div>
+            )}
         </div>
     );
 }
@@ -184,9 +511,14 @@ export default function SchoolRegistration({ principalProfile, onComplete }) {
     const [logoPreview, setLogoPreview] = useState(null);
     const logoInputRef = useRef();
 
-    // Step 3
+    // Step 3 — academics (all AI-resolved now)
     const [curricula, setCurricula] = useState(seed.curricula || []);
     const [customCurriculum, setCustomCurriculum] = useState('');
+    const [primaryCurriculum, setPrimaryCurriculum] = useState(''); // drives levels/phases/subjects
+    const [phases, setPhases] = useState([]);
+    const [primaryPhase, setPrimaryPhase] = useState(''); // drives subjects
+    const [levels, setLevels] = useState([]);
+    const [subjects, setSubjects] = useState([]);
 
     // Step 4
     const [selectedTier, setSelectedTier] = useState('free');
@@ -199,10 +531,34 @@ export default function SchoolRegistration({ principalProfile, onComplete }) {
     const [isSavingDraft, setIsSavingDraft] = useState(false);
     const [error, setError] = useState('');
 
-    // Reset region when country changes
-    useEffect(() => { setRegion(''); }, [countryCode]);
-
     const country = getCountry(countryCode);
+
+    // Reset region/district when country changes
+    useEffect(() => { setRegion(''); setDistrict(''); }, [countryCode]);
+    // Reset district when province changes
+    useEffect(() => { setDistrict(''); }, [region]);
+    // Reset downstream academic selections when primary curriculum changes
+    useEffect(() => {
+        setPhases([]); setPrimaryPhase(''); setLevels([]); setSubjects([]);
+    }, [primaryCurriculum]);
+    // Reset subjects when primary phase changes
+    useEffect(() => { setSubjects([]); }, [primaryPhase]);
+
+    // Keep primaryCurriculum valid — clear it if it's removed from the selected list,
+    // and auto-pick the first selected curriculum if none is set yet.
+    useEffect(() => {
+        if (primaryCurriculum && !curricula.includes(primaryCurriculum)) {
+            setPrimaryCurriculum(curricula[0] || '');
+        } else if (!primaryCurriculum && curricula.length > 0) {
+            setPrimaryCurriculum(curricula[0]);
+        }
+    }, [curricula, primaryCurriculum]);
+
+    useEffect(() => {
+        if (primaryPhase && !phases.includes(primaryPhase)) {
+            setPrimaryPhase('');
+        }
+    }, [phases, primaryPhase]);
 
     // ── Handlers ─────────────────────────────────────────────────────────────
     const handleLogoChange = (e) => {
@@ -229,6 +585,20 @@ export default function SchoolRegistration({ principalProfile, onComplete }) {
         if (!curricula.includes(val)) setCurricula((p) => [...p, val]);
         setCustomCurriculum('');
     };
+
+    const togglePhase = (p) =>
+        setPhases((prev) => {
+            const next = prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p];
+            // first phase ever added becomes the active one driving subjects, if none set
+            if (!primaryPhase && next.includes(p)) setPrimaryPhase(p);
+            return next;
+        });
+
+    const toggleLevel = (lvl) =>
+        setLevels((prev) => prev.includes(lvl) ? prev.filter((x) => x !== lvl) : [...prev, lvl]);
+
+    const toggleSubject = (s) =>
+        setSubjects((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
 
     const handleTierSelect = (tierId) => {
         if (tierId === 'free') { setSelectedTier('free'); return; }
@@ -277,6 +647,10 @@ export default function SchoolRegistration({ principalProfile, onComplete }) {
             primary,
             logoUrl: logoUrl || logoPreview,
             curricula,
+            primaryCurriculum,
+            teachingPhases: phases,
+            academicLevels: levels,
+            subjects,
             tier: selectedTier,
             tierUpdatedAt: serverTimestamp(),
             principalUid: uid,
@@ -356,13 +730,7 @@ export default function SchoolRegistration({ principalProfile, onComplete }) {
                 {/* Top color bar */}
                 <div className="fixed top-0 left-0 right-0 h-1.5 z-50 transition-all duration-500" style={{ background: primary }} />
 
-                {/* ── COMPACT SCROLL BOUNDARY LAYOUT ──
-          Enforcing strict flex management rules ensures the bottom action cluster 
-          can never get pushed down past the display viewport bounds.
-        */}
-                <div
-                    className="bg-white dark:bg-slate-900 w-full max-w-4xl h-[90vh] rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden relative"
-                >
+                <div className="bg-white dark:bg-slate-900 w-full max-w-4xl h-[90vh] rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden relative">
 
                     {/* ── 1. HEADER (never scrolls) ── */}
                     <div
@@ -453,7 +821,7 @@ export default function SchoolRegistration({ principalProfile, onComplete }) {
                                         <label className="lx">Established Year</label>
                                         <input type="number" value={established} min="1800" max={new Date().getFullYear()} placeholder="e.g. 1972" className="if" onChange={(e) => setEstablished(e.target.value)} />
                                     </div>
-                                    <RegionField countryCode={countryCode} value={region} onChange={setRegion} primary={primary} />
+                                    <RegionField country={country} value={region} onChange={setRegion} />
                                 </div>
 
                                 <div>
@@ -461,7 +829,7 @@ export default function SchoolRegistration({ principalProfile, onComplete }) {
                                         <label className="lx mb-0">District / City</label>
                                         {seed.district && <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-black">✦ Auto-filled</span>}
                                     </div>
-                                    <input type="text" value={district} placeholder="e.g. New Brighton" className="if" onChange={(e) => setDistrict(e.target.value)} />
+                                    <DistrictField country={country} province={region} value={district} onChange={setDistrict} />
                                 </div>
 
                                 <div>
@@ -517,9 +885,45 @@ export default function SchoolRegistration({ principalProfile, onComplete }) {
 
                                 <div>
                                     <label className="lx">Primary School Color</label>
-                                    <div className="flex flex-wrap gap-2 mb-3">
+
+                                    {/* Native browser color picker — primary interaction.
+                      Large clickable swatch opens the full-spectrum OS/browser
+                      picker (canvas+slider on Chrome/Edge, color panel on Safari,
+                      gradient picker on Firefox). No external library needed. */}
+                                    <div className="flex items-center gap-4 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                                        <div className="relative flex-shrink-0">
+                                            <input
+                                                type="color"
+                                                value={primary}
+                                                onChange={(e) => setPrimary(e.target.value)}
+                                                aria-label="Pick primary school color"
+                                                className="w-16 h-16 rounded-2xl border-2 border-white dark:border-slate-700 shadow-sm cursor-pointer appearance-none"
+                                                style={{ backgroundColor: primary }}
+                                            />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-black text-slate-800 dark:text-white">{primary.toUpperCase()}</p>
+                                            <p className="text-[10px] text-slate-400 mt-0.5">Tap the swatch to open the full color picker</p>
+                                            <input
+                                                type="text"
+                                                value={primary}
+                                                placeholder="#4f46e5"
+                                                className="if !py-1.5 !text-xs mt-2 max-w-[140px]"
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setPrimary(val.startsWith('#') ? val : `#${val}`);
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="px-4 py-2 rounded-xl text-white text-xs font-black flex-shrink-0" style={{ backgroundColor: primary }}>Preview</div>
+                                    </div>
+
+                                    {/* Quick picks — optional shortcuts, native picker remains the primary control */}
+                                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mt-4 mb-2">Quick picks</p>
+                                    <div className="flex flex-wrap gap-2">
                                         {PRESET_COLORS.map((c) => (
                                             <button key={c} type="button" onClick={() => setPrimary(c)}
+                                                title={c}
                                                 className="w-8 h-8 rounded-full border-2 transition-all hover:scale-110"
                                                 style={{
                                                     backgroundColor: c,
@@ -528,14 +932,6 @@ export default function SchoolRegistration({ principalProfile, onComplete }) {
                                                     boxShadow: primary === c ? `0 0 0 3px ${c}40` : undefined,
                                                 }} />
                                         ))}
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <input type="color" value={primary} onChange={(e) => setPrimary(e.target.value)} className="w-12 h-12 rounded-xl border border-slate-200 cursor-pointer p-1" />
-                                        <div>
-                                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">{primary.toUpperCase()}</p>
-                                            <p className="text-[10px] text-slate-400">Custom hex or pick a preset</p>
-                                        </div>
-                                        <div className="ml-auto px-4 py-2 rounded-xl text-white text-xs font-black" style={{ backgroundColor: primary }}>Preview</div>
                                     </div>
                                 </div>
 
@@ -559,63 +955,76 @@ export default function SchoolRegistration({ principalProfile, onComplete }) {
                             </div>
                         )}
 
-                        {/* ══ STEP 3: ACADEMICS ══ */}
+                        {/* ══ STEP 3: ACADEMICS (fully AI-resolved cascade) ══ */}
                         {step === 3 && (
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                                 <h2 className="text-base font-black text-slate-800 dark:text-white">Academics</h2>
 
-                                <div>
-                                    <label className="lx">Curricula Offered * — select all that apply</label>
-                                    {seed.curricula?.length > 0 && (
-                                        <div className="mb-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-black">
-                                            ✦ Curriculum data mapped
-                                        </div>
-                                    )}
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {CURRICULA_GLOBAL.map((c) => {
-                                            const active = curricula.includes(c);
-                                            return (
-                                                <button key={c} type="button" onClick={() => toggleCurriculum(c)}
-                                                    className={`p-3 rounded-2xl border-2 text-xs font-bold text-left transition-all ${active ? 'border-transparent text-white' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-400'}`}
-                                                    style={active ? { backgroundColor: primary, borderColor: primary } : {}}>
-                                                    {active && '✓ '}{c}
-                                                </button>
-                                            );
-                                        })}
+                                {seed.curricula?.length > 0 && (
+                                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-black">
+                                        ✦ Curriculum data mapped
                                     </div>
+                                )}
 
-                                    {/* Custom curriculum input */}
-                                    <div className="mt-3 flex gap-2">
-                                        <input
-                                            type="text" value={customCurriculum}
-                                            placeholder="Add custom curriculum..."
-                                            className="if flex-1 !py-3"
-                                            onChange={(e) => setCustomCurriculum(e.target.value)}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomCurriculum(); } }}
-                                        />
-                                        <button type="button" onClick={addCustomCurriculum}
-                                            className="px-4 py-3 rounded-2xl text-white text-xs font-black whitespace-nowrap"
-                                            style={{ backgroundColor: primary }}>
-                                            + Add
-                                        </button>
+                                <CurriculaPicker
+                                    country={country}
+                                    selected={curricula}
+                                    onToggle={toggleCurriculum}
+                                    primary={primary}
+                                    customCurriculum={customCurriculum}
+                                    setCustomCurriculum={setCustomCurriculum}
+                                    addCustomCurriculum={addCustomCurriculum}
+                                />
+
+                                {/* Primary curriculum selector — only relevant once 2+ chosen,
+                    drives the levels/phases/subjects cascade below */}
+                                {curricula.length > 1 && (
+                                    <div>
+                                        <label className="lx flex items-center gap-1.5">
+                                            <GraduationCap size={11} /> Primary curriculum (used to load levels & subjects)
+                                        </label>
+                                        <select value={primaryCurriculum} className="if" onChange={(e) => setPrimaryCurriculum(e.target.value)}>
+                                            {curricula.map((c) => <option key={c} value={c}>{c}</option>)}
+                                        </select>
                                     </div>
+                                )}
 
-                                    {/* Custom chips */}
-                                    {curricula.filter((c) => !CURRICULA_GLOBAL.includes(c)).length > 0 && (
-                                        <div className="flex flex-wrap gap-2 mt-3">
-                                            {curricula.filter((c) => !CURRICULA_GLOBAL.includes(c)).map((c) => (
-                                                <span key={c} className="flex items-center gap-1 px-3 py-1 rounded-full text-white text-xs font-bold" style={{ backgroundColor: primary }}>
-                                                    {c}
-                                                    <button type="button" onClick={() => toggleCurriculum(c)} className="ml-1 opacity-70 hover:opacity-100"><X size={10} /></button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
+                                <div className="h-px bg-slate-100 dark:bg-slate-800" />
 
-                                    {!curricula.length && (
-                                        <p className="text-xs text-red-500 mt-2 font-bold">Please select or add at least one curriculum.</p>
-                                    )}
-                                </div>
+                                <PhasePicker
+                                    country={country}
+                                    curriculum={primaryCurriculum}
+                                    selected={phases}
+                                    onToggle={togglePhase}
+                                    primary={primary}
+                                />
+
+                                {phases.length > 1 && (
+                                    <div>
+                                        <label className="lx">Primary phase (used to load subjects)</label>
+                                        <select value={primaryPhase} className="if" onChange={(e) => setPrimaryPhase(e.target.value)}>
+                                            <option value="">Select phase...</option>
+                                            {phases.map((p) => <option key={p} value={p}>{p}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+
+                                <LevelsPicker
+                                    country={country}
+                                    curriculum={primaryCurriculum}
+                                    selected={levels}
+                                    onToggle={toggleLevel}
+                                    primary={primary}
+                                />
+
+                                <SubjectsPicker
+                                    country={country}
+                                    curriculum={primaryCurriculum}
+                                    phase={primaryPhase}
+                                    selected={subjects}
+                                    onToggle={toggleSubject}
+                                    primary={primary}
+                                />
                             </div>
                         )}
 
@@ -635,10 +1044,9 @@ export default function SchoolRegistration({ principalProfile, onComplete }) {
 
                     </div>
 
-                    {/* ── 3. LOCKED BOTTOM NAV CLUSTER (Guaranteed Visibility) ── */}
+                    {/* ── 3. LOCKED BOTTOM NAV CLUSTER ── */}
                     <div className="flex-shrink-0 px-6 md:px-8 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-b-[2.5rem] flex items-center justify-between gap-3">
 
-                        {/* Action Left: Back Controls */}
                         <div className="flex items-center gap-2 flex-1">
                             {step > 1 ? (
                                 <button
@@ -654,7 +1062,6 @@ export default function SchoolRegistration({ principalProfile, onComplete }) {
                                 </div>
                             )}
 
-                            {/* Action Middle: Save Progress Action Hook */}
                             {schoolName.trim().length > 0 && (
                                 <button
                                     type="button"
@@ -672,7 +1079,6 @@ export default function SchoolRegistration({ principalProfile, onComplete }) {
                             )}
                         </div>
 
-                        {/* Action Right: Forward Progression / Finish Registration */}
                         <div className="flex-1 flex justify-end">
                             {step < 4 ? (
                                 <button

@@ -874,19 +874,7 @@ export default function AuthPage({ setStudentInfo }) {
                 </div>
               )}
 
-              {/* curriculum - will need to be changed later */}
-              <div>
-                <label className="label-xs block mb-1.5">Curriculum *</label>
-                <select
-                  value={curriculum}
-                  onChange={(e) => setCurriculum(e.target.value)}
-                  className="input-f text-black"
-                  disabled={isFetchingCurricula}
-                >
-                  <option value="">Select Curriculum</option>
-                  {availableCurricula.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
+
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

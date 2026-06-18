@@ -7,6 +7,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../utils/firebase';
 import { useState, useEffect, useCallback } from 'react';
+import { TIERS, getTierConfig } from './tierConfig';
 
 // ── Exam Audit ────────────────────────────────────────────────────────────────
 
@@ -372,4 +373,17 @@ export const getSchoolUserCount = async (schoolId, role) => {
 
     const snapshot = await getCountFromServer(q);
     return snapshot.data().count;
+};
+
+export const calculateUsageStatus = (currentCount, tierId, role) => {
+    const tierConfig = getTierConfig(tierId);
+    const max = tierConfig.limits[role === 'teacher' ? 'teachers' : 'students'];
+    const used = currentCount || 0;
+    const pct = Math.round((used / max) * 100);
+
+    let status = 'ok';
+    if (used >= max) status = 'crit';
+    else if (pct >= 80) status = 'warn';
+
+    return { used, max, pct, status };
 };

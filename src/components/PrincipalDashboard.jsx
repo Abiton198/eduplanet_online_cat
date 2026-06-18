@@ -13,6 +13,7 @@ import { auth, db } from '../utils/firebase';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { createPortal } from 'react-dom';
+import { useUser } from '../contexts/UserContext';
 
 import {
     Users, BookOpen, FileText, TrendingUp, Award, AlertTriangle,
@@ -33,6 +34,7 @@ import { TIERS, getTierConfig, isFeatureAllowed, isAtLimit, getUsagePercent } fr
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { onSnapshot, collection, getDocs, query, where } from 'firebase/firestore';
+
 
 
 
@@ -80,27 +82,27 @@ function useLimitStatus(tier, usage = {}) {
 // Shows amber at 80%, red at 100%. Dismissible for warnings, sticky for blocks.
 function LimitAlertBanner({ resource, label, info, onUpgrade }) {
     const [dismissed, setDismissed] = useState(false);
-    if (info.max === null || info.status === 'ok') return null;
+
+    // Graceful exit if info is missing or status is 'ok'
+    if (!info || info.status === 'ok') return null;
     if (dismissed && info.status === 'warn') return null;
 
     const isCrit = info.status === 'crit';
 
+
     return (
         <div className={`flex items-start gap-3 p-3.5 rounded-2xl border text-xs ${isCrit
-            ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
-            : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700'
+            ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700 text-black'
+            : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700 text-black'
             }`}>
             {isCrit
                 ? <Lock size={14} className="text-red-500 flex-shrink-0 mt-0.5" />
                 : <AlertTriangle size={14} className="text-amber-500 flex-shrink-0 mt-0.5" />}
             <div className="flex-1 min-w-0">
-                <p className={`font-black ${isCrit ? 'text-red-700 dark:text-red-300' : 'text-black dark:text-amber-300'}`}>
-                    {isCrit ? `${label} limit reached` : `${label} approaching limit`}
-                </p>
-                <p className={`mt-0.5 ${isCrit ? 'text-red-600 dark:text-red-400' : 'text-black dark:text-amber-400'}`}>
+                <p>
                     {isCrit
-                        ? `You've used all ${info.max} ${label.toLowerCase()} on your current plan. New ${label.toLowerCase()} cannot be added until you upgrade.`
-                        : `${info.used} of ${info.max} used (${info.pct}%). Consider upgrading before you're blocked.`}
+                        ? `You've used all ${info.max} ${label.toLowerCase()} on your current plan.`
+                        : `${info.used} of ${info.max} used (${info.pct}%). Consider upgrading.`}
                 </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -379,7 +381,40 @@ export default function PrincipalDashboard({ principal }) {
     // ── Limit status — single hook, used everywhere ───────────────────────────
     const { tier: activeTier, loading: tierLoading } = useActiveTier(schoolId);
     const tierConfig = getTierConfig(activeTier);  // ← single reference
-    const limits = tierConfig.limits;
+    const limits = useLimitStatus(activeTier, usage);
+
+    const { userRole, loading } = useUser();
+    const { user } = useUser();
+    const [selectedSchoolDoc, setSelectedSchoolDoc] = useState(null);
+
+
+
+
+    useEffect(() => {
+        const fetchSchool = async () => {
+            console.log('fetchSchool: user is', user);
+            if (!user) return;
+
+            try {
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                console.log('fetchSchool: userDoc exists?', userDoc.exists(), userDoc.data());
+                const schoolId = userDoc.data()?.schoolId;
+                console.log('fetchSchool: schoolId is', schoolId);
+
+                if (schoolId) {
+                    const schoolDoc = await getDoc(doc(db, 'schools', schoolId));
+                    console.log('fetchSchool: schoolDoc exists?', schoolDoc.exists());
+                    if (schoolDoc.exists()) {
+                        setSelectedSchoolDoc({ id: schoolId, ...schoolDoc.data() });
+                        console.log('fetchSchool: selectedSchoolDoc set');
+                    }
+                }
+            } catch (error) {
+                console.error('fetchSchool error:', error);
+            }
+        };
+        fetchSchool();
+    }, [user]);
 
 
 
@@ -437,10 +472,12 @@ export default function PrincipalDashboard({ principal }) {
     }, [schoolId]);
 
     // ── Derived ───────────────────────────────────────────────────────────────
+    const schoolAttempts = attempts.filter(a => a.schoolId === schoolId);
+
     const gradeCounts = countByGrade(students);
-    const avgScore = averageScore(attempts);
-    const overallPassRate = passRate(attempts);
-    const subjectGroups = groupBySubject(attempts);
+    const avgScore = averageScore(schoolAttempts);
+    const overallPassRate = passRate(schoolAttempts);
+    const subjectGroups = groupBySubject(schoolAttempts);
     const allSubjects = [...new Set(students.flatMap(s => s.subjects || []))].sort();
 
     const filteredStudents = students.filter(s => {
@@ -453,31 +490,29 @@ export default function PrincipalDashboard({ principal }) {
     });
 
     const studentAttempts = (uid) =>
-        (attempts || []).filter(
-            (a) =>
-                a.schoolId === schoolId &&
-                (a.studentUid === uid || a.studentId === uid)
+        schoolAttempts.filter(
+            (a) => a.studentUid === uid || a.studentId === uid
         );
 
     const examAttempts = (exam) =>
-        (attempts || []).filter(
+        schoolAttempts.filter(
             (a) =>
-                a.schoolId === schoolId &&
-                (
-                    a.examId === exam.id ||
-                    a.sourceUploadId === exam.id ||
-                    a.exam_id === exam.id
-                )
+                a.examId === exam.id ||
+                a.sourceUploadId === exam.id ||
+                a.exam_id === exam.id
         );
 
     const fetchAllAttempts = async () => {
-        const q = query(
-            collection(db, 'exam_attempts'),
-            where('schoolId', '==', schoolId) // Only get this school's attempts!
-        );
-        const snap = await getDocs(q);
-        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setAttempts(all);
+        try {
+            const snap = await getDocs(
+                query(collection(db, 'exam_attempts'), where('schoolId', '==', schoolId))
+            );
+            if (!state.active) return;
+            const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            setAttempts(all);
+        } catch (e) {
+            if (state.active) console.error('[fetchAttempts]', e);
+        }
     };
 
     const handleUpgrade = useCallback(() => setShowUpgradeModal(true), []);
@@ -574,7 +609,7 @@ export default function PrincipalDashboard({ principal }) {
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+            <nav className="flex-1 p-3 space-y-1 overflow-y-auto text-black">
                 {tabs.map(t => {
                     const Icon = t.icon;
                     const isActive = activeTab === t.id;
@@ -635,19 +670,19 @@ export default function PrincipalDashboard({ principal }) {
                         <UsageMeter
                             label="Students"
                             used={students.length}
-                            limit={limits.students ?? null}
+                            limit={limits.students?.max ?? null}
                             color={primary}
                         />
                         <UsageMeter
                             label="Exams"
                             used={exams.length}
-                            limit={limits.exams ?? null}
+                            limit={limits.exams?.max ?? null}
                             color={primary}
                         />
                         <UsageMeter
                             label="Teachers"
                             used={teachers.length}
-                            limit={limits.teachers ?? null}
+                            limit={limits.teachers?.max ?? null}
                             color={primary}
                         />
                     </div>
@@ -742,13 +777,13 @@ export default function PrincipalDashboard({ principal }) {
 
                     <button
                         onClick={exportPDF}
-                        className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                        className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] text-white bg-black font-black border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
                     >
                         <Download size={12} /> Export
                     </button>
                     <button
                         onClick={handlePrint}
-                        className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                        className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black text-white bg-black border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
                     >
                         <Printer size={12} /> Print
                     </button>
@@ -1251,19 +1286,19 @@ export default function PrincipalDashboard({ principal }) {
                                     <UsageMeter
                                         label="Students"
                                         used={students.length}
-                                        limit={limits.students ?? null}
+                                        limit={limits.students?.max ?? null}
                                         color={primary}
                                     />
                                     <UsageMeter
                                         label="Exams"
                                         used={exams.length}
-                                        limit={limits.exams ?? null}
+                                        limit={limits.exams?.max ?? null}
                                         color={primary}
                                     />
                                     <UsageMeter
                                         label="Teachers"
                                         used={teachers.length}
-                                        limit={limits.teachers ?? null}
+                                        limit={limits.teachers?.max ?? null}
                                         color={primary}
                                     />
                                 </div>
