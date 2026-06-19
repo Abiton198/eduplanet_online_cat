@@ -1,10 +1,11 @@
-Make global login - schools from any country can sign up
-if signup is school not in south africa need to add country option 
-on subscriptons if school outside SA only option is currency USD must double current subscription price
-enforce school subscription when teacher tries to upload exam work on teacher dashboard stats to show correct data
-enforce limits on students, teachers, and exams based on subscription plan
-disable teacher account after school subscription expires - opens dashboard to show expired message and link to renew subscription but cant upload exam work
+Make global login - schools from any country can sign up ------done
+if signup is school not in south africa need to add country option ------done
+on subscriptons if school outside SA only option is currency USD must double current subscription price ------done
+enforce school subscription when teacher tries to upload exam work on teacher dashboard stats to show correct data ------done
+enforce limits on students, teachers, and exams based on subscription plan ------done
+disable teacher account after school subscription expires - opens dashboard to show expired message and link to renew subscription but cant upload exam work 
 allow students to attempt exam once only - so when student click on exam it goes to the exam and when they finish it goes to the review page and they cant go back to the exam again
 when student clicks on review it shows the review page and they cant go back to the exam again - they should only be able to click on review 
 if school subscription is cancelled allow teachers and students in dashboard but return to free tier by default
 Ensure tests or exam uploads accepts diagrams and pictures or tables
+make student grade universal not only south africa - eg Form 1 (Grade 7), Form 2 (Grade 8), Form 3 (Grade 9), Grade 10, Grade 11, Grade 12 ------

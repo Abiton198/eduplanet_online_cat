@@ -378,7 +378,11 @@ export default function TeacherDashboard() {
   const [user, setUser] = useState(auth.currentUser);
   const [examDuration, setExamDuration] = useState(60); // default 60 minutes
 
+  const [examUsage, setExamUsage] = useState(null);
+  const [usageLoading, setUsageLoading] = useState(true);
+  const API = import.meta.env.VITE_API_URL;
 
+  // ─── Auth listener ────────────────────────────────────────────────── 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(setUser);
     return () => unsub();
@@ -390,7 +394,7 @@ export default function TeacherDashboard() {
     if (!user) return;
 
     // Wake up Render backend on dashboard load
-    fetch('https://chatbot-backend-educat.onrender.com/').catch(() => { });
+    fetch(`${API}`).catch(() => { });
 
     ensureUserFirestoreDocs(user.uid, 'teacher').catch(console.error);
 
@@ -436,6 +440,28 @@ export default function TeacherDashboard() {
       profileUnsub();
       examsUnsub();
     };
+  }, []);
+
+  // ─── Fetch exam usage ──────────────────────────────────────────────────  
+  useEffect(() => {
+    const fetchUsage = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`${API}/exams/usage`, {
+          headers: { 'Authorization': `Bearer ${idToken}` },
+        });
+        const data = await response.json();
+        if (response.ok) setExamUsage(data);
+      } catch (err) {
+        console.error('[examUsage]', err);
+      } finally {
+        setUsageLoading(false);
+      }
+    };
+    fetchUsage();
   }, []);
 
   // ─── FILTERED + SORTED AUDIT LIST ────────────────────────────────────────
@@ -517,40 +543,58 @@ export default function TeacherDashboard() {
       const memoUrl = await getDownloadURL(memoRef);
       const memoFilePath = `${storagePath}/memo_${memoFile.name}`;
 
-      // ── Save metadata ──────────────────────────────────────────────────
+      // ── Save metadata via backend (server-side limit enforcement) ─────────
       setUploadProgress('Saving to Eduket AI...');
 
-      const saved = await saveExamMetadata({
-        examId,
-        uid: user.uid,
-        teacherName: `${teacherProfile?.title || ''} ${teacherProfile?.surname || 'Teacher'}`.trim(),
-        schoolId,
-        schoolName: teacherProfile?.school || schoolId,
-        schoolFolder,
-        title: paperTitle.trim(),
-        year: paperYear,
-        subject: paperSubject,
-        curriculum,
-        grade: paperGrade,
-        examFileType: getFileTypeLabel(examFile),
-        memoFileType: getFileTypeLabel(memoFile),
-        examDuration,
-        examFileName: examFile.name,
-        memoFileName: memoFile.name,
-        examStorageUrl: examUrl,
-        memoStorageUrl: memoUrl,
-        examStoragePath: examFilePath,
-        memoStoragePath: memoFilePath,
+      const idToken = await user.getIdToken();
+
+      const response = await fetch(`${API}/exams/upload`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          examId,
+          teacherName: `${teacherProfile?.title || ''} ${teacherProfile?.surname || 'Teacher'}`.trim(),
+          schoolName: teacherProfile?.school || schoolId,
+          schoolFolder,
+          title: paperTitle.trim(),
+          year: paperYear,
+          subject: paperSubject,
+          curriculum,
+          grade: paperGrade,
+          examFileType: getFileTypeLabel(examFile),
+          memoFileType: getFileTypeLabel(memoFile),
+          examDuration,
+          examFileName: examFile.name,
+          memoFileName: memoFile.name,
+          examStorageUrl: examUrl,
+          memoStorageUrl: memoUrl,
+          examStoragePath: examFilePath,
+          memoStoragePath: memoFilePath,
+        }),
       });
 
-      if (!saved?.examId) throw new Error("Failed to create exam record");
+      const saved = await response.json();
 
-      await Swal.fire({
-        icon: 'success',
-        title: 'Upload Successful!',
-        text: 'AI extraction will begin automatically.',
-        confirmButtonColor: '#4F46E5',
-      });
+      if (response.status === 403 && saved.error === 'limit_reached') {
+        await Swal.fire({
+          icon: 'warning',
+          title: 'Upload Limit Reached',
+          text: saved.message,
+          confirmButtonText: 'Got it',
+          confirmButtonColor: '#4F46E5',
+        });
+        return; // stop here — don't show success, don't reset form
+      }
+
+      fetchUsage();
+
+
+      if (!response.ok || !saved?.examId) {
+        throw new Error(saved?.error || 'Failed to create exam record');
+      }
 
       setUploadStep(1);
       setExamFile(null);
@@ -577,6 +621,27 @@ export default function TeacherDashboard() {
     const examId = editingExam.examId || editingExam.id;
     await updateExamInAudit(user.uid, examId, changes);
   };
+
+  const fetchUsage = useCallback(async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+    setUsageLoading(true);
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`${API}/exams/usage`, {
+        headers: { 'Authorization': `Bearer ${idToken}` },
+      });
+      const data = await response.json();
+      if (response.ok) setExamUsage(data);
+    } catch (err) {
+      console.error('[examUsage]', err);
+    } finally {
+      setUsageLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchUsage(); }, [fetchUsage]);
+  { console.log('examUsage:', examUsage, 'usageLoading:', usageLoading) }
 
   // ─── DELETE ──────────────────────────────────────────────────────────────
   const handleDelete = async (exam) => {
@@ -887,7 +952,7 @@ export default function TeacherDashboard() {
                         <p className="font-black text-sm text-slate-700 dark:text-slate-300 group-hover:text-green-600">
                           {memoFile ? memoFile.name : 'Choose from Google Drive'}
                         </p>
-                        <p className="text-xs text-slate-400 mt-1">PDF, Word documents supported</p>
+                        <p className="text-xs text-slate-400 mt-1"> Word documents supported</p>
                       </div>
                       {memoFile && (
                         <span className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-3 py-1 rounded-full font-black">
@@ -896,6 +961,7 @@ export default function TeacherDashboard() {
                       )}
                     </button>
                   )}
+
 
                   {isUploading && (
                     <div className="flex items-center gap-3 p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl">
@@ -950,13 +1016,47 @@ export default function TeacherDashboard() {
                     </div>
 
 
+
+                    {/* Upload Count Info modal */}
+                    {!usageLoading && examUsage && (
+                      <div className={`p-3 rounded-xl text-xs ${examUsage.atLimit
+                        ? 'bg-red-50 border border-red-200 text-red-700'
+                        : examUsage.remaining <= 1
+                          ? 'bg-amber-50 border border-amber-200 text-amber-700'
+                          : 'bg-slate-50 border border-slate-200 text-slate-600'
+                        }`}>
+                        {examUsage.atLimit ? (
+                          <p>
+                            You've used all <strong>{examUsage.limit}</strong> exam uploads on the{' '}
+                            {examUsage.tier.charAt(0).toUpperCase() + examUsage.tier.slice(1)} plan this month.
+                            Wait until next month, or ask your principal to upgrade your school's plan for more uploads.
+                          </p>
+                        ) : (
+                          <p>
+                            {examUsage.used}/{examUsage.limit} uploads used this month —{' '}
+                            <strong>
+                              {examUsage.remaining} upload{examUsage.remaining !== 1 ? 's' : ''} remaining
+                            </strong>
+                            {examUsage.remaining <= 1 &&
+                              '. If you need more, ask your principal to upgrade your school\'s plan.'}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+
+                    {/* FINALIZE UPLOAD button */}
                     <button onClick={() => setUploadStep(2)} disabled={isUploading}
                       className="flex-1 bg-slate-100 dark:bg-slate-800 p-5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 disabled:opacity-50">
                       <ArrowLeft size={16} /> Back
                     </button>
-                    <button onClick={handleExamUpload} disabled={isUploading || !memoFile}
-                      className="flex-[2] bg-green-600 hover:bg-green-700 text-white p-5 rounded-2xl font-black text-sm shadow-lg shadow-green-500/20 disabled:opacity-40 transition-colors">
-                      {isUploading ? 'Uploading...' : '✓ FINALIZE UPLOAD'}
+
+                    <button
+                      onClick={handleExamUpload}
+                      disabled={isUploading || examUsage?.atLimit}
+                      className="flex-[2] bg-green-600 hover:bg-green-700 text-white p-5 rounded-2xl font-black text-sm shadow-lg shadow-green-500/20 disabled:opacity-40 transition-colors"
+                    >
+                      {examUsage?.atLimit ? 'Upload Limit Reached' : 'FINALIZE UPLOAD'}
                     </button>
 
                   </div>
