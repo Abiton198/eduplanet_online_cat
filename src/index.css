@@ -7,12 +7,22 @@
 
 /* confirm submit exam button */
 .swal2-confirm-green {
-    background-color: #28a745 !important; /* Bootstrap green */
-    color: white !important;
-  }
-  
-  .swal2-cancel-red {
-    background-color: #dc3545 !important; /* Bootstrap red */
-    color: white !important;
-  }
-  
+  background-color: #28a745 !important;
+  /* Bootstrap green */
+  color: white !important;
+}
+
+.swal2-cancel-red {
+  background-color: #dc3545 !important;
+  /* Bootstrap red */
+  color: white !important;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}

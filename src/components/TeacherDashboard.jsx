@@ -339,6 +339,99 @@ function DetailItem({ label, value, highlight = false }) {
 }
 
 
+// Time picker that looks like a clock - this is for the exam duration  
+function DurationWheelPicker({ value, onChange }) {
+  const hours = Array.from({ length: 5 }, (_, i) => i); // 0–4 hrs
+  const minutes = [0, 15, 30, 45];
+
+  const initialH = Math.floor(value / 60);
+  const initialM = value % 60;
+
+  const hRef = React.useRef(null);
+  const mRef = React.useRef(null);
+  const ITEM_HEIGHT = 40;
+  const PAD = 60;
+
+  React.useEffect(() => {
+    if (hRef.current) hRef.current.scrollTop = initialH * ITEM_HEIGHT;
+    if (mRef.current) mRef.current.scrollTop = minutes.indexOf(initialM) * ITEM_HEIGHT;
+  }, []);
+
+  const handleScroll = (ref, list, isHour) => {
+    if (!ref.current) return;
+    const index = Math.round(ref.current.scrollTop / ITEM_HEIGHT);
+    const clamped = Math.max(0, Math.min(list.length - 1, index));
+    const selected = list[clamped];
+
+    const h = isHour ? selected : Math.floor(value / 60);
+    const m = isHour ? value % 60 : selected;
+    const total = h * 60 + m;
+    onChange(total === 0 ? 5 : total); // never allow 0 — minimum 5 min
+  };
+
+  const currentH = Math.floor(value / 60);
+  const currentM = value % 60;
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div className="relative flex justify-center gap-1" style={{ height: 160 }}>
+        <div
+          className="absolute left-0 right-0 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl pointer-events-none"
+          style={{ top: '50%', height: ITEM_HEIGHT, transform: 'translateY(-50%)' }}
+        />
+        <div
+          ref={hRef}
+          onScroll={() => handleScroll(hRef, hours, true)}
+          className="overflow-y-scroll text-center relative z-10 scrollbar-none"
+          style={{ height: 160, width: 70, scrollSnapType: 'y mandatory' }}
+        >
+          <div style={{ height: PAD }} />
+          {hours.map((h) => (
+            <div
+              key={h}
+              style={{ height: ITEM_HEIGHT, scrollSnapAlign: 'center' }}
+              className={`flex items-center justify-center font-black transition-all ${h === currentH ? 'text-indigo-600 text-xl' : 'text-slate-400 text-base'
+                }`}
+            >
+              {h}
+            </div>
+          ))}
+          <div style={{ height: PAD }} />
+        </div>
+
+        <div className="flex items-center text-xl font-black text-slate-400">:</div>
+
+        <div
+          ref={mRef}
+          onScroll={() => handleScroll(mRef, minutes, false)}
+          className="overflow-y-scroll text-center relative z-10 scrollbar-none"
+          style={{ height: 160, width: 70, scrollSnapType: 'y mandatory' }}
+        >
+          <div style={{ height: PAD }} />
+          {minutes.map((m) => (
+            <div
+              key={m}
+              style={{ height: ITEM_HEIGHT, scrollSnapAlign: 'center' }}
+              className={`flex items-center justify-center font-black transition-all ${m === currentM ? 'text-indigo-600 text-xl' : 'text-slate-400 text-base'
+                }`}
+            >
+              {String(m).padStart(2, '0')}
+            </div>
+          ))}
+          <div style={{ height: PAD }} />
+        </div>
+      </div>
+
+      <p className="text-xs text-slate-400 dark:text-slate-500">
+        Selected:{' '}
+        <span className="font-bold text-indigo-500">
+          {currentH > 0 ? `${currentH} hr ` : ''}{currentM} min
+        </span>
+      </p>
+    </div>
+  );
+}
+
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
@@ -643,6 +736,20 @@ export default function TeacherDashboard() {
   useEffect(() => { fetchUsage(); }, [fetchUsage]);
   { console.log('examUsage:', examUsage, 'usageLoading:', usageLoading) }
 
+  useEffect(() => {
+    if (uploadStep === 3 && !usageLoading && examUsage) {
+      Swal.fire({
+        icon: examUsage.atLimit ? 'warning' : 'info',
+        title: examUsage.atLimit ? 'Upload Limit Reached' : 'Monthly Upload Usage',
+        html: examUsage.atLimit
+          ? `You've used all <strong>${examUsage.limit}</strong> exam uploads on the ${examUsage.tier.charAt(0).toUpperCase() + examUsage.tier.slice(1)} plan this month.<br><br>Wait until next month, or ask your principal to upgrade your school's plan for more uploads.`
+          : `<strong>${examUsage.used}/${examUsage.limit}</strong> uploads used this month — <strong>${examUsage.remaining}</strong> upload${examUsage.remaining !== 1 ? 's' : ''} remaining.${examUsage.remaining <= 1 ? '<br><br>If you need more, ask your principal to upgrade your school\'s plan.' : ''}`,
+        confirmButtonText: 'Got it',
+        confirmButtonColor: '#4F46E5',
+      });
+    }
+  }, [uploadStep, usageLoading, examUsage]);
+
   // ─── DELETE ──────────────────────────────────────────────────────────────
   const handleDelete = async (exam) => {
     const examId = exam.examId || exam.id;
@@ -785,6 +892,7 @@ export default function TeacherDashboard() {
       )}
 
       {/* ── UPLOAD TAB ───────────────────────────────────────────────────── */}
+      {/* ── UPLOAD TAB ───────────────────────────────────────────────────── */}
       {activeTab === 'upload' && (
         <div className="space-y-8 animate-in zoom-in-95 duration-300">
 
@@ -847,7 +955,7 @@ export default function TeacherDashboard() {
                         type="button"
                         onClick={() => { setExamSource(src); setExamFile(null); }}
                         className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all
-            ${examSource === src
+      ${examSource === src
                             ? 'bg-white dark:bg-slate-700 shadow text-indigo-600 dark:text-indigo-400'
                             : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
                       >
@@ -871,15 +979,15 @@ export default function TeacherDashboard() {
                       type="button"
                       onClick={() => openPicker((f) => setExamFile(f), 'office')}
                       className="w-full border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-2xl p-10
-                   flex flex-col items-center gap-3 hover:border-indigo-500 hover:bg-indigo-50
-                   dark:hover:bg-indigo-900/20 transition-all group"
+             flex flex-col items-center gap-3 hover:border-indigo-500 hover:bg-indigo-50
+             dark:hover:bg-indigo-900/20 transition-all group"
                     >
                       <DriveIcon className="w-10 h-10" />
                       <div className="text-center">
                         <p className="font-black text-sm text-slate-700 dark:text-slate-300 group-hover:text-indigo-600">
                           {examFile ? examFile.name : 'Choose from Google Drive'}
                         </p>
-                        <p className="text-xs text-slate-400 mt-1">PDF, Word documents supported</p>
+                        <p className="text-xs text-slate-400 mt-1">Ms Word documents supported</p>
                       </div>
                       {examFile && (
                         <span className="text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full font-black">
@@ -919,7 +1027,7 @@ export default function TeacherDashboard() {
                         type="button"
                         onClick={() => { setMemoSource(src); setMemoFile(null); }}
                         className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all
-            ${memoSource === src
+      ${memoSource === src
                             ? 'bg-white dark:bg-slate-700 shadow text-green-600 dark:text-green-400'
                             : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
                       >
@@ -944,8 +1052,8 @@ export default function TeacherDashboard() {
                       type="button"
                       onClick={() => openPicker((f) => setMemoFile(f), 'office')}
                       className="w-full border-2 border-dashed border-green-300 dark:border-green-700 rounded-2xl p-10
-                   flex flex-col items-center gap-3 hover:border-green-500 hover:bg-green-50
-                   dark:hover:bg-green-900/20 transition-all group"
+             flex flex-col items-center gap-3 hover:border-green-500 hover:bg-green-50
+             dark:hover:bg-green-900/20 transition-all group"
                     >
                       <DriveIcon className="w-10 h-10" />
                       <div className="text-center">
@@ -962,7 +1070,6 @@ export default function TeacherDashboard() {
                     </button>
                   )}
 
-
                   {isUploading && (
                     <div className="flex items-center gap-3 p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl">
                       <Loader2 size={20} className="animate-spin text-indigo-600" />
@@ -971,7 +1078,6 @@ export default function TeacherDashboard() {
                       </p>
                     </div>
                   )}
-
 
                   {/* Upload summary before final submit */}
                   {examFile && memoFile && !isUploading && (
@@ -984,68 +1090,19 @@ export default function TeacherDashboard() {
                       <SummaryRow label="Curriculum" value={curriculum} />
                       <SummaryRow label="Paper" value={examFile.name} />
                       <SummaryRow label="Memo" value={memoFile.name} />
-                      <SummaryRow label="Exam Duration" value={examDuration} />
+                      <SummaryRow label="Exam Duration" value={`${Math.floor(examDuration / 60) > 0 ? `${Math.floor(examDuration / 60)} hr ` : ''}${examDuration % 60} min`} />
                     </div>
                   )}
 
+                  {/* Exam Duration Selector — scrollable wheel picker */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                      Exam Time Allocation
+                    </label>
+                    <DurationWheelPicker value={examDuration} onChange={setExamDuration} />
+                  </div>
+
                   <div className="flex gap-4">
-                    {/* Exam Duration Selector */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                        Exam Time Allocation
-                      </label>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {[30, 60, 90, 120, 180, 240].map((mins) => (
-                          <button
-                            key={mins}
-                            onClick={() => setExamDuration(mins)}
-                            className={`p-4 rounded-2xl border-2 transition-all font-black text-sm ${examDuration === mins
-                              ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-500/20"
-                              : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-400"
-                              }`}
-                          >
-                            {mins < 60 ? `${mins} min` : `${mins / 60} hr${mins >= 120 ? "s" : ""}`}
-                          </button>
-                        ))}
-                      </div>
-
-                      <p className="text-xs text-slate-400 dark:text-slate-500">
-                        Selected: <span className="font-bold text-indigo-500">{examDuration} minutes</span>
-                      </p>
-                    </div>
-
-
-
-                    {/* Upload Count Info modal */}
-                    {!usageLoading && examUsage && (
-                      <div className={`p-3 rounded-xl text-xs ${examUsage.atLimit
-                        ? 'bg-red-50 border border-red-200 text-red-700'
-                        : examUsage.remaining <= 1
-                          ? 'bg-amber-50 border border-amber-200 text-amber-700'
-                          : 'bg-slate-50 border border-slate-200 text-slate-600'
-                        }`}>
-                        {examUsage.atLimit ? (
-                          <p>
-                            You've used all <strong>{examUsage.limit}</strong> exam uploads on the{' '}
-                            {examUsage.tier.charAt(0).toUpperCase() + examUsage.tier.slice(1)} plan this month.
-                            Wait until next month, or ask your principal to upgrade your school's plan for more uploads.
-                          </p>
-                        ) : (
-                          <p>
-                            {examUsage.used}/{examUsage.limit} uploads used this month —{' '}
-                            <strong>
-                              {examUsage.remaining} upload{examUsage.remaining !== 1 ? 's' : ''} remaining
-                            </strong>
-                            {examUsage.remaining <= 1 &&
-                              '. If you need more, ask your principal to upgrade your school\'s plan.'}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-
-                    {/* FINALIZE UPLOAD button */}
                     <button onClick={() => setUploadStep(2)} disabled={isUploading}
                       className="flex-1 bg-slate-100 dark:bg-slate-800 p-5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 disabled:opacity-50">
                       <ArrowLeft size={16} /> Back
@@ -1058,15 +1115,13 @@ export default function TeacherDashboard() {
                     >
                       {examUsage?.atLimit ? 'Upload Limit Reached' : 'FINALIZE UPLOAD'}
                     </button>
-
                   </div>
                 </div>
               )}
             </div>
           </div>
         </div>
-      )
-      }
+      )}
 
       {/* ── AUDIT TRAIL TAB ──────────────────────────────────────────────── */}
       {
