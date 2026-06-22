@@ -145,6 +145,7 @@ export default function AuthPage({ setStudentInfo }) {
   const [isFetchingSubjects, setIsFetchingSubjects] = useState(false);
   const [countries, setCountries] = useState([]);
   const [isFetchingCountries, setIsFetchingCountries] = useState(false);
+  const [showPassword, setShowPassword] = useState(true);
 
 
 
@@ -172,6 +173,11 @@ export default function AuthPage({ setStudentInfo }) {
       setIsFetchingProvinces(false);
     }
   };
+
+  const toggleShowPassword = () => {
+    setShowPassword(!showPassword);
+  };
+  // Password validation helper
 
   // Load countries in the dropdown list of all countries -  used in signup page when principal selects country
   useEffect(() => {
@@ -650,24 +656,28 @@ export default function AuthPage({ setStudentInfo }) {
 
             <form onSubmit={handlePasswordAuth} className="space-y-4">
               <div>
-                <label className="label-xs block mb-1.5">Email Address</label>
+                <label className="label-xs block mb-1.5 text-black">Email Address</label>
                 <input
                   type="email"
                   placeholder="you@school.co.za"
                   required
                   value={email}
-                  className="input-f"
+                  className="input-f text-black"
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
               <div>
-                <label className="label-xs block mb-1.5">Password</label>
+                <label className="label-xs block mb-1.5 text-black">Password</label>
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   required
-                  className="input-f"
+                  value={password}
+                  className="input-f text-black"
                   onChange={(e) => setPassword(e.target.value)}
+                  showPassword={showPassword}
+                  toggleShowPassword={toggleShowPassword}
+
                 />
               </div>
               <button
@@ -875,56 +885,6 @@ export default function AuthPage({ setStudentInfo }) {
               )}
 
 
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="label-xs block mb-1.5">Province *</label>
-                  <div className="relative">
-                    <select
-                      value={province}
-                      onChange={(e) => setProvince(e.target.value)}
-                      className="input-f text-black appearance-none pr-10"
-                      disabled={userRole !== 'principal' || isFetchingProvinces}
-                    >
-                      {isFetchingProvinces ? (
-                        <option>Loading...</option>
-                      ) : (
-                        provinces.map((p) => (
-                          <option key={p} value={p}>
-                            {p}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  </div>
-                </div>
-                <div>
-                  <label className="label-xs block mb-1.5">District / Region *</label>
-                  <div className="relative">
-                    <select
-                      value={district}
-                      onChange={(e) => setDistrict(e.target.value)}
-                      className="input-f text-black appearance-none pr-10"
-                      disabled={userRole !== 'principal' || isFetchingDistricts || districts.length === 0}
-                    >
-                      {isFetchingDistricts ? (
-                        <option>Loading districts...</option>
-                      ) : districts.length > 0 ? (
-                        <>
-                          <option value="">Select a district...</option>
-                          {districts.map((d) => (
-                            <option key={d} value={d}>{d}</option>
-                          ))}
-                        </>
-                      ) : (
-                        <option value="">No districts found</option>
-                      )}
-                    </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
 
               {userRole === 'student' && (
                 <div>

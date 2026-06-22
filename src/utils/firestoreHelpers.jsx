@@ -311,9 +311,17 @@ export function countByGrade(students) {
 }
 
 export function averageScore(attempts) {
-    const scored = attempts.filter((a) => typeof a.score === 'number');
-    if (!scored.length) return null;
-    return Math.round(scored.reduce((sum, a) => sum + a.score, 0) / scored.length);
+    if (!attempts.length) return null;
+    const scores = attempts.map((a) => a.percentage ?? a.score ?? 0);
+    return Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length);
+}
+
+export function passRate(attempts) {
+    if (!attempts.length) return 0;
+    // NOTE: 40% is a placeholder threshold. Pass marks actually vary by
+    // subject/curriculum — this needs a proper lookup once that's designed.
+    const passed = attempts.filter(a => (a.percentage ?? a.score ?? 0) >= 40).length;
+    return Math.round((passed / attempts.length) * 100);
 }
 
 export function groupBySubject(attempts) {
@@ -325,12 +333,6 @@ export function groupBySubject(attempts) {
     }, {});
 }
 
-
-export function passRate(attempts) {
-    if (!attempts.length) return 0;
-    const passed = attempts.filter(a => (a.score ?? a.percentage ?? 0) >= 40).length;
-    return Math.round((passed / attempts.length) * 100);
-}
 
 // ── Active Tier Hook ─────────────────────────────────────────────────────────────
 export function useActiveTier(schoolId) {

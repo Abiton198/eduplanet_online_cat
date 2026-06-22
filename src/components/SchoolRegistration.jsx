@@ -47,7 +47,7 @@ const STEPS = [
 // `deps` are the values the fetch depends on — when any is missing/falsy, the
 // fetch is skipped (e.g. don't fetch districts before a province is chosen).
 
-function useAiList(fetchFn, deps, enabled = true) {
+export function useAiList(fetchFn, deps, enabled = true) {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -826,7 +826,7 @@ export default function SchoolRegistration({ principalProfile, onComplete }) {
 
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
-                                        <label className="lx mb-0">District / City</label>
+                                        {/* <label className="lx mb-0">District / City</label> */}
                                         {seed.district && <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-black">✦ Auto-filled</span>}
                                     </div>
                                     <DistrictField country={country} province={region} value={district} onChange={setDistrict} />

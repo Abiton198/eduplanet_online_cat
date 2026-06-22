@@ -392,21 +392,21 @@ export default function PrincipalDashboard({ principal }) {
 
     useEffect(() => {
         const fetchSchool = async () => {
-            console.log('fetchSchool: user is', user);
+            // console.log('fetchSchool: user is', user);
             if (!user) return;
 
             try {
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
-                console.log('fetchSchool: userDoc exists?', userDoc.exists(), userDoc.data());
+                // console.log('fetchSchool: userDoc exists?', userDoc.exists(), userDoc.data());
                 const schoolId = userDoc.data()?.schoolId;
-                console.log('fetchSchool: schoolId is', schoolId);
+                // console.log('fetchSchool: schoolId is', schoolId);
 
                 if (schoolId) {
                     const schoolDoc = await getDoc(doc(db, 'schools', schoolId));
-                    console.log('fetchSchool: schoolDoc exists?', schoolDoc.exists());
+                    // console.log('fetchSchool: schoolDoc exists?', schoolDoc.exists());
                     if (schoolDoc.exists()) {
                         setSelectedSchoolDoc({ id: schoolId, ...schoolDoc.data() });
-                        console.log('fetchSchool: selectedSchoolDoc set');
+                        // console.log('fetchSchool: selectedSchoolDoc set');
                     }
                 }
             } catch (error) {
@@ -501,6 +501,20 @@ export default function PrincipalDashboard({ principal }) {
                 a.sourceUploadId === exam.id ||
                 a.exam_id === exam.id
         );
+
+    // Add this tracer in your Principal Dashboard
+    console.log("--- Dashboard Data Audit ---");
+    console.log("Total raw attempts fetched:", schoolAttempts.length);
+    console.log("Filtered school attempts:", schoolAttempts.length);
+
+    filteredStudents.forEach(s => {
+        const teacherViewAttempts = studentAttempts(s.uid);
+        const principalViewAttempts = studentAttempts(s.uid);
+
+        if (teacherViewAttempts.length !== principalViewAttempts.length) {
+            console.warn(`Mismatch for ${s.name}: Teacher=${teacherViewAttempts.length}, Principal=${principalViewAttempts.length}`);
+        }
+    });
 
     const fetchAllAttempts = async () => {
         try {
@@ -980,9 +994,11 @@ export default function PrincipalDashboard({ principal }) {
                                     ? <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 text-center text-xs text-slate-400 border border-slate-100 dark:border-slate-700">No students found.</div>
                                     : filteredStudents.map(s => {
                                         const atts = studentAttempts(s.uid);
+                                        console.log("DEBUG - Attempts for student:", s.name, atts); // Does this look like objects or numbers?
                                         const avg = averageScore(atts);
                                         const pr = passRate(atts);
                                         const isSelected = selectedStudent?.uid === s.uid;
+
                                         return (
                                             <div key={s.uid}
                                                 className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">

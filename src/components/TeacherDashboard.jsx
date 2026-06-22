@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { doc, onSnapshot, collection, getDoc, query, where } from 'firebase/firestore';
 import { getAuth, signOut } from 'firebase/auth';
 import { db } from '../utils/firebase';
@@ -14,6 +14,8 @@ import Swal from 'sweetalert2';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Monitor } from 'lucide-react';
 import { useGooglePicker } from '../utils/useGooglePicker';
+import { fetchLevels } from '../utils/academicResolver';
+import { useAiList } from './SchoolRegistration';
 
 import {
   saveExamMetadata,
@@ -26,7 +28,7 @@ import { runExamDeletion } from '../utils/examDeleteUtils';
 import { validateExamFile, getFileTypeLabel, isOpenDocumentFormat } from '../utils/examUploadUtils';
 import { ResultsTab } from './ResultsTab';
 import { serverTimestamp } from "firebase/firestore";
-
+import { useSchool } from '../utils/schoolContext';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -38,8 +40,8 @@ const DBE_SUBJECTS = [
   "isiXhosa HL", "isiZulu HL",
 ];
 
-const GRADES = [8, 9, 10, 11, 12];
-const CURRICULA = ['CAPS', 'IEB', 'SACAI', 'Cambridge'];
+// const GRADES = [8, 9, 10, 11, 12];
+// const CURRICULA = ['CAPS', 'IEB', 'SACAI', 'Cambridge'];
 
 const STATUS_CONFIG = {
   pending_extraction: { label: 'Pending', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
@@ -117,9 +119,13 @@ function EditExamModal({ exam, onSave, onClose }) {
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Grade</label>
-              <select value={grade} onChange={(e) => setGrade(e.target.value)}
-                className="w-full p-3.5 rounded-xl border dark:bg-slate-800 dark:border-slate-700 text-sm outline-none focus:border-indigo-500">
-                {GRADES.map((g) => <option key={g} value={g}>Grade {g}</option>)}
+              {/* Grade filter */}
+              <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)}
+                className="px-3 py-2.5 rounded-xl border dark:bg-slate-800 dark:border-slate-700 text-xs font-bold outline-none focus:border-indigo-500">
+                <option value="">All Grades</option>
+                {[...new Set(uploadedExams.map((e) => e.grade).filter(Boolean))].sort().map((g) => (
+                  <option key={g} value={String(g)}>{g}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -474,6 +480,23 @@ export default function TeacherDashboard() {
   const [examUsage, setExamUsage] = useState(null);
   const [usageLoading, setUsageLoading] = useState(true);
   const API = import.meta.env.VITE_API_URL;
+  const { school } = useSchool();
+  const [selectedCurriculum, setSelectedCurriculum] = useState('');
+
+  const { data: levels, loading: levelsLoading, error: levelsError, retry: retryLevels } = useAiList(
+    fetchLevels,
+    [school?.country, selectedCurriculum],
+    !!school?.country && !!selectedCurriculum
+  );
+
+  const [students, setStudents] = useState([]);
+  const [selectedGrade, setSelectedGrade] = useState('');
+
+  // 1. Get unique grades from the students list to populate the dropdown
+  const availableGrades = useMemo(() => {
+    const grades = students.map(s => s.grade).filter(Boolean);
+    return [...new Set(grades)].sort(); // Returns unique, sorted grades
+  }, [students]);
 
   // ─── Auth listener ────────────────────────────────────────────────── 
   useEffect(() => {
@@ -483,29 +506,16 @@ export default function TeacherDashboard() {
 
   // ─── INIT ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const user = auth.currentUser;
     if (!user) return;
 
-    // Wake up Render backend on dashboard load
     fetch(`${API}`).catch(() => { });
-
     ensureUserFirestoreDocs(user.uid, 'teacher').catch(console.error);
 
-    // ── Teacher profile ──────────────────────────────────────────────────
     const profileUnsub = onSnapshot(doc(db, 'teachers', user.uid), (snap) => {
       if (!snap.exists()) return;
-      const data = snap.data();
-      setTeacherProfile(data);
-      if (Array.isArray(data.subjects) && data.subjects.length > 0)
-        setPaperSubject(data.subjects[0]);
-      else if (typeof data.subjects === 'string' && data.subjects)
-        setPaperSubject(data.subjects);
-      if (data.curriculum) setCurriculum(data.curriculum);
+      setTeacherProfile(snap.data());
     });
 
-    // ── Audit trail — read from /exams where uploadedBy == teacher uid ───
-    // This works with both old uploads (teacherExamUploads array)
-    // and new uploads (exams collection with schoolId/subject structure)
     const examsUnsub = onSnapshot(
       query(
         collection(db, 'exams'),
@@ -515,9 +525,8 @@ export default function TeacherDashboard() {
         const exams = snap.docs.map((d) => ({
           ...d.data(),
           id: d.id,
-          examId: d.data().examId || d.id, // ensure examId always set
+          examId: d.data().examId || d.id,
         }));
-        // Sort newest first
         exams.sort((a, b) =>
           new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0)
         );
@@ -533,7 +542,30 @@ export default function TeacherDashboard() {
       profileUnsub();
       examsUnsub();
     };
-  }, []);
+  }, [user]);
+
+
+  const teacherSubjects = Array.isArray(teacherProfile?.subjects)
+    ? teacherProfile.subjects
+    : (typeof teacherProfile?.subjects === 'string' && teacherProfile.subjects)
+      ? [teacherProfile.subjects]
+      : [];
+
+  const schoolCurricula = school?.curricula || [];
+
+  useEffect(() => {
+    if (schoolCurricula.length === 1 && !selectedCurriculum) {
+      setSelectedCurriculum(schoolCurricula[0]);
+    }
+  }, [schoolCurricula.join(',')]);
+
+  // Auto-select first subject if exactly one
+  useEffect(() => {
+    if (teacherSubjects.length === 1 && !paperSubject) {
+      setPaperSubject(teacherSubjects[0]);
+    }
+  }, [teacherSubjects.join(',')]);
+
 
   // ─── Fetch exam usage ──────────────────────────────────────────────────  
   useEffect(() => {
@@ -734,7 +766,7 @@ export default function TeacherDashboard() {
   }, []);
 
   useEffect(() => { fetchUsage(); }, [fetchUsage]);
-  { console.log('examUsage:', examUsage, 'usageLoading:', usageLoading) }
+  // { console.log('examUsage:', examUsage, 'usageLoading:', usageLoading) }
 
   useEffect(() => {
     if (uploadStep === 3 && !usageLoading && examUsage) {
@@ -892,7 +924,6 @@ export default function TeacherDashboard() {
       )}
 
       {/* ── UPLOAD TAB ───────────────────────────────────────────────────── */}
-      {/* ── UPLOAD TAB ───────────────────────────────────────────────────── */}
       {activeTab === 'upload' && (
         <div className="space-y-8 animate-in zoom-in-95 duration-300">
 
@@ -915,27 +946,69 @@ export default function TeacherDashboard() {
               {uploadStep === 1 && (
                 <div className="max-w-2xl mx-auto space-y-6">
                   <StepHeader num={1} title="Identity & Metadata" />
+
                   <input type="text" placeholder="Exam Name (e.g. English Exam 2)" value={paperTitle}
                     onChange={(e) => setPaperTitle(e.target.value)}
                     className="w-full border-2 dark:bg-slate-800 dark:border-slate-700 p-5 rounded-2xl outline-none focus:border-indigo-600 font-bold text-sm" />
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <select value={paperSubject} onChange={(e) => setPaperSubject(e.target.value)}
-                      className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600">
-                      <option value="">Select Subject</option>
-                      {DBE_SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                    <select value={paperGrade} onChange={(e) => setPaperGrade(e.target.value)}
-                      className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600">
-                      {GRADES.map((g) => <option key={g} value={g}>Grade {g}</option>)}
-                    </select>
+
+                  {/* Subject + Year */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Subject — auto-filled if teacher has exactly one, otherwise a dropdown of only their assigned subjects */}
+                    {teacherSubjects.length <= 1 ? (
+                      <div className="p-5 border-2 border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Subject</p>
+                        <p className="font-bold text-sm text-slate-700 dark:text-slate-200">
+                          {teacherSubjects[0] || 'No subject on file — contact your principal'}
+                        </p>
+                      </div>
+                    ) : (
+                      <select value={paperSubject} onChange={(e) => setPaperSubject(e.target.value)}
+                        className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600">
+                        <option value="">Select Subject</option>
+                        {teacherSubjects.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    )}
+
                     <input type="number" value={paperYear} onChange={(e) => setPaperYear(e.target.value)} placeholder="Year"
                       className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600" />
                   </div>
-                  <select value={curriculum} onChange={(e) => setCurriculum(e.target.value)}
-                    className="w-full p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-indigo-600 text-sm outline-none focus:border-indigo-600">
-                    {CURRICULA.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                  <button onClick={() => setUploadStep(2)} disabled={!paperTitle.trim() || !paperSubject}
+
+                  {/* Curriculum + Grade/Level */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Curriculum — auto-filled if school has exactly one, otherwise a dropdown */}
+                    {schoolCurricula.length <= 1 ? (
+                      <div className="p-5 border-2 border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Curriculum</p>
+                        <p className="font-bold text-sm text-slate-700 dark:text-slate-200">
+                          {schoolCurricula[0] || 'No curriculum on file — contact your principal'}
+                        </p>
+                      </div>
+                    ) : (
+                      <select value={selectedCurriculum} onChange={(e) => { setSelectedCurriculum(e.target.value); setPaperGrade(''); }}
+                        className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600">
+                        <option value="">Select Curriculum</option>
+                        {schoolCurricula.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    )}
+
+                    {/* Grade/Level — always a dropdown, resolved via AI once curriculum is known */}
+                    <select value={paperGrade} onChange={(e) => setPaperGrade(e.target.value)}
+                      disabled={!selectedCurriculum || levelsLoading}
+                      className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600 disabled:opacity-50">
+                      <option value="">
+                        {!selectedCurriculum ? 'Select curriculum first' : levelsLoading ? 'Loading levels...' : 'Select Grade/Level'}
+                      </option>
+                      {levels.map((lvl) => <option key={lvl} value={lvl}>{lvl}</option>)}
+                    </select>
+                  </div>
+
+                  {levelsError && (
+                    <button type="button" onClick={retryLevels} className="text-xs text-red-500 font-bold underline">
+                      {levelsError} — Retry
+                    </button>
+                  )}
+
+                  <button onClick={() => setUploadStep(2)} disabled={!paperTitle.trim() || !paperSubject || !paperGrade}
                     className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-5 rounded-[2rem] flex items-center justify-center gap-3 transition-all disabled:opacity-30">
                     CONTINUE <ArrowRight size={20} />
                   </button>
@@ -1179,10 +1252,11 @@ export default function TeacherDashboard() {
               </select>
 
               {/* Grade filter */}
-              <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)}
-                className="px-3 py-2.5 rounded-xl border dark:bg-slate-800 dark:border-slate-700 text-xs font-bold outline-none focus:border-indigo-500">
-                <option value="">All Grades</option>
-                {GRADES.map((g) => <option key={g} value={String(g)}>Grade {g}</option>)}
+              <select onChange={(e) => setSelectedGrade(e.target.value)}>
+                <option value="">Select Grade</option>
+                {availableGrades.map(g => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
               </select>
 
               {/* Status filter */}

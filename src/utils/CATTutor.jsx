@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useStudentId } from "./StudentId";
 import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "../utils/firebase";
 
+// const API_BASE = import.meta.env.VITE_API_URL;
 const API_BASE = "https://chatbot-backend-educat.onrender.com";
 
 // ─── Performance context helper ───────────────────────────────────────────────
@@ -227,6 +229,8 @@ function TypingIndicator({ isDark }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function CATTutor() {
+  const [user, setUser] = useState(null);
+
   const STUDENT_ID = useStudentId();
 
   // ── Student profile (fetched from backend) ─────────────────────────────────
@@ -264,6 +268,8 @@ export default function CATTutor() {
   const containerRef = useRef(null);
   const [subjects, setSubjects] = useState([]);
   const [student, setStudent] = useState(null);
+  const [enrolledSubjects, setEnrolledSubjects] = useState([]);
+  const [subjectDataMap, setSubjectDataMap] = useState({});
 
   //   fetch student profile
   useEffect(() => {
@@ -289,6 +295,27 @@ export default function CATTutor() {
 
   }, [user]);
 
+
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    const unsub = onSnapshot(doc(db, "students", user.uid), (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+
+      // Set the list of subjects the user is enrolled in
+      setEnrolledSubjects(data.subjects || []);
+
+      // Filter your global config to only show what the user is enrolled in
+      const filteredData = (data.subjects || []).reduce((acc, subjCode) => {
+        acc[subjCode] = SUBJECT_DATA[subjCode] || { label: subjCode, topics: [], suggest: [] };
+        return acc;
+      }, {});
+      setSubjectDataMap(filteredData);
+    });
+    return unsub;
+  }, [user]);
+
   // ── Load student profile ───────────────────────────────────────────────────
   useEffect(() => {
     if (!STUDENT_ID) return;
@@ -304,7 +331,7 @@ export default function CATTutor() {
         // Graceful fallback — treat as new CAT student with all subjects available
         const fallback = {
           name: STUDENT_ID,
-          enrolledSubjects: Object.keys(SUBJECTS),
+          enrolledSubjects: Object.keys(subjects),
           examHistory: {},
         };
         setStudentProfile(fallback);
@@ -507,12 +534,18 @@ export default function CATTutor() {
 
   // ─── Welcome Modal ──────────────────────────────────────────────────────────
   const WelcomeModal = () => {
-    if (!showWelcome || profileLoading) return null;
     const subject = welcomeSubject || "CAT";
     const ctx = getPerformanceContext(subject, studentProfile?.examHistory || {});
     const enrolledSubjects = studentProfile?.enrolledSubjects || Object.keys(subjects);
     const badge = perfBadgeStyle(ctx.type);
     const icon = ctx.type === "good" ? "🏆" : ctx.type === "improve" ? "📈" : "🎓";
+
+    console.log("DEBUG - StudentProfile:", studentProfile);
+    console.log("DEBUG - EnrolledSubjects:", studentProfile?.enrolledSubjects);
+
+    if (!showWelcome) return null;
+    if (profileLoading) return <div className="p-10 text-center">Loading your subjects...</div>;
+    if (enrolledSubjects.length === 0) return <div className="p-10 text-center">No subjects found. Please contact support.</div>;
 
     return (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
@@ -610,18 +643,19 @@ export default function CATTutor() {
 
   // ─── Subject Switcher Bar ─────────────────────────────────────────────────
   const SubjectBar = () => {
-    const enrolled = subjects;
-    if (enrolled.length <= 1) return null;
+    if (enrolledSubjects.length <= 1) return null;
     return (
-      <div style={{ display: "flex", gap: 6, padding: "8px 16px", overflowX: "auto", borderBottom: dark ? "1px solid #1e293b" : "1px solid #f3f4f6", background: dark ? "#0f172a" : "#fafafa", flexShrink: 0 }}>
-        {enrolled.map((s) => {
+      <div className="flex gap-2 overflow-x-auto p-4">
+        {enrolledSubjects.map((s) => {
           const isActive = s === currentSubject;
-          const ctx = getPerformanceContext(s, studentProfile?.examHistory || {});
+          const data = subjectDataMap[s]; // Safe access via map
           return (
-            <button key={s} onClick={() => !isActive && switchSubject(s)} style={{ flexShrink: 0, padding: "5px 13px", borderRadius: 20, border: "none", cursor: isActive ? "default" : "pointer", fontWeight: 800, fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", background: isActive ? "#6366f1" : (dark ? "#1e293b" : "#e5e7eb"), color: isActive ? "#fff" : (dark ? "#64748b" : "#6b7280"), transition: "all .15s" }}>
-              {s}
-              {ctx.type === "good" && <span style={{ marginLeft: 4 }}>✓</span>}
-              {ctx.type === "improve" && <span style={{ marginLeft: 4 }}>↑</span>}
+            <button
+              key={s}
+              onClick={() => switchSubject(s)}
+              className={`px-4 py-2 rounded-full font-bold ${isActive ? 'bg-indigo-600 text-white' : 'bg-slate-200'}`}
+            >
+              {data?.label || s}
             </button>
           );
         })}
