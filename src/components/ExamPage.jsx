@@ -82,7 +82,19 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (u) => {
       setUser(u);
-      if (u && studentInfo) {
+
+      if (!u) {
+        localStorage.removeItem('user-session');
+        return;
+      }
+
+      if (studentInfo && studentInfo.uid && studentInfo.uid !== u.uid) {
+        setStudentInfo(null);
+        localStorage.removeItem('user-session');
+        return;
+      }
+
+      if (studentInfo) {
         await ensureStudentProfile({
           uid: u.uid,
           name: studentInfo.name,
@@ -277,6 +289,7 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
     });
   };
 
+
   // ─── LISTEN FOR TEACHER UPLOADS ───────────────────────────────────────
   useEffect(() => {
     if (!user || !studentInfo?.grade || !studentInfo?.subject) return;
@@ -370,7 +383,7 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
             </div>
             <div className="hidden sm:block">
               <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Student Portal</p>
-              <h2 className="text-sm font-black dark:text-white leading-none">{studentInfo?.name} (Gr. {studentInfo?.grade})</h2>
+              <h2 className="text-sm font-black dark:text-white leading-none">{studentInfo?.name} - {studentInfo?.grade}</h2>
             </div>
           </div>
 

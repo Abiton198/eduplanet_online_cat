@@ -71,12 +71,29 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // ── Load legacy session from localStorage (keeps existing users working) ───
+
+  // ── Load legacy session from localStorage, but only if it matches the live user ──
   useEffect(() => {
-    const savedUser = localStorage.getItem('user-session');
-    if (savedUser) {
-      try { setStudentInfo(JSON.parse(savedUser)); } catch (_) { }
-    }
+    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
+      if (!firebaseUser) {
+        localStorage.removeItem('user-session');
+        return;
+      }
+      const savedUser = localStorage.getItem('user-session');
+      if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser);
+          if (parsed.uid === firebaseUser.uid) {
+            setStudentInfo(parsed);
+          } else {
+            localStorage.removeItem('user-session');
+          }
+        } catch (_) {
+          localStorage.removeItem('user-session');
+        }
+      }
+    });
+    return () => unsub();
   }, []);
 
   // ── Firebase auth listener — loads role + full profile for all user types ──
@@ -118,9 +135,10 @@ function App() {
               role === 'teacher' ? 'teachers' : 'students';
 
           const profSnap = await getDoc(doc(db, profileCol, firebaseUser.uid));
+
           const profile = profSnap.exists()
-            ? { ...profSnap.data(), role, schoolId }
-            : { role, schoolId };
+            ? { ...profSnap.data(), role, schoolId, uid: firebaseUser.uid }
+            : { role, schoolId, uid: firebaseUser.uid };
 
           setUserProfile(profile);
 
