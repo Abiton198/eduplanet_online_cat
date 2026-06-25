@@ -640,11 +640,15 @@ export default function AIExamMocker({ student }) {
     return unsub;
   }, [STUDENT_ID]);
 
-  // ── Real-time exam list ────────────────────────────────────────────────────
+
+  // ── Real-time exam list — scoped to the student's own school ──────────────
   useEffect(() => {
+    if (!studentInfo?.schoolId) return;
+
     const q = query(
       collection(db, "exams"),
       where("status", "==", "ready"),
+      where("schoolId", "==", studentInfo.schoolId),
       orderBy("extractedAt", "desc")
     );
     const unsub = onSnapshot(q, (snap) => {
@@ -653,7 +657,7 @@ export default function AIExamMocker({ student }) {
       if (list.length > 0) setSelectedExam((c) => c || list[0].id);
     }, console.error);
     return () => unsub();
-  }, []);
+  }, [studentInfo?.schoolId]);
 
   // Temporary debug — remove after fix
   useEffect(() => {

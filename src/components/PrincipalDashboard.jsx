@@ -418,6 +418,7 @@ export default function PrincipalDashboard({ principal }) {
 
 
 
+
     useEffect(() => {
         if (!schoolId) return;
 
@@ -434,9 +435,15 @@ export default function PrincipalDashboard({ principal }) {
             if (user) {
                 const fetchAllAttempts = async () => {
                     try {
-                        const snap = await getDocs(collection(db, 'exam_attempts'));
-                        // FIX 3: Guard the setState too — fetch is async and may
-                        // resolve after unmount
+                        // ── TEMP DIAGNOSTIC ──────────────────────────────────────
+                        const myUserDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+                        console.log('[DIAG] my users/{uid} doc:', myUserDoc.data());
+                        console.log('[DIAG] querying schoolId:', schoolId);
+                        // ── END DIAGNOSTIC ───────────────────────────────────────
+
+                        const snap = await getDocs(
+                            query(collection(db, 'exam_attempts'), where('schoolId', '==', schoolId))
+                        );
                         if (!state.active) return;
                         const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                         setAttempts(all);
@@ -516,18 +523,7 @@ export default function PrincipalDashboard({ principal }) {
         }
     });
 
-    const fetchAllAttempts = async () => {
-        try {
-            const snap = await getDocs(
-                query(collection(db, 'exam_attempts'), where('schoolId', '==', schoolId))
-            );
-            if (!state.active) return;
-            const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            setAttempts(all);
-        } catch (e) {
-            if (state.active) console.error('[fetchAttempts]', e);
-        }
-    };
+
 
     const handleUpgrade = useCallback(() => setShowUpgradeModal(true), []);
 

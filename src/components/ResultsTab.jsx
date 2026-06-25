@@ -462,20 +462,70 @@ export function ResultsTab({ studentId, teacherMode = false }) {
         return () => unsub();
     }, []);
 
+
     // ── 2. Live attempts query ────────────────────────────────────────────────
     useEffect(() => {
         if (!teacherMode && !studentId) { setLoading(false); return; }
 
-        const q = teacherMode
-            ? query(collection(db, "exam_attempts"), orderBy("completedAt", "desc"))
-            : query(collection(db, "exam_attempts"), where("studentId", "==", studentId), orderBy("completedAt", "desc"));
+        if (teacherMode) {
+            const q = query(collection(db, "exam_attempts"), orderBy("completedAt", "desc"));
+            console.log('[DIAG] current auth uid:', auth.currentUser?.uid);
+            const unsub = onSnapshot(
+                q,
+                (snap) => { setAttempts(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setLoading(false); },
+                (err) => { console.error("ResultsTab [attempts]:", err); setLoading(false); }
+            );
+            return () => unsub();
+        }
 
-        const unsub = onSnapshot(
-            q,
-            (snap) => { setAttempts(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setLoading(false); },
-            (err) => { console.error("ResultsTab [attempts]:", err); setLoading(false); }
+        // Student view — merge results from both possible field names,
+        // since attempt documents are written inconsistently as either
+        // `studentId` or `studentUid` depending on which upload flow created them.
+        let byIdResults = [];
+        let byUidResults = [];
+        let idLoaded = false;
+        let uidLoaded = false;
+
+        const mergeAndSet = () => {
+            const merged = [...byIdResults, ...byUidResults];
+            const deduped = Array.from(
+                new Map(merged.map(a => [a.id, a])).values()
+            );
+            deduped.sort((a, b) => {
+                const aTime = a.completedAt?.toMillis?.() ?? new Date(a.completedAt || 0).getTime();
+                const bTime = b.completedAt?.toMillis?.() ?? new Date(b.completedAt || 0).getTime();
+                return bTime - aTime;
+            });
+            setAttempts(deduped);
+            if (idLoaded && uidLoaded) setLoading(false);
+        };
+
+        const qById = query(collection(db, "exam_attempts"), where("studentId", "==", studentId));
+        const unsubById = onSnapshot(
+            qById,
+            (snap) => {
+                byIdResults = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                idLoaded = true;
+                mergeAndSet();
+            },
+            (err) => { console.error("ResultsTab [attempts:studentId]:", err); idLoaded = true; mergeAndSet(); }
         );
-        return () => unsub();
+
+        const qByUid = query(collection(db, "exam_attempts"), where("studentUid", "==", studentId));
+        const unsubByUid = onSnapshot(
+            qByUid,
+            (snap) => {
+                byUidResults = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                uidLoaded = true;
+                mergeAndSet();
+            },
+            (err) => { console.error("ResultsTab [attempts:studentUid]:", err); uidLoaded = true; mergeAndSet(); }
+        );
+
+        return () => {
+            unsubById();
+            unsubByUid();
+        };
     }, [studentId, teacherMode]);
 
     // ── 3. Enrich with resolved title ─────────────────────────────────────────

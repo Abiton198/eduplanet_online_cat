@@ -583,9 +583,8 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
 
           <div className="my-10">
             <ExamResultsDisplay />
-            <ResultsTab studentId={studentName} />
+            <ResultsTab studentId={user?.uid} />
           </div>
-
 
           {/* NEW EXAMS BUTTON */}
           <div className="flex justify-center mb-10">
