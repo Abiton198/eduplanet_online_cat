@@ -469,7 +469,7 @@ export function ResultsTab({ studentId, teacherMode = false }) {
 
         if (teacherMode) {
             const q = query(collection(db, "exam_attempts"), orderBy("completedAt", "desc"));
-            console.log('[DIAG] current auth uid:', auth.currentUser?.uid);
+            // console.log('[DIAG] current auth uid:', auth.currentUser?.uid);
             const unsub = onSnapshot(
                 q,
                 (snap) => { setAttempts(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setLoading(false); },
