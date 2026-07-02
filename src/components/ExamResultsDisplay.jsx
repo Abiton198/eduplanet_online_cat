@@ -853,6 +853,8 @@ export default function ExamResultsDisplay() {
     return () => unsub();
   }, []);
 
+
+
   // ── 2. Load all student results ────────────────────────────────────────────
   // NOTE: examTitles intentionally NOT in deps — removing it prevents the
   // re-fetch race condition. examTitles is only used for display labels and
@@ -891,19 +893,25 @@ export default function ExamResultsDisplay() {
         // AI exam attempts — query by ALL possible student IDs
         // studentId from hook may be a custom string like "Abiton" (not Firebase UID)
         const sid = getCachedStudentId() || studentId || '';
+
         const possibleIds = [...new Set([user.uid, sid, user.email, studentName].filter(Boolean))];
 
         console.log('[ExamResults] querying exam_attempts by IDs:', possibleIds);
 
-        const allSnaps = await Promise.all(
+        // studentUid is the field the rules can actually prove — query it directly
+        const uidSnap = await getDocs(
+          query(collection(db, 'exam_attempts'), where('studentUid', '==', user.uid))
+        ).catch(err => { console.warn('[ExamResults] studentUid query failed:', err); return { docs: [] }; });
+
+        // studentId queries: only the uid-shaped candidate will ever be provable by rules;
+        const idSnaps = await Promise.all(
           possibleIds.map(id =>
             getDocs(query(collection(db, 'exam_attempts'), where('studentId', '==', id)))
-              .catch(err => {
-                console.warn(`[ExamResults] query failed for id "${id}":`, err);
-                return { docs: [] };
-              })
+              .catch(err => { console.warn(`[ExamResults] studentId query failed for "${id}":`, err); return { docs: [] }; })
           )
         );
+
+        const allSnaps = [uidSnap, ...idSnaps];
 
         // Log what came back per ID
         allSnaps.forEach((snap, i) => {
@@ -959,6 +967,7 @@ export default function ExamResultsDisplay() {
         examTitles[a.examId] ||
         examTitles[a.exam] ||
         a.examTitle ||
+        a.subject ||
         (a.examId || a.exam || 'Unknown Exam').replace(/_exam\.json$/, '').replace(/_/g, ' '),
     }));
   }, [aiAttempts, examTitles]);

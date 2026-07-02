@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, query, where, orderBy, onSnapshot, updateDoc, doc } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, updateDoc, doc, getDoc } from "firebase/firestore";
 import { db } from "../utils/firebase";
 import {
     ClipboardList, ChevronDown, ChevronUp, CheckCircle, XCircle,
@@ -7,6 +7,7 @@ import {
     BadgeCheck, User
 } from "lucide-react";
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 // ── Status helpers ────────────────────────────────────────────────────────────
 const STATUS = {
@@ -450,16 +451,33 @@ export function ResultsTab({ studentId, teacherMode = false }) {
 
     // ── 1. Live exam title map ────────────────────────────────────────────────
     useEffect(() => {
-        const unsub = onSnapshot(
-            collection(db, "exams"),
-            (snap) => {
-                const map = {};
-                snap.docs.forEach(d => { map[d.id] = d.data().title || d.id; });
-                setExamTitles(map);
-            },
-            (err) => console.error("ResultsTab [examTitles]:", err)
-        );
-        return () => unsub();
+        const auth = getAuth();
+        const unsubAuth = onAuthStateChanged(auth, async (user) => {
+            if (!user) return;
+
+            const userSnap = await getDoc(doc(db, "users", user.uid)).catch(() => null);
+            const schoolId = userSnap?.exists() ? userSnap.data().schoolId : null;
+            if (!schoolId) { console.warn("ResultsTab: no schoolId on user doc, skipping exams query"); return; }
+
+            const q = query(collection(db, "exams"), where("schoolId", "==", schoolId));
+            const unsubExams = onSnapshot(
+                q,
+                (snap) => {
+                    const map = {};
+                    snap.docs.forEach(d => { map[d.id] = d.data().title || d.id; });
+                    setExamTitles(map);
+                },
+                (err) => console.error("ResultsTab [examTitles]:", err)
+            );
+
+            // stash for cleanup below
+            unsubAuth._examsUnsub = unsubExams;
+        });
+
+        return () => {
+            unsubAuth._examsUnsub?.();
+            unsubAuth();
+        };
     }, []);
 
 
@@ -468,14 +486,26 @@ export function ResultsTab({ studentId, teacherMode = false }) {
         if (!teacherMode && !studentId) { setLoading(false); return; }
 
         if (teacherMode) {
-            const q = query(collection(db, "exam_attempts"), orderBy("completedAt", "desc"));
-            // console.log('[DIAG] current auth uid:', auth.currentUser?.uid);
-            const unsub = onSnapshot(
-                q,
-                (snap) => { setAttempts(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setLoading(false); },
-                (err) => { console.error("ResultsTab [attempts]:", err); setLoading(false); }
-            );
-            return () => unsub();
+            const auth = getAuth();
+            let unsubAttempts = () => { };
+            const unsubAuth = onAuthStateChanged(auth, async (user) => {
+                if (!user) { setLoading(false); return; }
+                const userSnap = await getDoc(doc(db, "users", user.uid)).catch(() => null);
+                const schoolId = userSnap?.exists() ? userSnap.data().schoolId : null;
+                if (!schoolId) { console.warn("ResultsTab: teacher has no schoolId"); setLoading(false); return; }
+
+                const q = query(
+                    collection(db, "exam_attempts"),
+                    where("schoolId", "==", schoolId),
+                    orderBy("completedAt", "desc")
+                );
+                unsubAttempts = onSnapshot(
+                    q,
+                    (snap) => { setAttempts(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setLoading(false); },
+                    (err) => { console.error("ResultsTab [attempts]:", err); setLoading(false); }
+                );
+            });
+            return () => { unsubAttempts(); unsubAuth(); };
         }
 
         // Student view — merge results from both possible field names,

@@ -14,9 +14,7 @@ import ResultPage from './components/ResultPage';
 import ExamRules from './utils/ExamRules';
 import ProtectedRoute from './utils/ProtectedRoute';
 import ReviewPage from './components/ReviewPage';
-import AllResults from './components/AllResults';
 import TeacherDashboard from './components/TeacherDashboard';
-import GroupWeakStudents from './utils/GroupWeakStudents';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
 
@@ -359,8 +357,6 @@ function App() {
             {/* Existing utility routes — untouched */}
             <Route path="/review" element={<ReviewPage />} />
             <Route path="/exam-rules" element={<ExamRules />} />
-            <Route path="/all-results" element={<AllResults />} />
-            <Route path="/group-weak-students" element={<GroupWeakStudents />} />
             <Route path="/payment/success" element={<PaymentSuccess />} />
             <Route path="/payment/cancel" element={<PaymentCancel />} />
 

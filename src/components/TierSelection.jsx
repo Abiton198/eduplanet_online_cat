@@ -1,16 +1,15 @@
-import React from 'react';
-import { Check, ArrowRight, Lock, RefreshCw } from 'lucide-react';
-import { TIERS, TIER_ORDER, getTierPrice } from '../utils/tierConfig';
+import React, { useState, useEffect } from 'react';
+import { Check, ArrowRight, Lock, RefreshCw, Loader2 } from 'lucide-react';
+import { TIERS, TIER_ORDER } from '../utils/tierConfig';
+import { fetchAllTierQuotes, formatCurrency } from '../services/billingApi';
 
-function TierCard({ tier, selected, current, billingCycle, onSelect, compact }) {
+function TierCard({ tier, selected, current, billingCycle, onSelect, compact, quote, quoteLoading }) {
     if (!tier || !tier.id) return null;
 
     const Icon = tier.icon; // Now sourced directly from config
     const isSelected = selected === tier.id;
     const isCurrent = current === tier.id;
-
-    // Use our utility formula to calculate the actual dynamic cost
-    const computedPrice = getTierPrice(tier, billingCycle);
+    const isFree = tier.monthlyPrice === 0 && tier.annualPrice === 0;
 
     // Downgrade logic using unified TIER_ORDER
     const isDowngrade = current && TIER_ORDER.indexOf(tier.id) < TIER_ORDER.indexOf(current);
@@ -70,18 +69,24 @@ function TierCard({ tier, selected, current, billingCycle, onSelect, compact }) 
             </div>
 
             <div className={compact ? 'mb-3' : 'mb-5'}>
-                {computedPrice === 0 ? (
+                {isFree ? (
                     <p className="text-2xl font-black text-slate-800 dark:text-white">Free</p>
+                ) : quoteLoading || !quote ? (
+                    <div className="h-8 w-24 rounded-lg bg-slate-100 dark:bg-slate-700 animate-pulse" />
                 ) : (
-                    <div className="flex items-baseline gap-1">
-                        <span className="text-xs font-bold text-slate-400">R</span>
+                    <div className="flex items-baseline gap-1 flex-wrap">
                         <span className="text-2xl font-black text-slate-800 dark:text-white">
-                            {computedPrice.toLocaleString()}
+                            {formatCurrency(quote.chargeAmount, quote.chargeCurrency)}
                         </span>
                         <span className="text-xs text-slate-400 font-medium">
                             {billingCycle === 'annual' ? '/year' : '/month'}
                         </span>
                     </div>
+                )}
+                {!isFree && quote && (quote.institutionMultiplier !== 1 || quote.currencyMultiplier !== 1) && (
+                    <p className="text-[10px] text-slate-400 mt-1">
+                        Adjusted for {quote.institutionType} institutions in your region
+                    </p>
                 )}
             </div>
 
@@ -109,7 +114,40 @@ function TierCard({ tier, selected, current, billingCycle, onSelect, compact }) 
     );
 }
 
-export default function TierSelection({ selected, current, billingCycle = 'monthly', onSelect, compact = false }) {
+export default function TierSelection({ selected, current, billingCycle = 'monthly', onSelect, compact = false, schoolId }) {
+    const [quotesByTier, setQuotesByTier] = useState({});
+    const [quotesLoading, setQuotesLoading] = useState(true);
+
+    useEffect(() => {
+        if (!schoolId) {
+            // No schoolId to price against (e.g. a marketing page before
+            // signup) - leave cards on their loading skeleton rather than
+            // guessing a price that might be wrong for the eventual buyer.
+            setQuotesLoading(false);
+            return;
+        }
+        let active = true;
+
+        async function loadQuotes() {
+            setQuotesLoading(true);
+            try {
+                const quotes = await fetchAllTierQuotes({ schoolId, billingCycle });
+                if (active) {
+                    const byTier = {};
+                    quotes.forEach((q) => { byTier[q.tierId] = q; });
+                    setQuotesByTier(byTier);
+                }
+            } catch (err) {
+                console.error('[TierSelection] Could not load price quotes', err);
+            } finally {
+                if (active) setQuotesLoading(false);
+            }
+        }
+
+        loadQuotes();
+        return () => { active = false; };
+    }, [schoolId, billingCycle]);
+
     return (
         <div className={`grid gap-4 ${compact ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-5'}`}>
             {TIERS.map((tier) => (
@@ -121,6 +159,8 @@ export default function TierSelection({ selected, current, billingCycle = 'month
                     billingCycle={billingCycle}
                     onSelect={onSelect}
                     compact={compact}
+                    quote={quotesByTier[tier.id]}
+                    quoteLoading={quotesLoading}
                 />
             ))}
         </div>

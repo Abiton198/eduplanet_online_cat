@@ -1,7 +1,28 @@
-import { Star, Zap, Sparkles, Crown } from 'lucide-react';
+import { Star, Zap, Sparkles, Crown, Gem } from 'lucide-react';
 import { onSnapshot, doc } from "firebase/firestore";
 import { db } from "./firebase";
 import { useState, useEffect } from "react";
+
+// ─────────────────────────────────────────────────────────────────────────
+// NOTE ON PRICING (read this before touching monthlyPrice/annualPrice)
+//
+// The numbers below are BASE ZAR rates for a PRIMARY-school customer paying
+// in ZAR (or any currency that isn't "stronger" than ZAR). They are no
+// longer the final chargeable amount on their own.
+//
+// Two multipliers now apply on top of these base prices, computed
+// authoritatively on the BACKEND (see services/billingApi.js +
+// backend/pricing_engine.py):
+//   1. Institution type  - secondary = 1.5x, tertiary (university/college) = 2.25x
+//   2. Registrant currency strength - 3x if the school's local currency is
+//      stronger than ZAR (USD/GBP/EUR/etc.), 1x otherwise
+//
+// getEstimatedPrice() below is for INSTANT UI feedback only (e.g. showing a
+// rough number while a real quote is still loading). The amount actually
+// sent to PayFast must come from fetchPriceQuote() in billingApi.js, not
+// from this file - that keeps a user from tampering with the price by
+// editing client-side JS before checkout.
+// ─────────────────────────────────────────────────────────────────────────
 
 export const TIERS = [
     {
@@ -14,7 +35,7 @@ export const TIERS = [
         gradientBg: 'from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-750',
         accentColor: '#64748b',
         limits: { students: 30, teachers: 2, exams: 5 },
-        features: ['30 students', '5 exams', '2 teachers', 'Basic AI marking', 'Email support'],
+        features: ['30 students', '5 exams', '2 teachers', 'Basic AI marking'],
     },
     {
         id: 'silver',
@@ -51,17 +72,96 @@ export const TIERS = [
         gradientBg: 'from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20',
         accentColor: '#f59e0b',
         limits: { students: 1000, teachers: 100, exams: 500 },
-        features: ['1000 students', '500 exams', '100 teachers', 'Full audit log', 'Advanced analytics'],
+        features: ['1000 students', '500 exams', '100 teachers', 'Full audit log', 'Advanced analytics', 'Email support'],
+    },
+    {
+        // Price is double Platinum's, per your instruction. Limits are also
+        // doubled for consistency since you didn't specify them - plain
+        // numbers, change freely. Parent dashboard is the headline feature;
+        // see canAccessParentDashboard() below for the gating helper to use
+        // once that route/component exists.
+        id: 'diamond',
+        label: 'Diamond',
+        monthlyPrice: 5998,
+        annualPrice: 59980,
+        icon: Gem,
+        gradient: 'from-cyan-400 to-indigo-600',
+        gradientBg: 'from-cyan-50 to-indigo-50 dark:from-cyan-900/20 dark:to-indigo-900/20',
+        accentColor: '#22d3ee',
+        limits: { students: 2000, teachers: 200, exams: 1000 },
+        features: ['2000 students', '1000 exams', '200 teachers', 'Parent dashboard', 'Full audit log', 'Advanced analytics', 'Email support'],
     }
 ];
 
-export const TIER_ORDER = ['free', 'silver', 'gold', 'platinum'];
+export const TIER_ORDER = ['free', 'silver', 'gold', 'platinum', 'diamond'];
 
+// ─── Tier-gated feature flags (decoupled from the display `features` list
+// above on purpose - gating logic shouldn't depend on exact wording match) ──
+export const TIER_FEATURE_FLAGS = {
+    diamond: { parentDashboard: true },
+};
 
-// Calculates price based on cycle using the new unified structure
+export function hasFeature(tierId, flagKey) {
+    return Boolean(TIER_FEATURE_FLAGS[tierId]?.[flagKey]);
+}
+
+// Once you build the actual parent-dashboard route/component, gate it with
+// this - e.g. `if (!canAccessParentDashboard(school.tier)) return <Upsell />`
+export function canAccessParentDashboard(tierId) {
+    return hasFeature(tierId, 'parentDashboard');
+}
+
+// ─── Institution-level multipliers (mirrors backend/pricing_engine.py) ────
+// secondary = +50% of primary, tertiary = +50% of secondary (i.e. 2.25x primary).
+// If you actually meant a flat +50% of primary at every level instead
+// (tertiary = 2.0x primary, not 2.25x), change TERTIARY here AND in
+// pricing_engine.py's INSTITUTION_MULTIPLIERS.
+export const INSTITUTION_TYPES = {
+    PRIMARY: 'primary',
+    SECONDARY: 'secondary',
+    TERTIARY: 'tertiary', // university / college
+};
+
+export const INSTITUTION_MULTIPLIERS = {
+    [INSTITUTION_TYPES.PRIMARY]: 1,
+    [INSTITUTION_TYPES.SECONDARY]: 1.5,
+    [INSTITUTION_TYPES.TERTIARY]: 2.25,
+};
+
+// Maps whatever free-text value you already store (e.g. from your
+// teachingPhase resolver) to one of the 3 buckets above.
+export function normalizeInstitutionType(raw) {
+    if (!raw) return INSTITUTION_TYPES.PRIMARY;
+    const v = raw.toString().toLowerCase();
+    if (v.includes('university') || v.includes('college') || v.includes('tertiary') || v.includes('higher')) {
+        return INSTITUTION_TYPES.TERTIARY;
+    }
+    if (v.includes('secondary') || v.includes('high')) {
+        return INSTITUTION_TYPES.SECONDARY;
+    }
+    return INSTITUTION_TYPES.PRIMARY;
+}
+
+export function getInstitutionMultiplier(institutionType) {
+    const normalized = normalizeInstitutionType(institutionType);
+    return INSTITUTION_MULTIPLIERS[normalized] ?? 1;
+}
+
+// Calculates the BASE price (institution/region multipliers not applied)
+// based on cycle using the unified structure. Kept for backward
+// compatibility with any code that just wants the sticker price.
 export function getTierPrice(tier, billingCycle) {
     if (!tier) return 0;
     return billingCycle === 'annual' ? tier.annualPrice : tier.monthlyPrice;
+}
+
+// ESTIMATE ONLY - does not know the registrant's currency strength, only
+// the institution multiplier (which is free to compute client-side since
+// it isn't tied to FX data). Use this for instant UI feedback while a real
+// quote loads; use fetchPriceQuote() from billingApi.js for anything that
+// actually gets charged.
+export function getEstimatedPrice(tier, billingCycle, institutionType) {
+    return getTierPrice(tier, billingCycle) * getInstitutionMultiplier(institutionType);
 }
 
 // Logic helpers required by your components

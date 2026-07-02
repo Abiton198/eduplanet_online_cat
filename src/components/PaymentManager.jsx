@@ -1,49 +1,74 @@
-import React, { useState } from 'react';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db } from './../utils/firebase';
-import { getTierPrice, getTierConfig } from './../utils/tierConfig';
+import React, { useState, useEffect } from 'react';
+import { getTierConfig } from './../utils/tierConfig';
+import { fetchPriceQuote, initiatePayment, formatCurrency } from './../services/billingApi';
 import TierSelection from './TierSelection';
-import { X } from 'lucide-react';
+import { X, Loader2, AlertTriangle } from 'lucide-react';
 
-const MERCHANT_ID = import.meta.env.VITE_PAYFAST_MERCHANT_ID;
-const MERCHANT_KEY = import.meta.env.VITE_PAYFAST_MERCHANT_KEY;
 const PAYFAST_URL = "https://www.payfast.co.za/eng/process";
 
 // ─── PAYMENT FORM COMPONENT ──────────────────────────────────────────────────
 
 // PaymentManager.jsx — PaymentForm component
+//
+// Two backend calls now do what this component used to do entirely on its
+// own:
+//  - fetchPriceQuote (read-only) shows a price preview as soon as this
+//    screen mounts.
+//  - initiatePayment (mutating) runs ONLY when the user clicks "Pay". It
+//    creates the authoritative pending transaction in Firestore and
+//    returns the exact fields for the PayFast redirect form - merchant_id/
+//    merchant_key included, so they no longer need to live in frontend env
+//    vars at all. payfast-itn.js verifies against that same record before
+//    upgrading anything, so nothing here needs to be trusted blindly.
 
 function PaymentForm({ tier, billingCycle, schoolId, schoolName, currentTier, onCancel }) {
-    const [step, setStep] = useState('confirm');
-    const computedPrice = getTierPrice(tier, billingCycle);
+    const [step, setStep] = useState('confirm'); // 'confirm' | 'paying' | 'error'
+    const [quote, setQuote] = useState(null);
+    const [quoteLoading, setQuoteLoading] = useState(true);
+    const [quoteError, setQuoteError] = useState(null);
 
-    const paymentData = {
-        merchant_id: MERCHANT_ID,
-        merchant_key: MERCHANT_KEY,
-        return_url: `${window.location.origin}/payment-success`,
-        m_payment_id: `PAY-${Date.now()}`,
-        amount: computedPrice.toFixed(2),
-        item_name: `${tier.label} Plan`,
-        item_description: `${tier.label} Subscription (${billingCycle})`,
-        custom_str1: schoolId,
-        custom_str2: schoolName,
-        custom_str3: currentTier,
-        custom_str4: billingCycle,
-    };
+    useEffect(() => {
+        let active = true; // guards against setting state after unmount / stale requests
+
+        async function loadQuote() {
+            setQuoteLoading(true);
+            setQuoteError(null);
+            try {
+                const result = await fetchPriceQuote({
+                    schoolId,
+                    tierId: tier.id,
+                    billingCycle,
+                });
+                if (active) setQuote(result);
+            } catch (err) {
+                console.error('[Billing Quote Error]', err);
+                if (active) setQuoteError(err.message || 'Could not load pricing for your region.');
+            } finally {
+                if (active) setQuoteLoading(false);
+            }
+        }
+
+        loadQuote();
+        return () => { active = false; };
+    }, [schoolId, tier.id, billingCycle]);
+
+    const hasAdjustment = quote && (quote.institutionMultiplier !== 1 || quote.currencyMultiplier !== 1);
 
     const handlePayfastPayment = async (e) => {
         e.preventDefault();
+        if (quoteLoading || quoteError) return; // button is disabled in this state anyway
         setStep('paying');
 
         try {
-            await addDoc(collection(db, 'billing'), {
+            // Recomputed fresh server-side rather than reusing the earlier
+            // preview, and this call is what actually creates the pending
+            // transaction the ITN handler will check against.
+            const { paymentData } = await initiatePayment({
                 schoolId,
+                schoolName,
                 tierId: tier.id,
                 billingCycle,
-                amount: computedPrice,
-                status: 'pending',
-                transactionRef: paymentData.m_payment_id,
-                createdAt: serverTimestamp(),
+                currentTier,
             });
 
             // Build form in raw DOM — completely outside React's tree
@@ -52,6 +77,7 @@ function PaymentForm({ tier, billingCycle, schoolId, schoolName, currentTier, on
             form.action = PAYFAST_URL;
 
             Object.entries(paymentData).forEach(([key, value]) => {
+                if (value === undefined || value === null) return;
                 const input = document.createElement('input');
                 input.type = 'hidden';
                 input.name = key;
@@ -77,11 +103,33 @@ function PaymentForm({ tier, billingCycle, schoolId, schoolName, currentTier, on
                 <div className="flex-1">
                     <p className="font-black text-slate-800 dark:text-white">{tier.label} Plan</p>
                     <p className="text-xs text-slate-500 capitalize">{billingCycle} subscription</p>
+                    {hasAdjustment && !quoteLoading && (
+                        <p className="text-xs text-slate-400 mt-1">
+                            Includes {quote.institutionType} institution and regional pricing
+                        </p>
+                    )}
                 </div>
                 <div className="text-right">
-                    <p className="font-black text-2xl text-slate-800 dark:text-white">R{computedPrice}</p>
+                    {quoteLoading ? (
+                        <Loader2 className="w-5 h-5 animate-spin text-slate-400 ml-auto" />
+                    ) : quoteError ? (
+                        <p className="text-xs text-red-500 font-bold">Pricing unavailable</p>
+                    ) : (
+                        <p className="font-black text-2xl text-slate-800 dark:text-white">
+                            {formatCurrency(quote.chargeAmount, quote.chargeCurrency)}
+                        </p>
+                    )}
                 </div>
             </div>
+
+            {quoteError && (
+                <div className="rounded-xl p-3 bg-red-50 dark:bg-red-900/20 flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                    <p className="text-xs text-red-600 dark:text-red-400">
+                        {quoteError} — please refresh and try again, or contact support if this persists.
+                    </p>
+                </div>
+            )}
 
             {step === 'error' && (
                 <p className="text-xs text-red-500 text-center font-bold">
@@ -91,10 +139,14 @@ function PaymentForm({ tier, billingCycle, schoolId, schoolName, currentTier, on
 
             <button
                 onClick={handlePayfastPayment}
-                disabled={step === 'paying'}
+                disabled={step === 'paying' || quoteLoading || !!quoteError}
                 className="w-full py-4 rounded-2xl font-black text-white bg-emerald-600 transition-opacity hover:opacity-90 disabled:opacity-60"
             >
-                {step === 'paying' ? 'Redirecting to PayFast...' : `Pay R${computedPrice}`}
+                {step === 'paying'
+                    ? 'Redirecting to PayFast...'
+                    : quoteLoading
+                        ? 'Calculating price...'
+                        : `Pay ${formatCurrency(quote.chargeAmount, quote.chargeCurrency)}`}
             </button>
             <button onClick={onCancel} className="w-full text-xs text-slate-400 hover:text-slate-600">
                 Cancel
@@ -139,6 +191,7 @@ export default function PaymentManager({ schoolId, schoolName, currentTier, onCl
                             current={currentTier}
                             onSelect={(id) => { setSelectedTier(id); setView('payment'); }}
                             billingCycle={billingCycle}
+                            schoolId={schoolId}
                         />
                     )}
 

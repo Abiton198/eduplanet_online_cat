@@ -5,11 +5,6 @@ import { addDoc, collection, query, onSnapshot, where, orderBy, limit, getCountF
 import { db, auth } from "../utils/firebase";
 import { signOut } from "firebase/auth";
 import ExamResultsDisplay from "./ExamResultsDisplay";
-import { termExams } from "../data/termExams";
-import { questions } from "../utils/Questions";
-import { ensureStudentProfile } from "../utils/pointsSystem/ensureStudentProfile";
-import { awardPointsFromExamHistory } from "../utils/pointsSystem/awardPointsFromExamHistory";
-import FloatingStudyHub from "../utils/FloatingStudyHub";
 import { Sun, Moon, LogOut, Clock, BookOpen, Sparkles, X, FileText } from "lucide-react";
 import CATTutor from '../utils/CATTutor';
 import AIExamMocker from '../utils/AIExamMocker';
@@ -39,7 +34,6 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
   const [timeLeft, setTimeLeft] = useState(15 * 60);
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
-  const [expandedTerm, setExpandedTerm] = useState(null);
   const [examView, setExamView] = useState("new");
 
   // User & Points State
@@ -62,10 +56,6 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
   // Grade Filtering Logic
   const cleanedGrade = (studentInfo?.grade || "").toLowerCase();
   const gradeKey = cleanedGrade.includes("12") ? "Grade 12" : cleanedGrade.includes("11") ? "Grade 11" : "Grade 10";
-  const gradeData = termExams[gradeKey] || {};
-
-  // ─── MERGE STATIC & DYNAMIC EXAMS ───
-  const staticGradeData = termExams[gradeKey] || {};
   const [dynamicExams, setDynamicExams] = useState([]);
   const [hasNotified, setHasNotified] = useState(false);
   const [seenExams, setSeenExams] = useState(() => {
@@ -94,17 +84,6 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
         return;
       }
 
-      if (studentInfo) {
-        await ensureStudentProfile({
-          uid: u.uid,
-          name: studentInfo.name,
-          grade: studentInfo.grade,
-        });
-        if (!didAward) {
-          await awardPointsFromExamHistory(u.uid, studentInfo.name);
-          setDidAward(true);
-        }
-      }
     });
     return () => unsub();
   }, [studentInfo, didAward]);
@@ -579,83 +558,14 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
       {/* ─── DASHBOARD ─── */}
       {!examActive && (
         <main className="max-w-7xl mx-auto pt-28 px-6 pb-20">
-          <FloatingStudyHub grade={studentInfo?.grade} currentStudentId={user?.uid} />
 
           <div className="my-10">
             <ExamResultsDisplay />
             <ResultsTab studentId={user?.uid} />
           </div>
 
-          {/* NEW EXAMS BUTTON */}
-          <div className="flex justify-center mb-10">
-            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-2xl p-1">
-              <button
-                onClick={() => setExamView("new")}
-                className={`px-6 py-3 rounded-xl font-bold transition-all relative ${examView === "new"
-                  ? "bg-indigo-600 text-white shadow-lg"
-                  : "text-gray-500"
-                  }`}
-              >
-                🆕 New Exams (
-                {newExams.length > 0 && (
-                  <span className={`ml-2 inline-flex items-center justify-center 
-      px-2 py-0.5 text-xs font-bold rounded-full
-      ${examView === "new"
-                      ? "bg-white text-indigo-600"
-                      : "bg-indigo-600 text-white"
-                    }`}>
-                    {newExams.length}
-                  </span>
-                )})
-              </button>
 
-              <button
-                onClick={() => setExamView("all")}
-                className={`px-6 py-3 rounded-xl font-bold transition-all ${examView === "all"
-                  ? "bg-indigo-600 text-white shadow-lg"
-                  : "text-gray-500"
-                  }`}
-              >
-                📚 All Exams ({dynamicExams.length})
-              </button>
-            </div>
-          </div>
 
-          <section className="bg-white dark:bg-gray-900 rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-gray-100 dark:border-gray-800">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-black dark:text-white tracking-tight mb-2">Available Revision Tests</h2>
-              <p className="text-gray-500 font-medium">Select a term to view specific curriculum papers.</p>
-            </div>
-
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-              {Object.keys(gradeData).map((term) => (
-                <button
-                  key={term}
-                  onClick={() => setExpandedTerm(expandedTerm === term ? null : term)}
-                  className={`p-8 rounded-3xl border-2 transition-all group ${expandedTerm === term ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' : 'border-gray-100 dark:border-gray-800 hover:border-indigo-300'}`}
-                >
-                  <BookOpen size={40} className={`mx-auto mb-4 ${expandedTerm === term ? 'text-indigo-600' : 'text-gray-300'}`} />
-                  <span className={`text-xl font-black block text-center ${expandedTerm === term ? 'text-indigo-600' : 'dark:text-gray-400'}`}>{term}</span>
-                </button>
-              ))}
-            </div>
-
-            {expandedTerm && (
-              <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-top-4">
-                {gradeData[expandedTerm].map((exam) => (
-                  <div key={exam.id} className="p-6 bg-gray-50 dark:bg-gray-800/50 rounded-3xl border border-gray-100 dark:border-gray-700 hover:scale-[1.02] transition-transform">
-                    <h3 className="text-lg font-bold dark:text-white mb-4">{exam.title}</h3>
-                    <button
-                      onClick={() => handleSelectExam(exam)}
-                      className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 transition-colors"
-                    >
-                      Enter Assessment
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
         </main>
       )}
 
