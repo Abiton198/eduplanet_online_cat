@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { collection, query, where, orderBy, onSnapshot, updateDoc, doc, getDoc } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, updateDoc, doc, getDoc, getDocs } from "firebase/firestore";
 import { db } from "../utils/firebase";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import {
     ClipboardList, ChevronDown, ChevronUp, CheckCircle, XCircle,
     AlertCircle, Download, Pencil, Sparkles, X, Save, RotateCcw,
-    BadgeCheck, User
+    BadgeCheck, User, FileText, Calendar, TrendingUp, TrendingDown
 } from "lucide-react";
-import { getFunctions, httpsCallable } from "firebase/functions";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 // ── Status helpers ────────────────────────────────────────────────────────────
 const STATUS = {
@@ -311,6 +311,137 @@ function RemarkModal({ attempt, onClose, onSave }) {
     );
 }
 
+// Period modal for generating report
+function ReportPeriodModal({ onClose, onGenerate, availableSubjects }) {
+    const [period, setPeriod] = useState("month");
+    const [customStart, setCustomStart] = useState("");
+    const [customEnd, setCustomEnd] = useState("");
+    const [subjectMode, setSubjectMode] = useState("all"); // "all" | "select"
+    const [selectedSubjects, setSelectedSubjects] = useState([]);
+
+    const canGenerate =
+        (period !== "custom" || (customStart && customEnd)) &&
+        (subjectMode !== "select" || selectedSubjects.length > 0);
+
+    const toggleSubject = (subj) => {
+        setSelectedSubjects(prev =>
+            prev.includes(subj) ? prev.filter(s => s !== subj) : [...prev, subj]
+        );
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[90vh] flex flex-col">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
+                    <div>
+                        <h3 className="font-black text-lg">Generate Report</h3>
+                        <p className="text-xs text-slate-400 mt-0.5">Choose period and subjects to include</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <X size={18} className="text-slate-500" />
+                    </button>
+                </div>
+
+                <div className="p-6 space-y-5 overflow-y-auto">
+                    {/* Period */}
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-2">Period</label>
+                        <div className="space-y-2">
+                            {PERIOD_OPTIONS.map(opt => (
+                                <button
+                                    key={opt.id}
+                                    onClick={() => setPeriod(opt.id)}
+                                    className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all text-sm font-semibold flex items-center justify-between ${period === opt.id
+                                        ? "border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
+                                        : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300"
+                                        }`}
+                                >
+                                    {opt.label}
+                                    {period === opt.id && <CheckCircle size={16} />}
+                                </button>
+                            ))}
+                        </div>
+
+                        {period === "custom" && (
+                            <div className="grid grid-cols-2 gap-3 pt-3">
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">From</label>
+                                    <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
+                                        className="w-full text-sm px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-indigo-400" />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">To</label>
+                                    <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
+                                        className="w-full text-sm px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-indigo-400" />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Subjects */}
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-2">Subjects</label>
+                        <div className="flex gap-2 mb-3">
+                            <button
+                                onClick={() => { setSubjectMode("all"); setSelectedSubjects([]); }}
+                                className={`flex-1 px-3 py-2 rounded-xl text-sm font-semibold border-2 transition-all ${subjectMode === "all"
+                                    ? "border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
+                                    : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+                                    }`}
+                            >
+                                All Subjects
+                            </button>
+                            <button
+                                onClick={() => setSubjectMode("select")}
+                                className={`flex-1 px-3 py-2 rounded-xl text-sm font-semibold border-2 transition-all ${subjectMode === "select"
+                                    ? "border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
+                                    : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+                                    }`}
+                            >
+                                Select Subjects
+                            </button>
+                        </div>
+
+                        {subjectMode === "select" && (
+                            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                {availableSubjects.length === 0 ? (
+                                    <p className="text-xs text-slate-400 italic">No subjects found in attempts.</p>
+                                ) : availableSubjects.map(subj => (
+                                    <button
+                                        key={subj}
+                                        onClick={() => toggleSubject(subj)}
+                                        className={`w-full text-left px-3 py-2 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all ${selectedSubjects.includes(subj)
+                                            ? "border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
+                                            : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+                                            }`}
+                                    >
+                                        {subj}
+                                        {selectedSubjects.includes(subj) && <CheckCircle size={14} />}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2 flex-shrink-0">
+                    <button onClick={onClose} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        Cancel
+                    </button>
+                    <button
+                        onClick={() => canGenerate && onGenerate(period, customStart, customEnd, subjectMode === "all" ? null : selectedSubjects)}
+                        disabled={!canGenerate}
+                        className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-bold shadow-sm flex items-center gap-1.5"
+                    >
+                        <FileText size={14} /> Generate
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
 // ── Single attempt card ───────────────────────────────────────────────────────
 function AttemptCard({ attempt, teacherMode, onRemark }) {
     const [expanded, setExpanded] = useState(false);
@@ -441,6 +572,112 @@ function AttemptCard({ attempt, teacherMode, onRemark }) {
     );
 }
 
+
+// Report Generation 
+const getAttemptMillis = (a) =>
+    a.completedAt?.toMillis?.() ?? new Date(a.completedAt || 0).getTime();
+
+const PERIOD_OPTIONS = [
+    { id: "week", label: "Last 7 Days", days: 7 },
+    { id: "month", label: "Last 30 Days", days: 30 },
+    { id: "term", label: "Last 3 Months", days: 90 },
+    { id: "year", label: "Last 12 Months", days: 365 },
+    { id: "all", label: "All Time", days: null },
+    { id: "custom", label: "Custom Range", days: null },
+];
+
+function filterByPeriod(attempts, period, customStart, customEnd) {
+    if (period === "all") return attempts;
+    const now = Date.now();
+    if (period === "custom") {
+        const start = customStart ? new Date(customStart).getTime() : 0;
+        const end = customEnd ? new Date(customEnd).getTime() + 86400000 - 1 : now;
+        return attempts.filter(a => {
+            const t = getAttemptMillis(a);
+            return t >= start && t <= end;
+        });
+    }
+    const opt = PERIOD_OPTIONS.find(p => p.id === period);
+    const start = now - opt.days * 86400000;
+    return attempts.filter(a => getAttemptMillis(a) >= start);
+}
+
+function filterBySubjects(attempts, subjects) {
+    if (!subjects || subjects.length === 0) return attempts;
+    return attempts.filter(a => subjects.includes(a.subject || a.resolvedTitle || a.examTitle || "General"));
+}
+
+function computeReportStats(periodAttempts, teacherMode) {
+    const total = periodAttempts.length;
+    const avg = total ? Math.round(periodAttempts.reduce((s, a) => s + (a.percentage ?? 0), 0) / total) : 0;
+    const best = total ? Math.max(...periodAttempts.map(a => a.percentage ?? 0)) : 0;
+    const worst = total ? Math.min(...periodAttempts.map(a => a.percentage ?? 0)) : 0;
+    const passing = periodAttempts.filter(a => (a.percentage ?? 0) >= 50).length;
+    const failing = total - passing;
+
+    // Breakdown by subject/exam
+    const bySubject = new Map();
+    periodAttempts.forEach(a => {
+        const key = a.subject || a.resolvedTitle || "General";
+        const cur = bySubject.get(key) || { count: 0, totalPct: 0 };
+        cur.count += 1;
+        cur.totalPct += (a.percentage ?? 0);
+        bySubject.set(key, cur);
+    });
+    const subjectBreakdown = [...bySubject.entries()]
+        .map(([subject, v]) => ({ subject, count: v.count, avg: Math.round(v.totalPct / v.count) }))
+        .sort((a, b) => b.count - a.count);
+
+    // Breakdown by student (teacher reports only)
+    let studentBreakdown = [];
+    if (teacherMode) {
+        const byStudent = new Map();
+        periodAttempts.forEach(a => {
+            const key = a.studentId || "Unknown";
+            const cur = byStudent.get(key) || { count: 0, totalPct: 0 };
+            cur.count += 1;
+            cur.totalPct += (a.percentage ?? 0);
+            byStudent.set(key, cur);
+        });
+        studentBreakdown = [...byStudent.entries()]
+            .map(([studentId, v]) => ({ studentId, count: v.count, avg: Math.round(v.totalPct / v.count) }))
+            .sort((a, b) => a.avg - b.avg); // weakest students first
+    }
+
+    // Recurring weak concepts across all attempts in the period
+    const weakMap = new Map();
+    periodAttempts.forEach(a => {
+        (a.markedResults || []).forEach(r => {
+            if (r.status === "correct") return;
+            const key = r.question_number
+                ? `${r.question_number}: ${(r.question || "").slice(0, 60)}`
+                : (r.question || "Unknown").slice(0, 60);
+            const cur = weakMap.get(key) || { count: 0 };
+            cur.count += 1;
+            weakMap.set(key, cur);
+        });
+    });
+    const weakAreas = [...weakMap.entries()]
+        .map(([label, v]) => ({ label, count: v.count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+    // Trend: compare first half vs second half of the period, chronologically
+    const sorted = [...periodAttempts].sort((a, b) => getAttemptMillis(a) - getAttemptMillis(b));
+    let trend = null;
+    if (sorted.length >= 2) {
+        const mid = Math.floor(sorted.length / 2) || 1;
+        const firstHalf = sorted.slice(0, mid);
+        const secondHalf = sorted.slice(mid);
+        const avgFirst = firstHalf.reduce((s, a) => s + (a.percentage ?? 0), 0) / firstHalf.length;
+        const avgSecond = secondHalf.reduce((s, a) => s + (a.percentage ?? 0), 0) / secondHalf.length;
+        trend = Math.round(avgSecond - avgFirst);
+    }
+
+    return { total, avg, best, worst, passing, failing, subjectBreakdown, studentBreakdown, weakAreas, trend, sorted };
+}
+
+
 // ── Main results tab ──────────────────────────────────────────────────────────
 export function ResultsTab({ studentId, teacherMode = false }) {
     const [attempts, setAttempts] = useState([]);
@@ -448,6 +685,88 @@ export function ResultsTab({ studentId, teacherMode = false }) {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [remarkTarget, setRemarkTarget] = useState(null); // attempt being remarked
+    const [showReportModal, setShowReportModal] = useState(false);
+    const [schoolName, setSchoolName] = useState("");
+    const [studentProfile, setStudentProfile] = useState({ name: "", grade: "" });
+    const [schoolLogoUrl, setSchoolLogoUrl] = useState("");
+    const [studentNameMap, setStudentNameMap] = useState({}); // uid -> real name, teacher mode
+    const [subjectTeacherMap, setSubjectTeacherMap] = useState({}); // subject -> teacher name
+
+    useEffect(() => {
+        const auth = getAuth();
+        const unsub = onAuthStateChanged(auth, async (user) => {
+            if (!user) return;
+            const userSnap = await getDoc(doc(db, "users", user.uid)).catch(() => null);
+            const schoolId = userSnap?.exists() ? userSnap.data().schoolId : null;
+            if (!schoolId) return;
+
+            const examsSnap = await getDocs(
+                query(collection(db, "exams"), where("schoolId", "==", schoolId))
+            ).catch(() => null);
+            if (!examsSnap) return;
+
+            const map = {};
+            for (const d of examsSnap.docs) {
+                const data = d.data();
+                if (!data.subject || map[data.subject]) continue; // one teacher per subject is enough
+                if (data.teacherName) {
+                    map[data.subject] = data.teacherName;
+                } else if (data.teacherId) {
+                    const tSnap = await getDoc(doc(db, "teachers", data.teacherId)).catch(() => null);
+                    map[data.subject] = tSnap?.exists() ? (tSnap.data().name || "") : "";
+                }
+            }
+            setSubjectTeacherMap(map);
+        });
+        return () => unsub();
+    }, []);
+
+    // ── Resolve school name + (student mode) own profile name/grade ────────────
+
+
+    useEffect(() => {
+        const auth = getAuth();
+        const unsub = onAuthStateChanged(auth, async (user) => {
+            if (!user) return;
+
+            const userSnap = await getDoc(doc(db, "users", user.uid)).catch(() => null);
+            const schoolId = userSnap?.exists() ? userSnap.data().schoolId : null;
+
+            if (schoolId) {
+                const schoolSnap = await getDoc(doc(db, "schools", schoolId)).catch(() => null);
+                if (schoolSnap?.exists()) {
+                    const d = schoolSnap.data();
+                    setSchoolName(d.name || d.schoolName || "");
+                    setSchoolLogoUrl(d.logoUrl || d.logo || "");
+                }
+            }
+
+            if (!teacherMode) {
+                const profSnap = await getDoc(doc(db, "students", user.uid)).catch(() => null);
+                if (profSnap?.exists()) {
+                    const d = profSnap.data();
+                    setStudentProfile({ name: d.name || user.displayName || "", grade: d.grade || d.gradeYear || "" });
+                }
+            }
+        });
+        return () => unsub();
+    }, [teacherMode]);
+
+    // ── Teacher mode: resolve real names for every studentUid seen in attempts ──
+    useEffect(() => {
+        if (!teacherMode) return;
+        const uids = [...new Set(attempts.map(a => a.studentUid).filter(Boolean))];
+        if (uids.length === 0) return;
+
+        (async () => {
+            const entries = await Promise.all(uids.map(async (uid) => {
+                const snap = await getDoc(doc(db, "students", uid)).catch(() => null);
+                const name = snap?.exists() ? (snap.data().name || uid) : uid;
+                return [uid, name];
+            }));
+            setStudentNameMap(Object.fromEntries(entries));
+        })();
+    }, [attempts, teacherMode]);
 
     // ── 1. Live exam title map ────────────────────────────────────────────────
     useEffect(() => {
@@ -589,20 +908,148 @@ export function ResultsTab({ studentId, teacherMode = false }) {
     };
 
     // ── 7. PDF export ─────────────────────────────────────────────────────────
-    const handleDownload = (attempt) => {
+    // ── Structured period report ──────────────────────────────────────────
+    const handleDownload = (period, customStart, customEnd, subjects = null) => {
+        let periodAttempts = filterByPeriod(enriched, period, customStart, customEnd);
+        periodAttempts = filterBySubjects(periodAttempts, subjects);
+
+        if (periodAttempts.length === 0) {
+            alert("No exam attempts found for the selected period and subjects.");
+            return;
+        }
+
         const printWindow = window.open("", "_blank");
         if (!printWindow) return;
-        const date = attempt.completedAt?.toDate?.()?.toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" }) ?? "N/A";
+
+        const periodLabel = period === "custom"
+            ? `${customStart} to ${customEnd}`
+            : PERIOD_OPTIONS.find(p => p.id === period)?.label || "All Time";
+        const subjectLabel = subjects && subjects.length > 0 ? subjects.join(", ") : "All Subjects";
+        const genDate = new Date().toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" });
+
+        // ── Aggregate stats ──────────────────────────────────────────────────
+        const total = periodAttempts.length;
+        const avgPct = Math.round(periodAttempts.reduce((s, a) => s + (a.percentage ?? 0), 0) / total);
+        const bestPct = Math.max(...periodAttempts.map(a => a.percentage ?? 0));
+        const passing = periodAttempts.filter(a => (a.percentage ?? 0) >= 50).length;
+        const failing = total - passing;
+
+        const sorted = [...periodAttempts].sort((a, b) => getAttemptMillis(b) - getAttemptMillis(a));
+
+        let trendLabel = "—";
+        if (sorted.length >= 2) {
+            const chron = [...sorted].reverse();
+            const mid = Math.floor(chron.length / 2) || 1;
+            const avgFirst = chron.slice(0, mid).reduce((s, a) => s + (a.percentage ?? 0), 0) / mid;
+            const avgSecond = chron.slice(mid).reduce((s, a) => s + (a.percentage ?? 0), 0) / (chron.length - mid);
+            const diff = Math.round(avgSecond - avgFirst);
+            trendLabel = diff > 0 ? `▲ +${diff}%` : diff < 0 ? `▼ ${diff}%` : "No change";
+        }
+
+        // Subject breakdown — now with teacher name prefixed
+        const bySubject = new Map();
+        periodAttempts.forEach(a => {
+            const key = a.subject || a.resolvedTitle || a.examTitle || "General";
+            const cur = bySubject.get(key) || { count: 0, totalPct: 0 };
+            cur.count += 1;
+            cur.totalPct += (a.percentage ?? 0);
+            bySubject.set(key, cur);
+        });
+        const subjectRows = [...bySubject.entries()]
+            .map(([subject, v]) => {
+                const teacherName = subjectTeacherMap[subject];
+                const teacherLine = teacherName ? `<div style="color:#64748b;font-size:12px">Subject Teacher: ${teacherName}</div>` : "";
+                return `<div style="margin-bottom:10px"><strong>${subject}</strong> — ${v.count} exam${v.count !== 1 ? "s" : ""}, avg ${Math.round(v.totalPct / v.count)}%${teacherLine}</div>`;
+            })
+            .join("");
+
+        // Student breakdown (teacher mode only)
+        let studentSection = "";
+        if (teacherMode) {
+            const byStudent = new Map();
+            periodAttempts.forEach(a => {
+                const key = a.studentUid || a.studentId || "Unknown";
+                const displayName = studentNameMap[a.studentUid] || a.studentId || "Unknown";
+                const cur = byStudent.get(key) || { count: 0, totalPct: 0, displayName };
+                cur.count += 1;
+                cur.totalPct += (a.percentage ?? 0);
+                byStudent.set(key, cur);
+            });
+            const studentRows = [...byStudent.values()]
+                .map(v => ({ name: v.displayName, count: v.count, avg: Math.round(v.totalPct / v.count) }))
+                .sort((a, b) => a.avg - b.avg)
+                .map(s => `<div><strong>${s.name}</strong> — ${s.count} exam${s.count !== 1 ? "s" : ""}, avg ${s.avg}%</div>`)
+                .join("");
+            studentSection = `
+    <div class="score-box" style="margin-top:16px">
+      <div class="section-title">Performance by Student (weakest first)</div>
+      ${studentRows}
+    </div>`;
+        }
+
+        // ── Concept gaps, grouped per subject, with subject teacher noted ───
+        const gapsBySubject = new Map();
+        periodAttempts.forEach(a => {
+            const subjectKey = a.subject || a.resolvedTitle || a.examTitle || "General";
+            const subjMap = gapsBySubject.get(subjectKey) || new Map();
+            (a.markedResults || []).forEach(r => {
+                if (r.status === "correct") return;
+                const label = (r.concept_gap && r.concept_gap.trim())
+                    || (r.question_number ? `${r.question_number}: ${(r.question || "").slice(0, 60)}` : (r.question || "Unknown").slice(0, 60));
+                subjMap.set(label, (subjMap.get(label) || 0) + 1);
+            });
+            gapsBySubject.set(subjectKey, subjMap);
+        });
+
+        const conceptGapSection = [...gapsBySubject.entries()]
+            .filter(([, subjMap]) => subjMap.size > 0)
+            .map(([subject, subjMap]) => {
+                const teacherName = subjectTeacherMap[subject];
+                const teacherLine = teacherName ? ` <span style="font-weight:400;color:#64748b;font-size:12px">— Subject Teacher: ${teacherName}</span>` : "";
+                const items = [...subjMap.entries()]
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 8)
+                    .map(([label, count]) => `<div class="answer-box" style="margin-top:8px"><strong>${count}×</strong> — ${label}</div>`)
+                    .join("");
+                return `
+    <div class="question" style="page-break-inside:avoid">
+      <div class="label">${subject}${teacherLine}</div>
+      ${items}
+    </div>`;
+            }).join("");
+
+        // Exam-by-exam appendix
+        const appendixRows = sorted.map((a, idx) => {
+            const d = a.completedAt?.toDate?.()?.toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" }) ?? "—";
+            const studentLabel = teacherMode ? (studentNameMap[a.studentUid] || a.studentId || "—") : null;
+            return `
+        <div class="question">
+          <div class="label">${idx + 1}. ${a.resolvedTitle || a.examTitle || "Exam"}</div>
+          ${teacherMode ? `<div>Student: ${studentLabel}</div>` : ""}
+          <div class="answer-box"><div class="label">Result</div><div>${a.score ?? 0} / ${a.total ?? 0} marks &nbsp;<span style="font-weight:bold">(${a.percentage ?? 0}%)</span></div></div>
+          <div style="color:#94a3b8;font-size:13px;margin-top:6px">${d}</div>
+        </div>`;
+        }).join("");
+
+        const displayStudentName = studentProfile.name || studentId || "N/A";
+        const displayGrade = studentProfile.grade ? `Grade ${studentProfile.grade}` : "";
+
+        const logoHtml = schoolLogoUrl
+            ? `<img src="${schoolLogoUrl}" class="logo" alt="School Logo" />`
+            : `<div class="logo-fallback">${(schoolName || "A").charAt(0).toUpperCase()}</div>`;
 
         printWindow.document.write(`
 <html>
   <head>
-    <title>Exam Record</title>
+    <title>Analytical Assessment Report</title>
     <style>
       body { font-family: Arial, sans-serif; padding: 40px; color: #0f172a; background: #fff; }
-      .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
-      .title { font-size: 28px; font-weight: 800; }
-      .subtitle { color: #64748b; margin-top: 6px; }
+      .header { display: flex; align-items: center; gap: 18px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+      .logo { width: 64px; height: 64px; object-fit: contain; border-radius: 12px; flex-shrink: 0; }
+      .logo-fallback { width: 64px; height: 64px; border-radius: 12px; background: #4f46e5; color: #fff; font-size: 28px; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+      .header-text { flex: 1; min-width: 0; }
+      .title { font-size: 24px; font-weight: 800; }
+      .subtitle { color: #64748b; margin-top: 4px; font-size: 13px; }
       .meta { margin-bottom: 10px; font-size: 15px; }
       .score-box { margin-top: 24px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; }
       .score { font-size: 52px; font-weight: 900; color: #4f46e5; }
@@ -612,42 +1059,61 @@ export function ResultsTab({ studentId, teacherMode = false }) {
       .label { font-weight: 700; margin-bottom: 6px; }
       .answer-box { margin-top: 14px; padding: 14px; border-radius: 12px; background: #f8fafc; }
       .footer { margin-top: 50px; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 18px; }
+      @media print {
+        .logo, .logo-fallback { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      }
     </style>
   </head>
   <body>
     <div class="header">
-      <div class="title">Academic Examination Record</div>
-      <div class="subtitle">Official AI-Marked Assessment Report${attempt.remarkedAt ? " · Re-marked" : ""}</div>
+      ${logoHtml}
+      <div class="header-text">
+        <div class="title">${schoolName || "Academic Performance Hub"}</div>
+        <div class="subtitle">Analytical Assessment Report · ${teacherMode ? "Class-wide performance summary" : "Official AI-Marked Assessment Report"} · ${periodLabel}</div>
+      </div>
     </div>
-    <div class="meta"><strong>Student:</strong> ${attempt.studentId || "N/A"}</div>
-    <div class="meta"><strong>Exam:</strong> ${attempt.resolvedTitle || attempt.examTitle || "Untitled"}</div>
-    <div class="meta"><strong>Date:</strong> ${date}</div>
-    ${attempt.remarkedAt ? `<div class="meta"><strong>Re-marked by:</strong> ${attempt.remarkedBy === "ai+teacher" ? "AI + Teacher" : "Teacher"}</div>` : ""}
+    ${!teacherMode ? `
+    <div class="meta"><strong>Student:</strong> ${displayStudentName}</div>
+    ${displayGrade ? `<div class="meta"><strong>Grade:</strong> ${displayGrade}</div>` : ""}` : ""}
+    <div class="meta"><strong>Period:</strong> ${periodLabel}</div>
+    <div class="meta"><strong>Subjects:</strong> ${subjectLabel}</div>
+    <div class="meta"><strong>Generated:</strong> ${genDate}</div>
+
     <div class="score-box">
-      <div class="section-title">Final Performance</div>
-      <div class="score">${attempt.score ?? 0} / ${attempt.total ?? 0} &nbsp;<span style="font-size:28px;color:#64748b">(${attempt.percentage ?? 0}%)</span></div>
+      <div class="section-title">Overall Performance</div>
+      <div class="score">${avgPct}% <span style="font-size:28px;color:#64748b">avg</span></div>
+      <div style="margin-top:12px;font-size:14px;color:#475569">
+        ${total} exam${total !== 1 ? "s" : ""} &nbsp;·&nbsp; Best ${bestPct}% &nbsp;·&nbsp; Trend ${trendLabel} &nbsp;·&nbsp; Passing ${passing} / Below 50% ${failing}
+      </div>
     </div>
-    ${attempt.teacherNote ? `<div class="score-box" style="margin-top:16px;border-color:#fde68a;background:#fffbeb"><div class="section-title">Teacher Note</div><p style="margin:0;color:#92400e">${attempt.teacherNote}</p></div>` : ""}
-    ${attempt.aiFeedback ? `<div class="score-box" style="margin-top:16px;border-color:#c7d2fe;background:#eef2ff"><div class="section-title">AI Feedback</div><p style="margin:0;color:#3730a3">${attempt.aiFeedback}</p></div>` : ""}
+
+    <div class="score-box" style="margin-top:16px;border-color:#c7d2fe;background:#eef2ff">
+      <div class="section-title">Performance by Subject</div>
+      ${subjectRows}
+    </div>
+
+    ${studentSection}
+
+    ${conceptGapSection ? `
     <div class="section">
-      <div class="section-title">Question Breakdown</div>
-      ${Array.isArray(attempt.markedResults) && attempt.markedResults.length > 0
-                ? attempt.markedResults.map((r, idx) => `
-        <div class="question">
-          <div class="label">${r.question_number || `Q${idx + 1}`}</div>
-          <div>${r.question || ""}</div>
-          <div class="answer-box"><div class="label">Student Answer</div><div>${r.student_answer || "No answer provided"}</div></div>
-          ${r.correct_answer && r.correct_answer !== "Not available" ? `<div class="answer-box"><div class="label">Correct Answer</div><div>${r.correct_answer}</div></div>` : ""}
-          <div class="answer-box"><div class="label">Result</div><div>${r.earned ?? 0} / ${r.marks ?? 0} marks &nbsp;<span style="text-transform:capitalize;font-weight:bold">(${r.status || "unknown"})</span></div>${r.feedback ? `<div style="margin-top:8px;color:#64748b;font-style:italic">${r.feedback}</div>` : ""}</div>
-        </div>`).join("")
-                : `<div class="question">No question records available.</div>`}
+      <div class="section-title">Recurring Concept Gaps — by Subject</div>
+      ${conceptGapSection}
+    </div>` : ""}
+
+    <div class="section">
+      <div class="section-title">Exam-by-Exam Record</div>
+      ${appendixRows}
     </div>
+
     <div class="footer">Generated by Academic Performance Hub • Audit Ready Report</div>
   </body>
 </html>`);
         printWindow.document.close();
         setTimeout(() => { printWindow.print(); }, 500);
     };
+
+    const availableSubjects = [...new Set(enriched.map(a => a.subject || a.resolvedTitle || a.examTitle || "General"))].sort();
+
 
     // ─────────────────────────────────────────────────────────────────────────
     if (loading) return (
@@ -665,6 +1131,7 @@ export function ResultsTab({ studentId, teacherMode = false }) {
                 />
             )}
 
+
             <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm p-8 border border-slate-200 dark:border-slate-800 animate-in fade-in">
 
                 {/* Header */}
@@ -681,12 +1148,23 @@ export function ResultsTab({ studentId, teacherMode = false }) {
                     </div>
 
                     <button
-                        onClick={() => window.print()}
+                        onClick={() => setShowReportModal(true)}
                         className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-sm transition-all"
                     >
                         <Download size={18} />
                         Download Report
                     </button>
+
+                    {showReportModal && (
+                        <ReportPeriodModal
+                            onClose={() => setShowReportModal(false)}
+                            availableSubjects={availableSubjects}
+                            onGenerate={(period, start, end, subjects) => {
+                                handleDownload(period, start, end, subjects);
+                                setShowReportModal(false);
+                            }}
+                        />
+                    )}
 
                     {attempts.length > 0 && (
                         <input
