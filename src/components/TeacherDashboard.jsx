@@ -491,6 +491,7 @@ export default function TeacherDashboard() {
 
   const [students, setStudents] = useState([]);
   const [selectedGrade, setSelectedGrade] = useState('');
+  const [skipMemo, setSkipMemo] = useState(false);
 
   // 1. Get unique grades from the students list to populate the dropdown
   const availableGrades = useMemo(() => {
@@ -505,45 +506,6 @@ export default function TeacherDashboard() {
   }, []);
 
   // ─── INIT ────────────────────────────────────────────────────────────────
-  // useEffect(() => {
-  //   if (!user) return;
-
-  //   fetch(`${API}`).catch(() => { });
-  //   ensureUserFirestoreDocs(user.uid, 'teacher').catch(console.error);
-
-  //   const profileUnsub = onSnapshot(doc(db, 'teachers', user.uid), (snap) => {
-  //     if (!snap.exists()) return;
-  //     setTeacherProfile(snap.data());
-  //   });
-
-  //   const examsUnsub = onSnapshot(
-  //     query(
-  //       collection(db, 'exams'),
-  //       where('uploadedBy', '==', user.uid)
-  //     ),
-  //     (snap) => {
-  //       const exams = snap.docs.map((d) => ({
-  //         ...d.data(),
-  //         id: d.id,
-  //         examId: d.data().examId || d.id,
-  //       }));
-  //       exams.sort((a, b) =>
-  //         new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0)
-  //       );
-  //       setUploadedExams(exams);
-  //     },
-  //     (err) => {
-  //       console.error('[Audit] Failed to load exams:', err.message);
-  //       setUploadedExams([]);
-  //     }
-  //   );
-
-  //   return () => {
-  //     profileUnsub();
-  //     examsUnsub();
-  //   };
-  // }, [user]);
-
   useEffect(() => {
     if (!user) return;
 
@@ -586,11 +548,8 @@ export default function TeacherDashboard() {
       }
     );
 
-
-
-
     return () => examsUnsub();
-  }, [user, teacherProfile?.schoolId]);   // re-runs only if schoolId changes
+  }, [user, teacherProfile?.schoolId]);
 
 
   const teacherSubjects = Array.isArray(teacherProfile?.subjects)
@@ -659,7 +618,6 @@ export default function TeacherDashboard() {
   // ─── UPLOAD ──────────────────────────────────────────────────────────────
   const handleExamUpload = async () => {
     const examFileError = validateExamFile(examFile, 'Question paper');
-    const memoFileError = validateExamFile(memoFile, 'Marking memo');
 
     if (!paperTitle.trim() || !paperSubject) {
       Swal.fire({ icon: 'warning', title: 'Missing Info', text: 'Please complete all fields.', confirmButtonColor: '#4F46E5' });
@@ -669,16 +627,17 @@ export default function TeacherDashboard() {
       Swal.fire({ icon: 'warning', title: 'Invalid File', text: examFileError, confirmButtonColor: '#4F46E5' });
       return;
     }
-    if (memoFileError) {
-      Swal.fire({ icon: 'warning', title: 'Invalid File', text: memoFileError, confirmButtonColor: '#4F46E5' });
-      return;
+    // ↓ memo validation only when not skipped
+    if (!skipMemo) {
+      const memoFileError = validateExamFile(memoFile, 'Marking memo');
+      if (memoFileError) {
+        Swal.fire({ icon: 'warning', title: 'Invalid File', text: memoFileError, confirmButtonColor: '#4F46E5' });
+        return;
+      }
     }
 
     const user = auth.currentUser;
-    if (!user?.uid) {
-      Swal.fire({ icon: 'error', title: 'Not logged in' });
-      return;
-    }
+    if (!user?.uid) { Swal.fire({ icon: 'error', title: 'Not logged in' }); return; }
 
     setIsUploading(true);
     setUploadProgress('Preparing upload...');
@@ -687,46 +646,37 @@ export default function TeacherDashboard() {
       const userDocSnap = await getDoc(doc(db, "users", user.uid));
       const userData = userDocSnap.exists() ? userDocSnap.data() : {};
       const schoolId = userData.schoolId ?? teacherProfile?.schoolId ?? "unknown";
-
-      // ── Clean school name for folder (no special chars) ───────────────
       const schoolName = (teacherProfile?.school || schoolId)
-        .replace(/[^a-zA-Z0-9\s-]/g, '')
-        .replace(/\s+/g, '_')
-        .substring(0, 40);
-
+        .replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '_').substring(0, 40);
       const schoolFolder = `${schoolId}_${schoolName}`;
       const subjectFolder = paperSubject.replace(/\s+/g, '_');
       const examId = `${user.uid}_${Date.now()}`;
-
-      // ── Storage path: exams/{schoolId_schoolName}/{subject}/{examId}/ ──
       const storagePath = `exams/${schoolFolder}/${subjectFolder}/${examId}`;
       const storage = getStorage();
 
-      // ── Upload exam paper ──────────────────────────────────────────────
-      setUploadProgress(`Uploading question paper...`);
+      // Upload exam paper
+      setUploadProgress('Uploading question paper...');
       const examRef = ref(storage, `${storagePath}/exam_${examFile.name}`);
       await uploadBytes(examRef, examFile);
       const examUrl = await getDownloadURL(examRef);
       const examFilePath = `${storagePath}/exam_${examFile.name}`;
 
-      // ── Upload memo ────────────────────────────────────────────────────
-      setUploadProgress(`Uploading marking memo...`);
-      const memoRef = ref(storage, `${storagePath}/memo_${memoFile.name}`);
-      await uploadBytes(memoRef, memoFile);
-      const memoUrl = await getDownloadURL(memoRef);
-      const memoFilePath = `${storagePath}/memo_${memoFile.name}`;
+      // Upload memo only if provided
+      let memoUrl = '';
+      let memoFilePath = '';
+      if (!skipMemo && memoFile) {
+        setUploadProgress('Uploading marking memo...');
+        const memoRef = ref(storage, `${storagePath}/memo_${memoFile.name}`);
+        await uploadBytes(memoRef, memoFile);
+        memoUrl = await getDownloadURL(memoRef);
+        memoFilePath = `${storagePath}/memo_${memoFile.name}`;
+      }
 
-      // ── Save metadata via backend (server-side limit enforcement) ─────────
       setUploadProgress('Saving to Eduket AI...');
-
       const idToken = await user.getIdToken();
-
       const response = await fetch(`${API}/exams/upload`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
         body: JSON.stringify({
           examId,
           teacherName: `${teacherProfile?.title || ''} ${teacherProfile?.surname || 'Teacher'}`.trim(),
@@ -738,40 +688,34 @@ export default function TeacherDashboard() {
           curriculum,
           grade: paperGrade,
           examFileType: getFileTypeLabel(examFile),
-          memoFileType: getFileTypeLabel(memoFile),
+          memoFileType: skipMemo ? '' : getFileTypeLabel(memoFile),
           examDuration,
           examFileName: examFile.name,
-          memoFileName: memoFile.name,
+          memoFileName: skipMemo ? '' : memoFile?.name ?? '',
           examStorageUrl: examUrl,
           memoStorageUrl: memoUrl,
           examStoragePath: examFilePath,
           memoStoragePath: memoFilePath,
+          aiMarkingOnly: skipMemo,    // ← signals backend to skip memo extraction
         }),
       });
 
       const saved = await response.json();
 
       if (response.status === 403 && saved.error === 'limit_reached') {
-        await Swal.fire({
-          icon: 'warning',
-          title: 'Upload Limit Reached',
-          text: saved.message,
-          confirmButtonText: 'Got it',
-          confirmButtonColor: '#4F46E5',
-        });
-        return; // stop here — don't show success, don't reset form
+        await Swal.fire({ icon: 'warning', title: 'Upload Limit Reached', text: saved.message, confirmButtonText: 'Got it', confirmButtonColor: '#4F46E5' });
+        return;
       }
 
       fetchUsage();
 
+      if (!response.ok || !saved?.examId) throw new Error(saved?.error || 'Failed to create exam record');
 
-      if (!response.ok || !saved?.examId) {
-        throw new Error(saved?.error || 'Failed to create exam record');
-      }
-
+      // Reset everything including skipMemo
       setUploadStep(1);
       setExamFile(null);
       setMemoFile(null);
+      setSkipMemo(false);
       setPaperTitle('');
       setActiveTab('audit');
 
@@ -1126,117 +1070,201 @@ export default function TeacherDashboard() {
                       <ArrowLeft size={16} /> Back
                     </button>
                     <button
-                      onClick={() => setUploadStep(3)}
+                      onClick={() => { setSkipMemo(false); setUploadStep(3); }}
                       disabled={!examFile}
                       className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white p-5 rounded-2xl font-black text-sm disabled:opacity-30 transition-colors"
                     >
                       Next: Marking Memo →
                     </button>
                   </div>
+
+                  {/* Skip memo option — only shown once exam file is selected */}
+                  {examFile && (
+                    <button
+                      onClick={() => { setSkipMemo(true); setMemoFile(null); setUploadStep(3); }}
+                      className="w-full mt-3 py-3 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-xs font-black text-slate-400 hover:text-indigo-500 hover:border-indigo-300 transition-colors"
+                    >
+                      Skip memo — use AI subject knowledge for marking →
+                    </button>
+                  )}
                 </div>
               )}
 
               {uploadStep === 3 && (
                 <div className="max-w-2xl mx-auto space-y-6">
-                  <StepHeader num={3} title="Upload Marking Memo" />
+                  <StepHeader num={3} title={skipMemo ? 'AI Marking Confirmed' : 'Upload Marking Memo'} />
 
-                  {/* Source Toggle */}
-                  <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
-                    {['local', 'drive'].map((src) => (
-                      <button
-                        key={src}
-                        type="button"
-                        onClick={() => { setMemoSource(src); setMemoFile(null); }}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all
-      ${memoSource === src
-                            ? 'bg-white dark:bg-slate-700 shadow text-green-600 dark:text-green-400'
-                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                      >
-                        {src === 'local'
-                          ? <><Monitor size={15} /> My Computer</>
-                          : <><DriveIcon className="w-4 h-4" /> Google Drive</>}
-                      </button>
-                    ))}
-                  </div>
-
-                  {memoSource === 'local' ? (
-                    <FileDropZone
-                      id="memoFile"
-                      file={memoFile}
-                      onChange={setMemoFile}
-                      icon={<CheckCircle size={32} className="text-green-400" />}
-                      label="Click to Select Memo Document"
-                      accentColor="green"
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => openPicker((f) => setMemoFile(f), 'office')}
-                      className="w-full border-2 border-dashed border-green-300 dark:border-green-700 rounded-2xl p-10
-             flex flex-col items-center gap-3 hover:border-green-500 hover:bg-green-50
-             dark:hover:bg-green-900/20 transition-all group"
-                    >
-                      <DriveIcon className="w-10 h-10" />
-                      <div className="text-center">
-                        <p className="font-black text-sm text-slate-700 dark:text-slate-300 group-hover:text-green-600">
-                          {memoFile ? memoFile.name : 'Choose from Google Drive'}
-                        </p>
-                        <p className="text-xs text-slate-400 mt-1"> Word documents supported</p>
+                  {/* ── AI-only mode ───────────────────────────────────────────── */}
+                  {skipMemo ? (
+                    <div className="space-y-6">
+                      <div className="rounded-2xl p-6 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800">
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0">
+                            <GraduationCap size={20} className="text-white" />
+                          </div>
+                          <div>
+                            <p className="font-black text-indigo-800 dark:text-indigo-200 text-sm mb-1">
+                              AI Subject-Knowledge Marking
+                            </p>
+                            <p className="text-xs text-indigo-600 dark:text-indigo-300 leading-relaxed">
+                              No memo required. Eduket AI will mark every answer using its deep
+                              understanding of the <strong>{paperSubject}</strong> CAPS/NSC curriculum —
+                              awarding marks for correct meaning, ignoring spelling errors, and providing
+                              detailed per-question feedback.
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      {memoFile && (
-                        <span className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-3 py-1 rounded-full font-black">
-                          ✓ File selected
-                        </span>
+
+                      <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5 space-y-2 text-sm">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                          Ready to upload
+                        </p>
+                        <SummaryRow label="Title" value={paperTitle} />
+                        <SummaryRow label="Subject" value={paperSubject} />
+                        <SummaryRow label="Grade" value={`Grade ${paperGrade}`} />
+                        <SummaryRow label="Year" value={paperYear} />
+                        <SummaryRow label="Paper" value={examFile?.name} />
+                        <SummaryRow label="Memo" value="None — AI marking" />
+                        <SummaryRow label="Duration" value={`${Math.floor(examDuration / 60) > 0 ? `${Math.floor(examDuration / 60)} hr ` : ''}${examDuration % 60} min`} />
+                      </div>
+
+                      {isUploading && (
+                        <div className="flex items-center gap-3 p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl">
+                          <Loader2 size={20} className="animate-spin text-indigo-600" />
+                          <p className="text-sm font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">
+                            {uploadProgress}
+                          </p>
+                        </div>
                       )}
-                    </button>
-                  )}
 
-                  {isUploading && (
-                    <div className="flex items-center gap-3 p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl">
-                      <Loader2 size={20} className="animate-spin text-indigo-600" />
-                      <p className="text-sm font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">
-                        {uploadProgress}
-                      </p>
+                      <div className="flex gap-4">
+                        <button
+                          onClick={() => { setSkipMemo(false); setUploadStep(2); }}
+                          disabled={isUploading}
+                          className="flex-1 bg-slate-100 dark:bg-slate-800 p-5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          <ArrowLeft size={16} /> Back
+                        </button>
+                        <button
+                          onClick={handleExamUpload}
+                          disabled={isUploading || examUsage?.atLimit}
+                          className="flex-[2] bg-green-600 hover:bg-green-700 text-white p-5 rounded-2xl font-black text-sm shadow-lg shadow-green-500/20 disabled:opacity-40 transition-colors"
+                        >
+                          {examUsage?.atLimit ? 'Upload Limit Reached' : 'FINALIZE UPLOAD'}
+                        </button>
+                      </div>
+                    </div>
+
+                  ) : (
+                    /* ── Normal memo upload mode ─────────────────────────────── */
+                    <div className="space-y-6">
+                      {/* Source toggle */}
+                      <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+                        {['local', 'drive'].map((src) => (
+                          <button
+                            key={src}
+                            type="button"
+                            onClick={() => { setMemoSource(src); setMemoFile(null); }}
+                            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all
+            ${memoSource === src
+                                ? 'bg-white dark:bg-slate-700 shadow text-green-600 dark:text-green-400'
+                                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                          >
+                            {src === 'local'
+                              ? <><Monitor size={15} /> My Computer</>
+                              : <><DriveIcon className="w-4 h-4" /> Google Drive</>}
+                          </button>
+                        ))}
+                      </div>
+
+                      {memoSource === 'local' ? (
+                        <FileDropZone
+                          id="memoFile"
+                          file={memoFile}
+                          onChange={setMemoFile}
+                          icon={<CheckCircle size={32} className="text-green-400" />}
+                          label="Click to Select Memo Document"
+                          accentColor="green"
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openPicker((f) => setMemoFile(f), 'office')}
+                          className="w-full border-2 border-dashed border-green-300 dark:border-green-700 rounded-2xl p-10
+          flex flex-col items-center gap-3 hover:border-green-500 hover:bg-green-50
+          dark:hover:bg-green-900/20 transition-all group"
+                        >
+                          <DriveIcon className="w-10 h-10" />
+                          <div className="text-center">
+                            <p className="font-black text-sm text-slate-700 dark:text-slate-300 group-hover:text-green-600">
+                              {memoFile ? memoFile.name : 'Choose from Google Drive'}
+                            </p>
+                            <p className="text-xs text-slate-400 mt-1">Word documents supported</p>
+                          </div>
+                          {memoFile && (
+                            <span className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-3 py-1 rounded-full font-black">
+                              ✓ File selected
+                            </span>
+                          )}
+                        </button>
+                      )}
+
+                      {/* Skip option also available from step 3 */}
+                      <button
+                        onClick={() => { setSkipMemo(true); setMemoFile(null); }}
+                        className="w-full py-2.5 text-xs font-black text-slate-400 hover:text-indigo-500 transition-colors"
+                      >
+                        No memo available — skip and use AI marking instead →
+                      </button>
+
+                      {isUploading && (
+                        <div className="flex items-center gap-3 p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl">
+                          <Loader2 size={20} className="animate-spin text-indigo-600" />
+                          <p className="text-sm font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">
+                            {uploadProgress}
+                          </p>
+                        </div>
+                      )}
+
+                      {examFile && memoFile && !isUploading && (
+                        <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5 space-y-2 text-sm">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Ready to upload</p>
+                          <SummaryRow label="Title" value={paperTitle} />
+                          <SummaryRow label="Subject" value={paperSubject} />
+                          <SummaryRow label="Grade" value={`Grade ${paperGrade}`} />
+                          <SummaryRow label="Year" value={paperYear} />
+                          <SummaryRow label="Paper" value={examFile.name} />
+                          <SummaryRow label="Memo" value={memoFile.name} />
+                          <SummaryRow label="Duration" value={`${Math.floor(examDuration / 60) > 0 ? `${Math.floor(examDuration / 60)} hr ` : ''}${examDuration % 60} min`} />
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                          Exam Time Allocation
+                        </label>
+                        <DurationWheelPicker value={examDuration} onChange={setExamDuration} />
+                      </div>
+
+                      <div className="flex gap-4">
+                        <button
+                          onClick={() => setUploadStep(2)}
+                          disabled={isUploading}
+                          className="flex-1 bg-slate-100 dark:bg-slate-800 p-5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          <ArrowLeft size={16} /> Back
+                        </button>
+                        <button
+                          onClick={handleExamUpload}
+                          disabled={isUploading || !memoFile || examUsage?.atLimit}
+                          className="flex-[2] bg-green-600 hover:bg-green-700 text-white p-5 rounded-2xl font-black text-sm shadow-lg shadow-green-500/20 disabled:opacity-40 transition-colors"
+                        >
+                          {examUsage?.atLimit ? 'Upload Limit Reached' : 'FINALIZE UPLOAD'}
+                        </button>
+                      </div>
                     </div>
                   )}
-
-                  {/* Upload summary before final submit */}
-                  {examFile && memoFile && !isUploading && (
-                    <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5 space-y-2 text-sm">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Ready to upload</p>
-                      <SummaryRow label="Title" value={paperTitle} />
-                      <SummaryRow label="Subject" value={paperSubject} />
-                      <SummaryRow label="Grade" value={`Grade ${paperGrade}`} />
-                      <SummaryRow label="Year" value={paperYear} />
-                      <SummaryRow label="Curriculum" value={curriculum} />
-                      <SummaryRow label="Paper" value={examFile.name} />
-                      <SummaryRow label="Memo" value={memoFile.name} />
-                      <SummaryRow label="Exam Duration" value={`${Math.floor(examDuration / 60) > 0 ? `${Math.floor(examDuration / 60)} hr ` : ''}${examDuration % 60} min`} />
-                    </div>
-                  )}
-
-                  {/* Exam Duration Selector — scrollable wheel picker */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                      Exam Time Allocation
-                    </label>
-                    <DurationWheelPicker value={examDuration} onChange={setExamDuration} />
-                  </div>
-
-                  <div className="flex gap-4">
-                    <button onClick={() => setUploadStep(2)} disabled={isUploading}
-                      className="flex-1 bg-slate-100 dark:bg-slate-800 p-5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 disabled:opacity-50">
-                      <ArrowLeft size={16} /> Back
-                    </button>
-
-                    <button
-                      onClick={handleExamUpload}
-                      disabled={isUploading || examUsage?.atLimit}
-                      className="flex-[2] bg-green-600 hover:bg-green-700 text-white p-5 rounded-2xl font-black text-sm shadow-lg shadow-green-500/20 disabled:opacity-40 transition-colors"
-                    >
-                      {examUsage?.atLimit ? 'Upload Limit Reached' : 'FINALIZE UPLOAD'}
-                    </button>
-                  </div>
                 </div>
               )}
             </div>

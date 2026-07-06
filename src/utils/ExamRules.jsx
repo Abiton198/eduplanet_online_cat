@@ -21,7 +21,7 @@ export default function ExamRules() {
   const engineFeatures = [
     {
       title: "Agentic AI Marking",
-      desc: "Our Agentic AI doesn't just check keys; it understands context. It marks your answers against DBE/IEB/SACAI standards in real-time.",
+      desc: "Our Agentic AI doesn't just check keys; it understands context. It marks your answers against any uploaded curricula or standards in real-time.",
       icon: <BrainCircuit className="text-indigo-600" />,
       color: "border-indigo-400"
     },
@@ -39,7 +39,7 @@ export default function ExamRules() {
     },
     {
       title: "Universal Alignment",
-      desc: "The marking logic automatically adjusts based on your registered subject and examination body (CAPS, IEB, or SACAI).",
+      desc: "The marking logic automatically adjusts based on your registered subject and examination body as registered by institution.",
       icon: <LineChart className="text-emerald-600" />,
       color: "border-emerald-400"
     },
@@ -134,7 +134,7 @@ export default function ExamRules() {
             </ul>
 
             <button
-              onClick={handleStartExam}
+
               className="w-full bg-white text-indigo-600 py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 hover:scale-105 transition-transform shadow-lg"
             >
               <Play className="fill-current w-5 h-5" /> START ASSESSMENT

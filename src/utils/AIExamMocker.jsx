@@ -431,6 +431,28 @@ function QuestionContent({ question, index, totalQ, answers, skipped, saveAnswer
         <div style={S.qMark}>[{question.marks || 0} Marks]</div>
       </div>
 
+      {/* Image: shown for questions with diagrams, graphs, circuits, maps */}
+      {question.questionImageUrl && (
+        <img
+          src={question.questionImageUrl}
+          alt="Exam diagram"
+          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 mb-4 object-contain max-h-96"
+        />
+      )}
+
+      {/* Accounting table: rendered from markdown */}
+      {question.questionTable && (
+        <div className="overflow-x-auto mb-4 rounded-xl border border-slate-200 dark:border-slate-700">
+          <MarkdownTable source={question.questionTable} />
+        </div>
+      )}
+
+      {/* Maths equations: rendered by MathJax (add MathJax CDN to index.html) */}
+      {question.questionLatex && (
+        <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl font-mono text-sm"
+          dangerouslySetInnerHTML={{ __html: question.questionLatex }} />
+      )}
+
       {/* ✅ key={index} resets InputContent's internal state on question change */}
       <InputContent
         key={index}
