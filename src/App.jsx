@@ -106,21 +106,7 @@ function App() {
         return;
       }
 
-      await firebaseUser.getIdToken(true);
-
-      // ── TEMPORARY DEBUG ──────────────────────────────────────
-      const testCols = ['teachers', 'students', 'exams', 'exam_attempts', 'auditLog'];
-      for (const c of testCols) {
-        try {
-          const snap = await getDocs(
-            query(collection(db, c), where('schoolId', '==', firebaseUser.uid))
-          );
-          console.log(`✅ ${c}: ${snap.size} docs`);
-        } catch (e) {
-          console.log(`❌ ${c}: DENIED —`, e.message);
-        }
-      }
-      // ── END DEBUG ────────────────────────────────────────────
+      // await firebaseUser.getIdToken(true);
 
       setUser(firebaseUser);
 

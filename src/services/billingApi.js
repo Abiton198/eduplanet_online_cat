@@ -17,7 +17,7 @@
 
 import { auth } from '../utils/firebase';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 async function getAuthHeaders() {
     const user = auth.currentUser;
@@ -36,7 +36,12 @@ async function handleResponse(res) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || `Request failed with status ${res.status}`);
     }
-    return res.json();
+    const data = await res.json();
+    // ↓ add this — Flask jsonify(None) returns HTTP 200 with body `null`
+    if (data === null || data === undefined) {
+        throw new Error('Empty response from billing service — please try again.');
+    }
+    return data;
 }
 
 // Shared display formatter - lets Intl handle currency-correct symbols and

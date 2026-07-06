@@ -505,6 +505,45 @@ export default function TeacherDashboard() {
   }, []);
 
   // ─── INIT ────────────────────────────────────────────────────────────────
+  // useEffect(() => {
+  //   if (!user) return;
+
+  //   fetch(`${API}`).catch(() => { });
+  //   ensureUserFirestoreDocs(user.uid, 'teacher').catch(console.error);
+
+  //   const profileUnsub = onSnapshot(doc(db, 'teachers', user.uid), (snap) => {
+  //     if (!snap.exists()) return;
+  //     setTeacherProfile(snap.data());
+  //   });
+
+  //   const examsUnsub = onSnapshot(
+  //     query(
+  //       collection(db, 'exams'),
+  //       where('uploadedBy', '==', user.uid)
+  //     ),
+  //     (snap) => {
+  //       const exams = snap.docs.map((d) => ({
+  //         ...d.data(),
+  //         id: d.id,
+  //         examId: d.data().examId || d.id,
+  //       }));
+  //       exams.sort((a, b) =>
+  //         new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0)
+  //       );
+  //       setUploadedExams(exams);
+  //     },
+  //     (err) => {
+  //       console.error('[Audit] Failed to load exams:', err.message);
+  //       setUploadedExams([]);
+  //     }
+  //   );
+
+  //   return () => {
+  //     profileUnsub();
+  //     examsUnsub();
+  //   };
+  // }, [user]);
+
   useEffect(() => {
     if (!user) return;
 
@@ -516,10 +555,17 @@ export default function TeacherDashboard() {
       setTeacherProfile(snap.data());
     });
 
+    return () => profileUnsub();
+  }, [user]);
+
+  useEffect(() => {
+    const schoolId = teacherProfile?.schoolId;
+    if (!user || !schoolId) return;           // wait until profile loads
+
     const examsUnsub = onSnapshot(
       query(
         collection(db, 'exams'),
-        where('uploadedBy', '==', user.uid)
+        where('uploadedBy', '==', user.uid)  // ← back to uploadedBy, now rules allow it
       ),
       (snap) => {
         const exams = snap.docs.map((d) => ({
@@ -530,7 +576,9 @@ export default function TeacherDashboard() {
         exams.sort((a, b) =>
           new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0)
         );
-        setUploadedExams(exams);
+
+        const myExams = exams.filter(e => e.uploadedBy === user.uid);
+        setUploadedExams(myExams);
       },
       (err) => {
         console.error('[Audit] Failed to load exams:', err.message);
@@ -538,11 +586,11 @@ export default function TeacherDashboard() {
       }
     );
 
-    return () => {
-      profileUnsub();
-      examsUnsub();
-    };
-  }, [user]);
+
+
+
+    return () => examsUnsub();
+  }, [user, teacherProfile?.schoolId]);   // re-runs only if schoolId changes
 
 
   const teacherSubjects = Array.isArray(teacherProfile?.subjects)

@@ -34,11 +34,13 @@ function PaymentForm({ tier, billingCycle, schoolId, schoolName, currentTier, on
             setQuoteLoading(true);
             setQuoteError(null);
             try {
-                const result = await fetchPriceQuote({
-                    schoolId,
-                    tierId: tier.id,
-                    billingCycle,
-                });
+                const result = await fetchPriceQuote({ schoolId, tierId: tier.id, billingCycle });
+
+                // ↓ Add this — null or missing chargeAmount means backend returned bad data
+                if (!result?.chargeAmount) {
+                    throw new Error('Invalid price response — please try again or contact support.');
+                }
+
                 if (active) setQuote(result);
             } catch (err) {
                 console.error('[Billing Quote Error]', err);
@@ -114,6 +116,8 @@ function PaymentForm({ tier, billingCycle, schoolId, schoolName, currentTier, on
                         <Loader2 className="w-5 h-5 animate-spin text-slate-400 ml-auto" />
                     ) : quoteError ? (
                         <p className="text-xs text-red-500 font-bold">Pricing unavailable</p>
+                    ) : !quote ? (
+                        <p className="text-xs text-slate-400 font-bold">—</p>
                     ) : (
                         <p className="font-black text-2xl text-slate-800 dark:text-white">
                             {formatCurrency(quote.chargeAmount, quote.chargeCurrency)}
@@ -139,15 +143,19 @@ function PaymentForm({ tier, billingCycle, schoolId, schoolName, currentTier, on
 
             <button
                 onClick={handlePayfastPayment}
-                disabled={step === 'paying' || quoteLoading || !!quoteError}
+                disabled={step === 'paying' || quoteLoading || !!quoteError || !quote}
                 className="w-full py-4 rounded-2xl font-black text-white bg-emerald-600 transition-opacity hover:opacity-90 disabled:opacity-60"
             >
                 {step === 'paying'
                     ? 'Redirecting to PayFast...'
                     : quoteLoading
                         ? 'Calculating price...'
-                        : `Pay ${formatCurrency(quote.chargeAmount, quote.chargeCurrency)}`}
+                        : !quote
+                            ? 'Pricing unavailable'
+                            : `Pay ${formatCurrency(quote.chargeAmount, quote.chargeCurrency)}`}
             </button>
+
+
             <button onClick={onCancel} className="w-full text-xs text-slate-400 hover:text-slate-600">
                 Cancel
             </button>
