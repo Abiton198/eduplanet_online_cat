@@ -119,9 +119,17 @@ function PaymentForm({ tier, billingCycle, schoolId, schoolName, currentTier, on
                     ) : !quote ? (
                         <p className="text-xs text-slate-400 font-bold">—</p>
                     ) : (
-                        <p className="font-black text-2xl text-slate-800 dark:text-white">
-                            {formatCurrency(quote.chargeAmount, quote.chargeCurrency)}
-                        </p>
+                        <div className="text-right">
+                            <p className="font-black text-2xl text-slate-800 dark:text-white">
+                                {formatCurrency(quote.chargeAmount, quote.chargeCurrency)}
+                            </p>
+                            {/* Show ZAR equivalent for non-ZAR schools so PayFast amount isn't a surprise */}
+                            {quote.chargeCurrency !== 'ZAR' && (
+                                <p className="text-xs text-slate-400 mt-1">
+                                    Billed via PayFast as {formatCurrency(quote.amountZarEquivalent, 'ZAR')}
+                                </p>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>
@@ -144,7 +152,8 @@ function PaymentForm({ tier, billingCycle, schoolId, schoolName, currentTier, on
             <button
                 onClick={handlePayfastPayment}
                 disabled={step === 'paying' || quoteLoading || !!quoteError || !quote}
-                className="w-full py-4 rounded-2xl font-black text-white bg-emerald-600 transition-opacity hover:opacity-90 disabled:opacity-60"
+                className="w-full py-4 rounded-2xl font-black text-white bg-emerald-600 
+               transition-opacity hover:opacity-90 disabled:opacity-60"
             >
                 {step === 'paying'
                     ? 'Redirecting to PayFast...'
@@ -152,12 +161,10 @@ function PaymentForm({ tier, billingCycle, schoolId, schoolName, currentTier, on
                         ? 'Calculating price...'
                         : !quote
                             ? 'Pricing unavailable'
-                            : `Pay ${formatCurrency(quote.chargeAmount, quote.chargeCurrency)}`}
-            </button>
-
-
-            <button onClick={onCancel} className="w-full text-xs text-slate-400 hover:text-slate-600">
-                Cancel
+                            : quote.chargeCurrency === 'ZAR'
+                                ? `Pay ${formatCurrency(quote.chargeAmount, 'ZAR')}`
+                                // For non-ZAR: show local price + clarify PayFast charges in ZAR
+                                : `Pay ${formatCurrency(quote.chargeAmount, quote.chargeCurrency)} · ${formatCurrency(quote.amountZarEquivalent, 'ZAR')} via PayFast`}
             </button>
         </div>
     );
