@@ -445,7 +445,7 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
                       AI Tutor
                     </h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                      Study concepts, get explanations, and practise with your AI mentor.
+                      Study concepts, get explanations, and practise with your AI mentor step by step.
                     </p>
                   </div>
                   <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest">
@@ -469,7 +469,7 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
                       AI Exam
                     </h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                      Attempt an AI-generated exam under timed conditions.
+                      Attempt a teacher uploaded exam and AI-marked or memoised  exam under timed conditions.
                     </p>
                   </div>
                   <span className="text-xs font-bold text-green-500 uppercase tracking-widest">

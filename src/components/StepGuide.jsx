@@ -1,273 +1,245 @@
 import React from 'react';
 import {
-    Building2,
-    UserCheck,
-    FileUp,
-    ShieldCheck,
-    BarChart3,
-    MessageSquareDiff,
-    Printer,
+    Building2, UserCheck, FileUp, BookOpen,
+    BarChart3, ArrowRight, CheckCircle2,
 } from 'lucide-react';
 
-const steps = [
+// ── Three role tracks, each with simple numbered steps ────────────────────────
+
+const tracks = [
     {
-        number: '01',
-        icon: Building2,
-        title: 'Institution Enrols',
-        badge: 'Admin',
+        role: 'Institution',
         color: 'indigo',
-        bullets: [
-            'School, college, or university registers on Eduket OS through Access Portal button',
-            'Activates Google Sign-In for staff and students — no passwords needed',
-            'Works from any country or time zone',
-            'Teachers and students then self-onboard under the institution',
+        icon: Building2,
+        tagline: 'Register once. Your whole school is ready.',
+        steps: [
+            {
+                action: 'Register your institution',
+                detail: 'Click "Access Portal", enter your school name and country. Takes 2 minutes.',
+            },
+            {
+                action: 'Enable Google Sign-In',
+                detail: 'No passwords. Teachers and students sign in with their Google accounts automatically.',
+            },
+            {
+                action: 'Choose your plan',
+                detail: 'Start free with 5 assessments. Upgrade when your school is ready to scale.',
+            },
         ],
+        cta: { label: 'Register your institution', href: '/register' },
     },
     {
-        number: '02',
-        icon: UserCheck,
-        title: 'Teacher Signs Up & Configures',
-        badge: 'Teacher',
+        role: 'Teacher',
         color: 'violet',
-        bullets: [
-            'Signs in with Google and selects one or more subjects',
-            'Multi-subject selection supported in a single account',
-            'Teacher dashboard activates instantly — classes, exams, and reports in one place',
+        icon: UserCheck,
+        tagline: 'Upload a Word doc. Everything else is handled.',
+        steps: [
+            {
+                action: 'Sign in and select your subjects',
+                detail: 'Log in with Google, pick one or more subjects. Your dashboard is ready instantly.',
+            },
+            {
+                action: 'Upload your exam or worksheet',
+                detail: 'Drop any Word document — with or without a marking memo. Set the time limit and publish.',
+            },
+            {
+                action: 'Review results in real time',
+                detail: 'See every learner\'s marked results, concept gaps, and performance trends as they submit.',
+            },
+            {
+                action: 'Adjust or remark if needed',
+                detail: 'Override any mark with a reason. Request an AI remark for context-sensitive answers.',
+            },
+            {
+                action: 'Download reports',
+                detail: 'One-click PDF export for any student, your whole class, or for moderation filing.',
+            },
         ],
+        cta: { label: 'Start as a teacher', href: '/register?role=teacher' },
     },
     {
-        number: '03',
-        icon: FileUp,
-        title: 'Teacher Uploads Exam & Memo',
-        badge: 'Teacher',
-        color: 'purple',
-        bullets: [
-            'Uploads MS Word (.docx) exam paper and marking memo',
-            'Sets exam duration timer before publishing',
-            'Exam is only visible to students enrolled in that subject',
-        ],
-    },
-    {
-        number: '04',
-        icon: ShieldCheck,
-        title: 'Student Attempts Exam',
-        badge: 'Student',
-        color: 'sky',
-        bullets: [
-            'Student signs in and selects their institution and enrolled subjects',
-            'Sees available exams and starts attempt with one click',
-            'AI Proctoring active — no copy/paste, no tab switching',
-            'Anti-cheating flags are logged and visible to the teacher',
-        ],
-    },
-    {
-        number: '05',
-        icon: BarChart3,
-        title: 'Results, Feedback & Reports',
-        badge: 'All Roles',
+        role: 'Student',
         color: 'emerald',
-        bullets: [
-            'Student sees marked results and feedback analysis within ~1 minute of submission',
-            'Teacher receives a per-student attempt report instantly',
-            'Principal dashboard shows class-wide results and performance analysis',
+        icon: BookOpen,
+        tagline: 'Sign in, attempt, improve. That\'s it.',
+        steps: [
+            {
+                action: 'Sign in with Google',
+                detail: 'No account setup. Use your school Google account — you\'re in.',
+            },
+            {
+                action: 'Join your institution and subjects',
+                detail: 'Select your school and the subjects your teacher has enrolled you in.',
+            },
+            {
+                action: 'Start an available exam',
+                detail: 'Pick from your active assessments. The timer starts when you begin.',
+            },
+            {
+                action: 'Get instant feedback',
+                detail: 'Results, per-question feedback, and your concept gaps appear within a minute of submitting.',
+            },
+            {
+                action: 'Study with your AI coach',
+                detail: 'Your coach knows your results and teaches you exactly what you missed — in real time.',
+            },
         ],
-    },
-    {
-        number: '06',
-        icon: MessageSquareDiff,
-        title: 'AI Remark or Manual Adjustment',
-        badge: 'Teacher',
-        color: 'amber',
-        bullets: [
-            'Teacher can request an AI remark for context-sensitive answers outside the memo',
-            'Manual mark adjustment available with a reason field for transparency',
-            'Adjusted results update the student and principal dashboards automatically',
-        ],
-    },
-    {
-        number: '07',
-        icon: Printer,
-        title: 'Print or Download Reports',
-        badge: 'Teacher',
-        color: 'rose',
-        bullets: [
-            'One-click PDF or Word export of any student report',
-            'Formatted for filing, moderation, or further assessment',
-            'Batch download available for full class reports',
-        ],
+        cta: { label: 'Start as a student', href: '/register?role=student' },
     },
 ];
 
-const colorMap = {
+const colors = {
     indigo: {
-        badge: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
-        number: 'text-indigo-200 dark:text-indigo-900',
-        icon: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400',
-        border: 'border-indigo-100 dark:border-indigo-900/60',
-        dot: 'bg-indigo-500',
-        bullet: 'text-indigo-500 dark:text-indigo-400',
+        ring: 'ring-indigo-200 dark:ring-indigo-800',
+        bg: 'bg-indigo-50 dark:bg-indigo-950/40',
+        border: 'border-indigo-100 dark:border-indigo-900',
+        badge: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300',
+        icon: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/60 dark:text-indigo-400',
+        num: 'bg-indigo-600 text-white',
+        cta: 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20',
+        line: 'bg-indigo-200 dark:bg-indigo-800',
     },
     violet: {
-        badge: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
-        number: 'text-violet-200 dark:text-violet-900',
-        icon: 'bg-violet-50 text-violet-600 dark:bg-violet-900/50 dark:text-violet-400',
-        border: 'border-violet-100 dark:border-violet-900/60',
-        dot: 'bg-violet-500',
-        bullet: 'text-violet-500 dark:text-violet-400',
-    },
-    purple: {
-        badge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-        number: 'text-purple-200 dark:text-purple-900',
-        icon: 'bg-purple-50 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400',
-        border: 'border-purple-100 dark:border-purple-900/60',
-        dot: 'bg-purple-500',
-        bullet: 'text-purple-500 dark:text-purple-400',
-    },
-    sky: {
-        badge: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
-        number: 'text-sky-200 dark:text-sky-900',
-        icon: 'bg-sky-50 text-sky-600 dark:bg-sky-900/50 dark:text-sky-400',
-        border: 'border-sky-100 dark:border-sky-900/60',
-        dot: 'bg-sky-500',
-        bullet: 'text-sky-500 dark:text-sky-400',
+        ring: 'ring-violet-200 dark:ring-violet-800',
+        bg: 'bg-violet-50 dark:bg-violet-950/40',
+        border: 'border-violet-100 dark:border-violet-900',
+        badge: 'bg-violet-100 text-violet-700 dark:bg-violet-900/60 dark:text-violet-300',
+        icon: 'bg-violet-100 text-violet-600 dark:bg-violet-900/60 dark:text-violet-400',
+        num: 'bg-violet-600 text-white',
+        cta: 'bg-violet-600 hover:bg-violet-500 text-white shadow-violet-500/20',
+        line: 'bg-violet-200 dark:bg-violet-800',
     },
     emerald: {
-        badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-        number: 'text-emerald-200 dark:text-emerald-900',
-        icon: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400',
-        border: 'border-emerald-100 dark:border-emerald-900/60',
-        dot: 'bg-emerald-500',
-        bullet: 'text-emerald-500 dark:text-emerald-400',
-    },
-    amber: {
-        badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-        number: 'text-amber-200 dark:text-amber-900',
-        icon: 'bg-amber-50 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400',
-        border: 'border-amber-100 dark:border-amber-900/60',
-        dot: 'bg-amber-500',
-        bullet: 'text-amber-500 dark:text-amber-400',
-    },
-    rose: {
-        badge: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
-        number: 'text-rose-200 dark:text-rose-900',
-        icon: 'bg-rose-50 text-rose-600 dark:bg-rose-900/50 dark:text-rose-400',
-        border: 'border-rose-100 dark:border-rose-900/60',
-        dot: 'bg-rose-500',
-        bullet: 'text-rose-500 dark:text-rose-400',
+        ring: 'ring-emerald-200 dark:ring-emerald-800',
+        bg: 'bg-emerald-50 dark:bg-emerald-950/40',
+        border: 'border-emerald-100 dark:border-emerald-900',
+        badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300',
+        icon: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/60 dark:text-emerald-400',
+        num: 'bg-emerald-600 text-white',
+        cta: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20',
+        line: 'bg-emerald-200 dark:bg-emerald-800',
     },
 };
 
+// ── Single track card ─────────────────────────────────────────────────────────
+
+function TrackCard({ track }) {
+    const c = colors[track.color];
+    const Icon = track.icon;
+
+    return (
+        <div className={`rounded-[2rem] border ${c.border} ${c.bg} p-8 flex flex-col`}>
+
+            {/* Track header */}
+            <div className="flex items-center gap-3 mb-2">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.icon}`}>
+                    <Icon className="w-5 h-5" />
+                </div>
+                <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${c.badge}`}>
+                    {track.role}
+                </span>
+            </div>
+
+            <p className="text-lg font-black text-slate-900 dark:text-white mb-6 leading-snug">
+                {track.tagline}
+            </p>
+
+            {/* Steps */}
+            <div className="flex-1 space-y-0 mb-8">
+                {track.steps.map((step, i) => (
+                    <div key={i} className="flex gap-4">
+                        {/* Number + connector line */}
+                        <div className="flex flex-col items-center">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black flex-shrink-0 ${c.num}`}>
+                                {i + 1}
+                            </div>
+                            {i < track.steps.length - 1 && (
+                                <div className={`w-px flex-1 min-h-[20px] mt-1 mb-1 ${c.line}`} />
+                            )}
+                        </div>
+
+                        {/* Content */}
+                        <div className={`pb-${i < track.steps.length - 1 ? '4' : '0'}`}
+                            style={{ paddingBottom: i < track.steps.length - 1 ? 16 : 0 }}>
+                            <p className="text-sm font-black text-slate-800 dark:text-slate-100 leading-snug mb-1">
+                                {step.action}
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                {step.detail}
+                            </p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* CTA */}
+            <a
+                href={track.cta.href}
+                className={`inline-flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl font-black text-sm transition-colors shadow-lg ${c.cta}`}
+            >
+                {track.cta.label} <ArrowRight className="w-4 h-4" />
+            </a>
+        </div>
+    );
+}
+
+// ── Main export ───────────────────────────────────────────────────────────────
+
 export default function StepGuide() {
     return (
-        <section className="relative py-24 px-4 bg-white dark:bg-gray-950 overflow-hidden">
-            {/* subtle background grid */}
-            <div
-                className="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.06]"
-                style={{
-                    backgroundImage:
-                        'linear-gradient(#6366f1 1px, transparent 1px), linear-gradient(90deg, #6366f1 1px, transparent 1px)',
-                    backgroundSize: '48px 48px',
-                }}
-            />
+        <section className="relative py-24 px-4 bg-slate-50 dark:bg-slate-950 overflow-hidden">
+            <div className="max-w-6xl mx-auto">
 
-            <div className="relative max-w-4xl mx-auto">
                 {/* Header */}
                 <div className="text-center mb-16">
-                    <span className="inline-block text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400 mb-3">
-                        How it works
-                    </span>
-                    <h2 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white mb-4 leading-tight">
-                        From enrolment to insight —{' '}
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-500 to-rose-500">
-                            in seven steps.
+                    <button onClick={() => setIsModalOpen(true)} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 transition-colors">
+                        Get Started
+
+                    </button>
+                    <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-4 leading-tight tracking-tighter">
+                        Enrol and run your first exam<br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-violet-500 to-emerald-500">
+                            in under ten minutes.
                         </span>
                     </h2>
-                    <p className="text-base text-gray-500 dark:text-gray-400 max-w-xl mx-auto leading-relaxed">
-                        Eduket OS is built for any institution, anywhere. Here is the complete journey from
-                        first login to filed report.
+                    <p className="text-base text-slate-500 dark:text-slate-400 max-w-lg mx-auto leading-relaxed">
+                        Three paths — one for your institution, one for teachers, one for students.
+                        Follow the steps for your role and you're live.
                     </p>
                 </div>
 
-                {/* Steps */}
-                <div className="flex flex-col gap-5">
-                    {steps.map((step, i) => {
-                        const c = colorMap[step.color];
-                        const Icon = step.icon;
-                        const isEven = i % 2 === 0;
-
-                        return (
-                            <div
-                                key={step.number}
-                                className={`relative flex ${isEven ? 'justify-start' : 'justify-end'}`}
-                            >
-                                {/* connector line — skip last */}
-                                {i < steps.length - 1 && (
-                                    <div
-                                        className={`absolute ${isEven ? 'left-8' : 'right-8'} top-full w-px h-5 bg-gray-200 dark:bg-gray-800 z-10`}
-                                    />
-                                )}
-
-                                <div
-                                    className={`
-                    relative w-full md:w-[88%]
-                    rounded-2xl border ${c.border}
-                    bg-white dark:bg-gray-900
-                    shadow-sm hover:shadow-md transition-shadow duration-200
-                    p-6
-                  `}
-                                >
-                                    {/* Big ghost number */}
-                                    <span
-                                        className={`absolute top-3 ${isEven ? 'right-5' : 'left-5'} text-7xl font-black leading-none select-none ${c.number} transition-colors`}
-                                    >
-                                        {step.number}
-                                    </span>
-
-                                    <div className="relative z-10">
-                                        {/* Top row */}
-                                        <div className="flex items-start gap-4 mb-4">
-                                            <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${c.icon}`}>
-                                                <Icon className="w-5 h-5" />
-                                            </div>
-                                            <div className="flex-1 min-w-0 pt-0.5">
-                                                <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${c.badge}`}>
-                                                        {step.badge}
-                                                    </span>
-                                                </div>
-                                                <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-snug">
-                                                    {step.title}
-                                                </h3>
-                                            </div>
-                                        </div>
-
-                                        {/* Bullets */}
-                                        <ul className="space-y-2 pl-1">
-                                            {step.bullets.map((b) => (
-                                                <li key={b} className="flex items-start gap-2.5">
-                                                    <span className={`mt-[7px] flex-shrink-0 w-1.5 h-1.5 rounded-full ${c.dot}`} />
-                                                    <span className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                                                        {b}
-                                                    </span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
+                {/* Quick-start summary strip */}
+                <div className="flex flex-wrap justify-center gap-3 mb-12">
+                    {[
+                        { icon: CheckCircle2, label: 'Free to start' },
+                        { icon: CheckCircle2, label: 'No IT setup' },
+                        { icon: CheckCircle2, label: 'Google Sign-In only' },
+                        { icon: CheckCircle2, label: 'Any device, any browser' },
+                        { icon: CheckCircle2, label: 'Results in under a minute' },
+                    ].map(({ icon: Icon, label }) => (
+                        <span key={label} className="flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
+                            <Icon className="w-3.5 h-3.5 text-emerald-500" />
+                            {label}
+                        </span>
+                    ))}
                 </div>
 
-                {/* Footer CTA */}
-                <div className="mt-16 text-center">
-                    <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">
-                        Ready to run your first AI-marked exam?
+                {/* Three track cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+                    {tracks.map((track) => (
+                        <TrackCard key={track.role} track={track} />
+                    ))}
+                </div>
+
+                {/* Bottom note */}
+                <div className="text-center">
+                    <p className="text-sm text-slate-400 dark:text-slate-500">
+                        Institution registers first — then teachers and students follow under it.
+                        <br className="hidden md:block" />
+                        All three roles can be active on the same school in the same day.
                     </p>
-                    <button className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-colors shadow-lg shadow-indigo-500/20">
-                        Get started — it's free
-                    </button>
                 </div>
+
             </div>
         </section>
     );

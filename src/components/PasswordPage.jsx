@@ -602,37 +602,99 @@ export default function AuthPage({ setStudentInfo }) {
       </header>
 
       {/* ── Hero ── */}
-      <main className="relative z-10 flex flex-col items-center pt-5 px-4 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase border border-indigo-200 dark:border-indigo-800 mb-8 animate-bounce">
-          <Zap className="w-3 h-3 fill-current" /> The AI-powered school operating system for assessments, analytics, and student success.
+      <main className="relative z-10 flex flex-col items-center pt-12 px-4 text-center">
+
+        {/* Badge */}
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[11px] font-bold uppercase border border-blue-200 dark:border-blue-800 mb-8 tracking-wide">
+          <Zap className="w-3 h-3 fill-current" /> Built for Africa. It just works
         </div>
-        <h1 className="text-6xl md:text-8xl font-black mb-8 leading-[1.1]">
-          Know where every learner<br />
+
+        {/* Headline */}
+        <h1 className="text-5xl md:text-7xl font-black mb-6 leading-[1.1] tracking-tighter">
+          Smart marking.<br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-500 to-rose-500">
-            stands, before it matters.
+            Smart teaching.
           </span>
         </h1>
-        <p className="text-xl md:text-2xl opacity-70 max-w-3xl mb-10 leading-relaxed font-medium mx-auto">
+
+        {/* Sub */}
+        <p className="text-lg md:text-xl opacity-70 max-w-2xl mb-10 leading-relaxed font-medium mx-auto">
           <span className="text-indigo-600 dark:text-indigo-400 font-bold">Eduket OS</span>{' '}
-          tracks every answer, predicts outcomes, and adapts to each learner — across schools, colleges, and universities worldwide.
+          turns any Word document into a fully marked, individually analysed assessment — in minutes.
+          Homework, class tests, practicals, exams. Every learner. Every subject. Any curriculum.
         </p>
-        <div className="flex flex-wrap justify-center gap-3 mb-3 text-sm">
+
+        {/* CTAs */}
+        <div className="flex flex-wrap justify-center gap-3 mb-4">
+
+          <button onClick={() => setIsModalOpen(true)} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 transition-colors">
+            Start for free →
+
+          </button>
+          <a href="/demo" className="px-7 py-3.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-2xl font-black text-sm transition-colors">
+            See it in action
+          </a>
+        </div>
+        <p className="text-xs text-slate-400 mb-12">No credit card needed · 5 free assessments to start</p>
+
+        {/* Feature tags */}
+        <div className="flex flex-wrap justify-center gap-2 mb-16 text-xs">
           {[
-            'Upload Word Doc',
+            'Upload any Word doc',
             'Auto-mark with memo',
-            'Human Remark Optional',
-            'Predictive outcome tracking',
-            'Agentic study planner',
+            'AI marks without memo',
+            'Timed exams & tests',
+            'Predict performance',
+            'Per-learner concept gaps',
+            'AI study coach',
             'Any curriculum, anywhere',
           ].map((tag) => (
-            <span
-              key={tag}
-              className="px-4 py-2 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 bg-indigo-500/5 font-medium"
-            >
+            <span key={tag} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 font-medium">
               {tag}
             </span>
           ))}
         </div>
+
+        {/* How it works strip */}
+        <div className="w-full max-w-5xl mb-16">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6">How it works</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              { n: '01', title: 'Teacher uploads', body: 'Drop any Word doc — with or without a memo.' },
+              { n: '02', title: 'AI extracts', body: 'Questions, diagrams, and equations structured automatically.' },
+              { n: '03', title: 'Learner completes', body: 'Any device, any browser. Timed or open.' },
+              { n: '04', title: 'Instant marking', body: 'Partial credit, spelling forgiven, concept feedback.' },
+              { n: '05', title: 'Teacher sees all', body: 'Class overview, gaps, no data entry.' },
+              { n: '06', title: 'Learner improves', body: 'AI coach teaches the exact concepts missed.' },
+            ].map(({ n, title, body }) => (
+              <div key={n} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-left">
+                <p className="text-[10px] font-black text-indigo-500 mb-2">{n}</p>
+                <p className="text-xs font-black text-slate-800 dark:text-slate-100 mb-1">{title}</p>
+                <p className="text-[11px] text-slate-400 leading-relaxed">{body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bottom CTA */}
+        <div className="w-full max-w-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 rounded-[2rem] p-10 mb-8">
+          <p className="text-xs font-black text-green-600 dark:text-green-400 uppercase tracking-widest mb-3">Focus on building learners, not on admin</p>
+          <h2 className="text-2xl font-black mb-3 tracking-tighter">Every learner, seen. Every gap, closed.</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto leading-relaxed">
+            Real-time performance tracking, AI-predicted outcomes, and a personal study coach — on a simple computer, online.
+          </p>
+
+          <button onClick={() => setIsModalOpen(true)} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 transition-colors">
+            Start for free → no credit card needed
+
+          </button>
+        </div>
+
+        {/* Curriculum line */}
+        <p className="text-[11px] text-slate-400 pb-12">
+          CAPS · Cambridge · IEB · National Curriculum · ZIMSEC and many more
+        </p>
+
       </main>
 
       <StepGuide />

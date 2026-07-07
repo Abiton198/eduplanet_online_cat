@@ -627,7 +627,6 @@ export default function TeacherDashboard() {
       Swal.fire({ icon: 'warning', title: 'Invalid File', text: examFileError, confirmButtonColor: '#4F46E5' });
       return;
     }
-    // ↓ memo validation only when not skipped
     if (!skipMemo) {
       const memoFileError = validateExamFile(memoFile, 'Marking memo');
       if (memoFileError) {
@@ -643,25 +642,29 @@ export default function TeacherDashboard() {
     setUploadProgress('Preparing upload...');
 
     try {
-      const userDocSnap = await getDoc(doc(db, "users", user.uid));
+      const userDocSnap = await getDoc(doc(db, 'users', user.uid));
       const userData = userDocSnap.exists() ? userDocSnap.data() : {};
-      const schoolId = userData.schoolId ?? teacherProfile?.schoolId ?? "unknown";
+      const schoolId = userData.schoolId ?? teacherProfile?.schoolId ?? 'unknown';
+
       const schoolName = (teacherProfile?.school || schoolId)
-        .replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '_').substring(0, 40);
+        .replace(/[^a-zA-Z0-9\s-]/g, '')
+        .replace(/\s+/g, '_')
+        .substring(0, 40);
+
       const schoolFolder = `${schoolId}_${schoolName}`;
       const subjectFolder = paperSubject.replace(/\s+/g, '_');
       const examId = `${user.uid}_${Date.now()}`;
       const storagePath = `exams/${schoolFolder}/${subjectFolder}/${examId}`;
       const storage = getStorage();
 
-      // Upload exam paper
+      // ── Upload exam paper ──────────────────────────────────────────────────
       setUploadProgress('Uploading question paper...');
       const examRef = ref(storage, `${storagePath}/exam_${examFile.name}`);
       await uploadBytes(examRef, examFile);
       const examUrl = await getDownloadURL(examRef);
       const examFilePath = `${storagePath}/exam_${examFile.name}`;
 
-      // Upload memo only if provided
+      // ── Upload memo (only if provided) ─────────────────────────────────────
       let memoUrl = '';
       let memoFilePath = '';
       if (!skipMemo && memoFile) {
@@ -672,11 +675,15 @@ export default function TeacherDashboard() {
         memoFilePath = `${storagePath}/memo_${memoFile.name}`;
       }
 
+      // ── Save metadata via Flask backend ────────────────────────────────────
       setUploadProgress('Saving to Eduket AI...');
       const idToken = await user.getIdToken();
       const response = await fetch(`${API}/exams/upload`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
         body: JSON.stringify({
           examId,
           teacherName: `${teacherProfile?.title || ''} ${teacherProfile?.surname || 'Teacher'}`.trim(),
@@ -685,38 +692,65 @@ export default function TeacherDashboard() {
           title: paperTitle.trim(),
           year: paperYear,
           subject: paperSubject,
-          curriculum,
+          curriculum: selectedCurriculum || curriculum,  // fix: was always sending default 'CAPS'
           grade: paperGrade,
           examFileType: getFileTypeLabel(examFile),
           memoFileType: skipMemo ? '' : getFileTypeLabel(memoFile),
           examDuration,
           examFileName: examFile.name,
-          memoFileName: skipMemo ? '' : memoFile?.name ?? '',
+          memoFileName: skipMemo ? '' : (memoFile?.name ?? ''),
           examStorageUrl: examUrl,
           memoStorageUrl: memoUrl,
           examStoragePath: examFilePath,
           memoStoragePath: memoFilePath,
-          aiMarkingOnly: skipMemo,    // ← signals backend to skip memo extraction
+          aiMarkingOnly: skipMemo,
         }),
       });
 
       const saved = await response.json();
 
+      // ── Tier limit reached ─────────────────────────────────────────────────
       if (response.status === 403 && saved.error === 'limit_reached') {
-        await Swal.fire({ icon: 'warning', title: 'Upload Limit Reached', text: saved.message, confirmButtonText: 'Got it', confirmButtonColor: '#4F46E5' });
+        await Swal.fire({
+          icon: 'warning',
+          title: 'Upload Limit Reached',
+          text: saved.message,
+          confirmButtonText: 'Got it',
+          confirmButtonColor: '#4F46E5',
+        });
         return;
+      }
+
+      if (!response.ok || !saved?.examId) {
+        throw new Error(saved?.error || 'Failed to create exam record');
       }
 
       fetchUsage();
 
-      if (!response.ok || !saved?.examId) throw new Error(saved?.error || 'Failed to create exam record');
-
-      // Reset everything including skipMemo
+      // ── Reset wizard state ─────────────────────────────────────────────────
       setUploadStep(1);
       setExamFile(null);
       setMemoFile(null);
       setSkipMemo(false);
       setPaperTitle('');
+
+      // ── Success notification — teacher knows upload worked ─────────────────
+      await Swal.fire({
+        icon: 'success',
+        title: 'Exam Uploaded!',
+        html: `
+        <strong>${paperTitle}</strong> has been uploaded successfully.<br/>
+        <span style="font-size:13px;color:#6b7280">
+          AI extraction is running in the background.<br/>
+          Questions will appear in the Audit Trail within a minute.
+        </span>
+      `,
+        confirmButtonText: 'View Audit Trail',
+        confirmButtonColor: '#6366f1',
+        timer: 6000,
+        timerProgressBar: true,
+      });
+
       setActiveTab('audit');
 
     } catch (err) {
@@ -906,7 +940,7 @@ export default function TeacherDashboard() {
       {/* TABS */}
       <div className="flex p-1.5 bg-white dark:bg-slate-900 rounded-2xl w-fit mb-8 shadow-sm border border-slate-200 dark:border-slate-800 gap-1 flex-wrap">
         <TabButton active={activeTab === 'results'} onClick={() => setActiveTab('results')} icon={<ClipboardList size={16} />} label="Mark Analysis" />
-        <TabButton active={activeTab === 'upload'} onClick={() => setActiveTab('upload')} icon={<Upload size={16} />} label="Upload Exam" />
+        <TabButton active={activeTab === 'upload'} onClick={() => setActiveTab('upload')} icon={<Upload size={16} />} label="Upload Paper" />
         <TabButton active={activeTab === 'audit'} onClick={() => setActiveTab('audit')} icon={<FileText size={16} />} label={`Audit Trail ${uploadedExams.length > 0 ? `(${uploadedExams.length})` : ''}`} />
       </div>
 
@@ -918,34 +952,48 @@ export default function TeacherDashboard() {
       {/* ── UPLOAD TAB ───────────────────────────────────────────────────── */}
       {activeTab === 'upload' && (
         <div className="space-y-8 animate-in zoom-in-95 duration-300">
-
           <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+
+            {/* ── Header ──────────────────────────────────────────────────────── */}
             <div className="bg-indigo-600 p-8 flex justify-between items-center text-white">
               <div>
-                <h2 className="text-2xl font-black italic uppercase tracking-tighter">AI Exam Factory</h2>
-                <p className="text-indigo-100 text-xs font-bold uppercase tracking-widest opacity-80 mt-1">Step {uploadStep} of 3</p>
+                <h2 className="text-2xl font-black italic uppercase tracking-tighter">File Uploads</h2>
+                <p className="text-indigo-100 text-xs font-bold uppercase tracking-widest opacity-80 mt-1">
+                  Step {uploadStep} of 3
+                </p>
               </div>
-              {/* Step progress */}
               <div className="flex gap-2">
                 {[1, 2, 3].map((s) => (
-                  <div key={s} className={`h-2 rounded-full transition-all duration-300 ${s < uploadStep ? 'bg-white w-8' : s === uploadStep ? 'bg-white w-10' : 'bg-white/30 w-4'
-                    }`} />
+                  <div
+                    key={s}
+                    className={`h-2 rounded-full transition-all duration-300 ${s < uploadStep ? 'bg-white w-8'
+                      : s === uploadStep ? 'bg-white w-10'
+                        : 'bg-white/30 w-4'
+                      }`}
+                  />
                 ))}
               </div>
             </div>
 
             <div className="p-10">
+
+              {/* ══════════════════════════════════════════════════════════════════
+            STEP 1 — Identity & Metadata
+        ══════════════════════════════════════════════════════════════════ */}
               {uploadStep === 1 && (
                 <div className="max-w-2xl mx-auto space-y-6">
                   <StepHeader num={1} title="Identity & Metadata" />
 
-                  <input type="text" placeholder="Exam Name (e.g. English Exam 2)" value={paperTitle}
+                  <input
+                    type="text"
+                    placeholder="Exam Name (e.g. English Exam 2)"
+                    value={paperTitle}
                     onChange={(e) => setPaperTitle(e.target.value)}
-                    className="w-full border-2 dark:bg-slate-800 dark:border-slate-700 p-5 rounded-2xl outline-none focus:border-indigo-600 font-bold text-sm" />
+                    className="w-full border-2 dark:bg-slate-800 dark:border-slate-700 p-5 rounded-2xl outline-none focus:border-indigo-600 font-bold text-sm"
+                  />
 
                   {/* Subject + Year */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Subject — auto-filled if teacher has exactly one, otherwise a dropdown of only their assigned subjects */}
                     {teacherSubjects.length <= 1 ? (
                       <div className="p-5 border-2 border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Subject</p>
@@ -954,41 +1002,67 @@ export default function TeacherDashboard() {
                         </p>
                       </div>
                     ) : (
-                      <select value={paperSubject} onChange={(e) => setPaperSubject(e.target.value)}
-                        className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600">
+                      <select
+                        value={paperSubject}
+                        onChange={(e) => setPaperSubject(e.target.value)}
+                        className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600"
+                      >
                         <option value="">Select Subject</option>
                         {teacherSubjects.map((s) => <option key={s} value={s}>{s}</option>)}
                       </select>
                     )}
 
-                    <input type="number" value={paperYear} onChange={(e) => setPaperYear(e.target.value)} placeholder="Year"
-                      className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600" />
+                    <input
+                      type="number"
+                      value={paperYear}
+                      onChange={(e) => setPaperYear(e.target.value)}
+                      placeholder="Year"
+                      className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600"
+                    />
                   </div>
 
-                  {/* Curriculum + Grade/Level */}
+                  {/* Curriculum + Grade */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Curriculum — auto-filled if school has exactly one, otherwise a dropdown */}
                     {schoolCurricula.length <= 1 ? (
-                      <div className="p-5 border-2 border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
+                      /* Auto-filled curriculum — still syncs selectedCurriculum so
+                         the grade dropdown is enabled immediately */
+                      <div
+                        className="p-5 border-2 border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800/50"
+                        ref={(el) => {
+                          // Sync on mount so grade dropdown is never stuck disabled
+                          if (schoolCurricula[0] && !selectedCurriculum) {
+                            setSelectedCurriculum(schoolCurricula[0]);
+                          }
+                        }}
+                      >
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Curriculum</p>
                         <p className="font-bold text-sm text-slate-700 dark:text-slate-200">
                           {schoolCurricula[0] || 'No curriculum on file — contact your principal'}
                         </p>
                       </div>
                     ) : (
-                      <select value={selectedCurriculum} onChange={(e) => { setSelectedCurriculum(e.target.value); setPaperGrade(''); }}
-                        className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600">
+                      <select
+                        value={selectedCurriculum}
+                        onChange={(e) => { setSelectedCurriculum(e.target.value); setPaperGrade(''); }}
+                        className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600"
+                      >
                         <option value="">Select Curriculum</option>
                         {schoolCurricula.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
                     )}
 
-                    {/* Grade/Level — always a dropdown, resolved via AI once curriculum is known */}
-                    <select value={paperGrade} onChange={(e) => setPaperGrade(e.target.value)}
+                    <select
+                      value={paperGrade}
+                      onChange={(e) => setPaperGrade(e.target.value)}
                       disabled={!selectedCurriculum || levelsLoading}
-                      className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600 disabled:opacity-50">
+                      className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600 disabled:opacity-50"
+                    >
                       <option value="">
-                        {!selectedCurriculum ? 'Select curriculum first' : levelsLoading ? 'Loading levels...' : 'Select Grade/Level'}
+                        {!selectedCurriculum
+                          ? 'Select curriculum first'
+                          : levelsLoading
+                            ? 'Loading levels...'
+                            : 'Select Grade / Level'}
                       </option>
                       {levels.map((lvl) => <option key={lvl} value={lvl}>{lvl}</option>)}
                     </select>
@@ -1000,29 +1074,34 @@ export default function TeacherDashboard() {
                     </button>
                   )}
 
-                  <button onClick={() => setUploadStep(2)} disabled={!paperTitle.trim() || !paperSubject || !paperGrade}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-5 rounded-[2rem] flex items-center justify-center gap-3 transition-all disabled:opacity-30">
+                  <button
+                    onClick={() => setUploadStep(2)}
+                    disabled={!paperTitle.trim() || !paperSubject || !paperGrade}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-5 rounded-[2rem] flex items-center justify-center gap-3 transition-all disabled:opacity-30"
+                  >
                     CONTINUE <ArrowRight size={20} />
                   </button>
                 </div>
               )}
 
-              {/* Upload Steps */}
+              {/* ══════════════════════════════════════════════════════════════════
+            STEP 2 — Upload Question Paper
+        ══════════════════════════════════════════════════════════════════ */}
               {uploadStep === 2 && (
                 <div className="max-w-2xl mx-auto space-y-6">
                   <StepHeader num={2} title="Upload Question Paper" />
 
-                  {/* Source Toggle */}
+                  {/* Source toggle */}
                   <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
                     {['local', 'drive'].map((src) => (
                       <button
                         key={src}
                         type="button"
                         onClick={() => { setExamSource(src); setExamFile(null); }}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all
-      ${examSource === src
-                            ? 'bg-white dark:bg-slate-700 shadow text-indigo-600 dark:text-indigo-400'
-                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all ${examSource === src
+                          ? 'bg-white dark:bg-slate-700 shadow text-indigo-600 dark:text-indigo-400'
+                          : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                          }`}
                       >
                         {src === 'local'
                           ? <><Monitor size={15} /> My Computer</>
@@ -1043,9 +1122,7 @@ export default function TeacherDashboard() {
                     <button
                       type="button"
                       onClick={() => openPicker((f) => setExamFile(f), 'office')}
-                      className="w-full border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-2xl p-10
-             flex flex-col items-center gap-3 hover:border-indigo-500 hover:bg-indigo-50
-             dark:hover:bg-indigo-900/20 transition-all group"
+                      className="w-full border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-2xl p-10 flex flex-col items-center gap-3 hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all group"
                     >
                       <DriveIcon className="w-10 h-10" />
                       <div className="text-center">
@@ -1078,7 +1155,6 @@ export default function TeacherDashboard() {
                     </button>
                   </div>
 
-                  {/* Skip memo option — only shown once exam file is selected */}
                   {examFile && (
                     <button
                       onClick={() => { setSkipMemo(true); setMemoFile(null); setUploadStep(3); }}
@@ -1090,13 +1166,18 @@ export default function TeacherDashboard() {
                 </div>
               )}
 
+              {/* ══════════════════════════════════════════════════════════════════
+            STEP 3 — Memo or AI marking
+        ══════════════════════════════════════════════════════════════════ */}
               {uploadStep === 3 && (
                 <div className="max-w-2xl mx-auto space-y-6">
                   <StepHeader num={3} title={skipMemo ? 'AI Marking Confirmed' : 'Upload Marking Memo'} />
 
-                  {/* ── AI-only mode ───────────────────────────────────────────── */}
+                  {/* ── Branch A: skipped memo / AI-only ──────────────────────── */}
                   {skipMemo ? (
                     <div className="space-y-6">
+
+                      {/* AI marking info card */}
                       <div className="rounded-2xl p-6 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800">
                         <div className="flex items-start gap-4">
                           <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0">
@@ -1108,14 +1189,23 @@ export default function TeacherDashboard() {
                             </p>
                             <p className="text-xs text-indigo-600 dark:text-indigo-300 leading-relaxed">
                               No memo required. Eduket AI will mark every answer using its deep
-                              understanding of the <strong>{paperSubject}</strong> CAPS/NSC curriculum —
-                              awarding marks for correct meaning, ignoring spelling errors, and providing
+                              understanding of the <strong>{paperSubject}</strong> NSC curriculum —
+                              awarding marks for correct meaning, ignoring minor spelling errors, and providing
                               detailed per-question feedback.
                             </p>
                           </div>
                         </div>
                       </div>
 
+                      {/* Exam duration — present in BOTH branches so teacher can always set it */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                          Time Allocation
+                        </label>
+                        <DurationWheelPicker value={examDuration} onChange={setExamDuration} />
+                      </div>
+
+                      {/* Summary */}
                       <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5 space-y-2 text-sm">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
                           Ready to upload
@@ -1126,9 +1216,13 @@ export default function TeacherDashboard() {
                         <SummaryRow label="Year" value={paperYear} />
                         <SummaryRow label="Paper" value={examFile?.name} />
                         <SummaryRow label="Memo" value="None — AI marking" />
-                        <SummaryRow label="Duration" value={`${Math.floor(examDuration / 60) > 0 ? `${Math.floor(examDuration / 60)} hr ` : ''}${examDuration % 60} min`} />
+                        <SummaryRow
+                          label="Duration"
+                          value={`${Math.floor(examDuration / 60) > 0 ? `${Math.floor(examDuration / 60)} hr ` : ''}${examDuration % 60} min`}
+                        />
                       </div>
 
+                      {/* Upload progress */}
                       {isUploading && (
                         <div className="flex items-center gap-3 p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl">
                           <Loader2 size={20} className="animate-spin text-indigo-600" />
@@ -1138,6 +1232,7 @@ export default function TeacherDashboard() {
                         </div>
                       )}
 
+                      {/* Actions */}
                       <div className="flex gap-4">
                         <button
                           onClick={() => { setSkipMemo(false); setUploadStep(2); }}
@@ -1157,8 +1252,9 @@ export default function TeacherDashboard() {
                     </div>
 
                   ) : (
-                    /* ── Normal memo upload mode ─────────────────────────────── */
+                    /* ── Branch B: normal memo upload ─────────────────────────── */
                     <div className="space-y-6">
+
                       {/* Source toggle */}
                       <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
                         {['local', 'drive'].map((src) => (
@@ -1166,10 +1262,10 @@ export default function TeacherDashboard() {
                             key={src}
                             type="button"
                             onClick={() => { setMemoSource(src); setMemoFile(null); }}
-                            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all
-            ${memoSource === src
-                                ? 'bg-white dark:bg-slate-700 shadow text-green-600 dark:text-green-400'
-                                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all ${memoSource === src
+                              ? 'bg-white dark:bg-slate-700 shadow text-green-600 dark:text-green-400'
+                              : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                              }`}
                           >
                             {src === 'local'
                               ? <><Monitor size={15} /> My Computer</>
@@ -1191,9 +1287,7 @@ export default function TeacherDashboard() {
                         <button
                           type="button"
                           onClick={() => openPicker((f) => setMemoFile(f), 'office')}
-                          className="w-full border-2 border-dashed border-green-300 dark:border-green-700 rounded-2xl p-10
-          flex flex-col items-center gap-3 hover:border-green-500 hover:bg-green-50
-          dark:hover:bg-green-900/20 transition-all group"
+                          className="w-full border-2 border-dashed border-green-300 dark:border-green-700 rounded-2xl p-10 flex flex-col items-center gap-3 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group"
                         >
                           <DriveIcon className="w-10 h-10" />
                           <div className="text-center">
@@ -1210,7 +1304,7 @@ export default function TeacherDashboard() {
                         </button>
                       )}
 
-                      {/* Skip option also available from step 3 */}
+                      {/* Skip link */}
                       <button
                         onClick={() => { setSkipMemo(true); setMemoFile(null); }}
                         className="w-full py-2.5 text-xs font-black text-slate-400 hover:text-indigo-500 transition-colors"
@@ -1218,6 +1312,7 @@ export default function TeacherDashboard() {
                         No memo available — skip and use AI marking instead →
                       </button>
 
+                      {/* Upload progress */}
                       {isUploading && (
                         <div className="flex items-center gap-3 p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl">
                           <Loader2 size={20} className="animate-spin text-indigo-600" />
@@ -1227,19 +1322,26 @@ export default function TeacherDashboard() {
                         </div>
                       )}
 
+                      {/* Summary — only shown once both files are selected */}
                       {examFile && memoFile && !isUploading && (
                         <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5 space-y-2 text-sm">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Ready to upload</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                            Ready to upload
+                          </p>
                           <SummaryRow label="Title" value={paperTitle} />
                           <SummaryRow label="Subject" value={paperSubject} />
                           <SummaryRow label="Grade" value={`Grade ${paperGrade}`} />
                           <SummaryRow label="Year" value={paperYear} />
                           <SummaryRow label="Paper" value={examFile.name} />
                           <SummaryRow label="Memo" value={memoFile.name} />
-                          <SummaryRow label="Duration" value={`${Math.floor(examDuration / 60) > 0 ? `${Math.floor(examDuration / 60)} hr ` : ''}${examDuration % 60} min`} />
+                          <SummaryRow
+                            label="Duration"
+                            value={`${Math.floor(examDuration / 60) > 0 ? `${Math.floor(examDuration / 60)} hr ` : ''}${examDuration % 60} min`}
+                          />
                         </div>
                       )}
 
+                      {/* Exam duration — always visible in memo branch */}
                       <div className="space-y-2">
                         <label className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                           Exam Time Allocation
@@ -1247,6 +1349,7 @@ export default function TeacherDashboard() {
                         <DurationWheelPicker value={examDuration} onChange={setExamDuration} />
                       </div>
 
+                      {/* Actions */}
                       <div className="flex gap-4">
                         <button
                           onClick={() => setUploadStep(2)}
@@ -1267,6 +1370,7 @@ export default function TeacherDashboard() {
                   )}
                 </div>
               )}
+
             </div>
           </div>
         </div>
