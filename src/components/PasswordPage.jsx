@@ -626,19 +626,25 @@ export default function AuthPage({ setStudentInfo }) {
 
         {/* CTAs */}
         <div className="flex flex-wrap justify-center gap-3 mb-4">
-
-          <button onClick={() => setIsModalOpen(true)} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 transition-colors">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 transition-colors"
+          >
             Start for free →
-
           </button>
-          <a href="/demo" className="px-7 py-3.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-2xl font-black text-sm transition-colors">
-            See it in action
+
+          <a href="https://share.synthesia.io/9c45a63c-5bd7-4767-b288-a7938f9d7c5a"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-7 py-3.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-2xl font-black text-sm transition-colors"
+          >
+            Watch full video ↗
           </a>
         </div>
         <p className="text-xs text-slate-400 mb-12">No credit card needed · 5 free assessments to start</p>
 
         {/* Feature tags */}
-        <div className="flex flex-wrap justify-center gap-2 mb-16 text-xs">
+        <div className="flex flex-wrap justify-center gap-2 mb-12 text-xs">
           {[
             'Upload any Word doc',
             'Auto-mark with memo',
@@ -649,21 +655,72 @@ export default function AuthPage({ setStudentInfo }) {
             'AI study coach',
             'Any curriculum, anywhere',
           ].map((tag) => (
-            <span key={tag} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 font-medium">
+            <span
+              key={tag}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 font-medium"
+            >
               {tag}
             </span>
           ))}
         </div>
+
+        {/* ── VIDEO EMBED ───────────────────────────────────────────────────── */}
+        <div className="w-full max-w-4xl mb-16">
+
+          {/* Label */}
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-3">
+              See Eduket OS in action
+            </span>
+            <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+          </div>
+
+          {/* Video container */}
+          <div className="relative rounded-[1.5rem] overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl shadow-indigo-500/10 bg-slate-900">
+
+            {/* Thin accent line top */}
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-600 via-purple-500 to-rose-500 z-10" />
+
+            {/* Iframe — 16:9 ratio */}
+            <div style={{ position: 'relative', overflow: 'hidden', aspectRatio: '1920/1080' }}>
+              <iframe
+                src="https://share.synthesia.io/embeds/videos/9c45a63c-5bd7-4767-b288-a7938f9d7c5a"
+                loading="lazy"
+                title="Eduket OS — Smart learning for Africa"
+                allowFullScreen
+                allow="encrypted-media; fullscreen; microphone; screen-wake-lock;"
+                style={{
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  top: 0,
+                  left: 0,
+                  border: 'none',
+                  padding: 0,
+                  margin: 0,
+                  overflow: 'hidden',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Caption under video */}
+          <p className="text-xs text-slate-400 mt-3 text-center">
+            3-minute introduction · See how a teacher uploads, students complete, and results appear instantly
+          </p>
+        </div>
+        {/* ── END VIDEO ─────────────────────────────────────────────────────── */}
 
         {/* How it works strip */}
         <div className="w-full max-w-5xl mb-16">
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6">How it works</p>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
-              { n: '01', title: 'Teacher uploads', body: 'Drop any assignment, test, exam or classwork (doc type) — with or without a memo.' },
+              { n: '01', title: 'Teacher uploads', body: 'Drop any assignment, test, exam or classwork — with or without a memo.' },
               { n: '02', title: 'AI extracts', body: 'Questions are structured automatically.' },
-              { n: '03', title: 'Learner completes', body: 'Any device, any browser. Timed or open' },
-              { n: '04', title: 'Instant marking', body: 'Partial credit, small spelling mistakes forgiven, concept feedback.' },
+              { n: '03', title: 'Learner completes', body: 'Any device, any browser. Timed or open.' },
+              { n: '04', title: 'Instant marking', body: 'Partial credit, spelling forgiven, concept feedback.' },
               { n: '05', title: 'Teacher sees all', body: 'Class overview, gaps, no data entry.' },
               { n: '06', title: 'Learner improves', body: 'AI coach teaches the exact concepts missed.' },
             ].map(({ n, title, body }) => (
@@ -678,15 +735,18 @@ export default function AuthPage({ setStudentInfo }) {
 
         {/* Bottom CTA */}
         <div className="w-full max-w-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 rounded-[2rem] p-10 mb-8">
-          <p className="text-xs font-black text-green-600 dark:text-green-400 uppercase tracking-widest mb-3">Focus on building learners, not on admin</p>
+          <p className="text-xs font-black text-green-600 dark:text-green-400 uppercase tracking-widest mb-3">
+            Focus on building learners, not on admin
+          </p>
           <h2 className="text-2xl font-black mb-3 tracking-tighter">Every learner, seen. Every gap, closed.</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto leading-relaxed">
             Real-time performance tracking, AI-predicted outcomes, and a personal study coach — on a simple computer, online.
           </p>
-
-          <button onClick={() => setIsModalOpen(true)} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 transition-colors">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 transition-colors"
+          >
             Start for free → no credit card needed
-
           </button>
         </div>
 
@@ -695,371 +755,375 @@ export default function AuthPage({ setStudentInfo }) {
           CAPS · Cambridge · IEB · National Curriculum · ZIMSEC and many more
         </p>
 
-      </main>
+      </main >
 
       <StepGuide />
 
       {/* ── AUTH MODAL ── */}
-      {isModalOpen && !showProfileSetup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl relative border border-slate-200 dark:border-slate-800">
-            <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-6 text-slate-400 hover:text-rose-500">
-              <X size={24} />
-            </button>
-
-            <h2 className="text-3xl font-black mb-2">{isRegistering ? 'Join Us' : 'Welcome'}</h2>
-            <p className="text-slate-500 text-sm mb-8">
-              {isRegistering
-                ? 'Create an account to start your AI journey.'
-                : "Access the world's most powerful learning OS."}
-            </p>
-
-            {error && <ErrorBox message={error} />}
-
-            <form onSubmit={handlePasswordAuth} className="space-y-4">
-              <div>
-                <label className="label-xs block mb-1.5 text-black">Email Address</label>
-                <input
-                  type="email"
-                  placeholder="you@school.co.za"
-                  required
-                  value={email}
-                  className="input-f text-black"
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="label-xs block mb-1.5 text-black">Password</label>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  required
-                  value={password}
-                  className="input-f text-black"
-                  onChange={(e) => setPassword(e.target.value)}
-                  showPassword={showPassword}
-                  toggleShowPassword={toggleShowPassword}
-
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20 uppercase tracking-widest text-xs disabled:opacity-50"
-              >
-                {isRegistering ? 'Create Account' : 'Sign In'}
+      {
+        isModalOpen && !showProfileSetup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl relative border border-slate-200 dark:border-slate-800">
+              <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-6 text-slate-400 hover:text-rose-500">
+                <X size={24} />
               </button>
-            </form>
 
-            <Divider />
+              <h2 className="text-3xl font-black mb-2">{isRegistering ? 'Join Us' : 'Welcome'}</h2>
+              <p className="text-slate-500 text-sm mb-8">
+                {isRegistering
+                  ? 'Create an account to start your AI journey.'
+                  : "Access the world's most powerful learning OS."}
+              </p>
 
-            <button
-              onClick={handleGoogleLogin}
-              className="w-full py-4 border-2 border-slate-100 dark:border-slate-800 rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-bold text-sm"
-            >
-              <img src="https://www.gstatic.com/images/branding/product/1x/gsa_64dp.png" className="w-5 h-5" alt="G" />
-              Continue with Google
-            </button>
+              {error && <ErrorBox message={error} />}
 
-            <p className="text-center mt-4 text-[10px] text-slate-400 leading-relaxed">
-              🔒 Unified access automatically provisions cloud space for your papers and records safely.
-            </p>
+              <form onSubmit={handlePasswordAuth} className="space-y-4">
+                <div>
+                  <label className="label-xs block mb-1.5 text-black">Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="you@school.co.za"
+                    required
+                    value={email}
+                    className="input-f text-black"
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="label-xs block mb-1.5 text-black">Password</label>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    required
+                    value={password}
+                    className="input-f text-black"
+                    onChange={(e) => setPassword(e.target.value)}
+                    showPassword={showPassword}
+                    toggleShowPassword={toggleShowPassword}
 
-            <p className="text-center mt-5 text-sm font-medium">
-              {isRegistering ? 'Already a member?' : 'New to Eduket?'}{' '}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20 uppercase tracking-widest text-xs disabled:opacity-50"
+                >
+                  {isRegistering ? 'Create Account' : 'Sign In'}
+                </button>
+              </form>
+
+              <Divider />
+
               <button
-                onClick={() => setIsRegistering(!isRegistering)}
-                className="text-indigo-600 font-black hover:underline underline-offset-4"
+                onClick={handleGoogleLogin}
+                className="w-full py-4 border-2 border-slate-100 dark:border-slate-800 rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-bold text-sm"
               >
-                {isRegistering ? 'Sign In Instead' : 'Register Now'}
+                <img src="https://www.gstatic.com/images/branding/product/1x/gsa_64dp.png" className="w-5 h-5" alt="G" />
+                Continue with Google
               </button>
-            </p>
+
+              <p className="text-center mt-4 text-[10px] text-slate-400 leading-relaxed">
+                🔒 Unified access automatically provisions cloud space for your papers and records safely.
+              </p>
+
+              <p className="text-center mt-5 text-sm font-medium">
+                {isRegistering ? 'Already a member?' : 'New to Eduket?'}{' '}
+                <button
+                  onClick={() => setIsRegistering(!isRegistering)}
+                  className="text-indigo-600 font-black hover:underline underline-offset-4"
+                >
+                  {isRegistering ? 'Sign In Instead' : 'Register Now'}
+                </button>
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* ── PROFILE SETUP MODAL ── */}
-      {showProfileSetup && (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 bg-indigo-600/95 backdrop-blur-2xl overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[3rem] p-10 shadow-2xl my-8">
+      {
+        showProfileSetup && (
+          <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 bg-indigo-600/95 backdrop-blur-2xl overflow-y-auto">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[3rem] p-10 shadow-2xl my-8">
 
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="bg-indigo-100 dark:bg-indigo-900/40 p-2 rounded-xl">
-                  <UserCheck className="text-indigo-600 dark:text-indigo-400" />
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="bg-indigo-100 dark:bg-indigo-900/40 p-2 rounded-xl">
+                    <UserCheck className="text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black">Initialize Your OS</h2>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                      Complete your profile to access your dashboard
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-black">Initialize Your OS</h2>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                    Complete your profile to access your dashboard
+                <StorageBadge status={storageStatus} />
+              </div>
+
+              {Object.values(autoFilled).some(Boolean) && (
+                <div className="mb-5 flex items-center gap-2 px-4 py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800">
+                  <Sparkles size={14} className="text-indigo-500 flex-shrink-0" />
+                  <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300">
+                    Some fields were auto-filled from your account or school — review and edit as needed.
                   </p>
                 </div>
-              </div>
-              <StorageBadge status={storageStatus} />
-            </div>
+              )}
 
-            {Object.values(autoFilled).some(Boolean) && (
-              <div className="mb-5 flex items-center gap-2 px-4 py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800">
-                <Sparkles size={14} className="text-indigo-500 flex-shrink-0" />
-                <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300">
-                  Some fields were auto-filled from your account or school — review and edit as needed.
-                </p>
-              </div>
-            )}
+              {error && <ErrorBox message={error} className="mb-5" />}
 
-            {error && <ErrorBox message={error} className="mb-5" />}
-
-            <form onSubmit={finalizeProfile} className="space-y-6">
-              <div>
-                <p className="label-xs">I am a…</p>
-                <div className="grid grid-cols-3 gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
-                  {['student', 'teacher', 'principal'].map((role) => (
-                    <button
-                      key={role}
-                      type="button"
-                      onClick={() => setUserRole(role)}
-                      className={`py-3 rounded-xl text-[10px] font-black uppercase transition-all ${userRole === role ? 'bg-white dark:bg-slate-700 shadow-md text-indigo-600' : 'opacity-40'}`}
-                    >
-                      {role === 'student' ? '🎓 Student' : role === 'teacher' ? '📚 Teacher' : '🏫 Principal'}
-                    </button>
-                  ))}
-                </div>
-                {userRole === 'principal' && (
-                  <p className="mt-2 text-[10px] text-indigo-500 font-bold">
-                    ℹ️ As a principal, your details will be carried forward — no need to re-enter in the next step.
-                  </p>
-                )}
-              </div>
-
-              {/* country and curriculum */}
-              <div>
-                <label className="label-xs block mb-1.5">Country *</label>
-                <div className="relative">
-                  <select
-                    value={country}
-                    onChange={(e) => handleCountryChange(e.target.value)}
-                    className="input-f appearance-none pr-10 text-black"
-                    disabled={isFetchingCountries}
-                    required
-                  >
-                    {isFetchingCountries ? (
-                      <option>Loading countries...</option>
-                    ) : (
-                      <>
-                        <option value="">Select your country...</option>
-                        {countries.map((c) => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </>
-                    )}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                </div>
-              </div>
-
-              {(userRole === 'teacher' || userRole === 'principal') && (
+              <form onSubmit={finalizeProfile} className="space-y-6">
                 <div>
-                  <p className="label-xs">Title</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {['Mr', 'Mrs', 'Ms', 'Miss', 'Dr', 'Prof'].map((t) => (
+                  <p className="label-xs">I am a…</p>
+                  <div className="grid grid-cols-3 gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
+                    {['student', 'teacher', 'principal'].map((role) => (
                       <button
-                        key={t}
+                        key={role}
                         type="button"
-                        onClick={() => setTitle(t)}
-                        className={`px-4 py-2 rounded-xl text-xs font-black border transition-all ${title === t ? 'bg-indigo-600 text-black border-indigo-600' : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-indigo-400'}`}
+                        onClick={() => setUserRole(role)}
+                        className={`py-3 rounded-xl text-[10px] font-black uppercase transition-all ${userRole === role ? 'bg-white dark:bg-slate-700 shadow-md text-indigo-600' : 'opacity-40'}`}
                       >
-                        {t}
+                        {role === 'student' ? '🎓 Student' : role === 'teacher' ? '📚 Teacher' : '🏫 Principal'}
                       </button>
                     ))}
                   </div>
+                  {userRole === 'principal' && (
+                    <p className="mt-2 text-[10px] text-indigo-500 font-bold">
+                      ℹ️ As a principal, your details will be carried forward — no need to re-enter in the next step.
+                    </p>
+                  )}
                 </div>
-              )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* country and curriculum */}
                 <div>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <label className="label-xs">First Name *</label>
-                    {autoFilled.name && <AutoTag />}
+                  <label className="label-xs block mb-1.5">Country *</label>
+                  <div className="relative">
+                    <select
+                      value={country}
+                      onChange={(e) => handleCountryChange(e.target.value)}
+                      className="input-f appearance-none pr-10 text-black"
+                      disabled={isFetchingCountries}
+                      required
+                    >
+                      {isFetchingCountries ? (
+                        <option>Loading countries...</option>
+                      ) : (
+                        <>
+                          <option value="">Select your country...</option>
+                          {countries.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   </div>
-                  <input
-                    type="text"
-                    value={name}
-                    placeholder="e.g. Thabo"
-                    required
-                    className="input-f text-black"
-                    onChange={(e) => { setName(e.target.value); clearAuto('name'); }}
-                  />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <label className="label-xs">Surname *</label>
-                    {autoFilled.surname && <AutoTag />}
-                  </div>
-                  <input
-                    type="text"
-                    value={surname}
-                    placeholder="e.g. Nkosi"
-                    required
-                    className="input-f text-black"
-                    onChange={(e) => { setSurname(e.target.value); clearAuto('surname'); }}
-                  />
-                </div>
-              </div>
 
-              {userRole === 'principal' ? (
-                <div>
-                  <label className="label-xs block mb-1.5">Your School Name *</label>
-                  <input
-                    type="text"
-                    value={school}
-                    placeholder="e.g. Hoërskool Randburg"
-                    required
-                    className="input-f text-black"
-                    onChange={(e) => setSchool(e.target.value)}
-                  />
+                {(userRole === 'teacher' || userRole === 'principal') && (
+                  <div>
+                    <p className="label-xs">Title</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {['Mr', 'Mrs', 'Ms', 'Miss', 'Dr', 'Prof'].map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setTitle(t)}
+                          className={`px-4 py-2 rounded-xl text-xs font-black border transition-all ${title === t ? 'bg-indigo-600 text-black border-indigo-600' : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-indigo-400'}`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <label className="label-xs">First Name *</label>
+                      {autoFilled.name && <AutoTag />}
+                    </div>
+                    <input
+                      type="text"
+                      value={name}
+                      placeholder="e.g. Thabo"
+                      required
+                      className="input-f text-black"
+                      onChange={(e) => { setName(e.target.value); clearAuto('name'); }}
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <label className="label-xs">Surname *</label>
+                      {autoFilled.surname && <AutoTag />}
+                    </div>
+                    <input
+                      type="text"
+                      value={surname}
+                      placeholder="e.g. Nkosi"
+                      required
+                      className="input-f text-black"
+                      onChange={(e) => { setSurname(e.target.value); clearAuto('surname'); }}
+                    />
+                  </div>
                 </div>
-              ) : (
-                <div>
-                  <label className="label-xs block mb-1.5">Select Your School *</label>
-                  {schoolsLoading ? (
-                    <div className="input-f flex items-center gap-2 text-slate-400">
-                      <Loader2 size={14} className="animate-spin" /> Loading schools…
-                    </div>
-                  ) : schoolList.length === 0 ? (
-                    <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50 text-amber-700 text-xs font-bold">
-                      No schools registered yet. Ask your principal to register the school first.
-                    </div>
-                  ) : (
+
+                {userRole === 'principal' ? (
+                  <div>
+                    <label className="label-xs block mb-1.5">Your School Name *</label>
+                    <input
+                      type="text"
+                      value={school}
+                      placeholder="e.g. Hoërskool Randburg"
+                      required
+                      className="input-f text-black"
+                      onChange={(e) => setSchool(e.target.value)}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="label-xs block mb-1.5">Select Your School *</label>
+                    {schoolsLoading ? (
+                      <div className="input-f flex items-center gap-2 text-slate-400">
+                        <Loader2 size={14} className="animate-spin" /> Loading schools…
+                      </div>
+                    ) : schoolList.length === 0 ? (
+                      <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50 text-amber-700 text-xs font-bold">
+                        No schools registered yet. Ask your principal to register the school first.
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <select
+                          value={selectedSchoolId}
+                          onChange={(e) => handleSchoolSelect(e.target.value)}
+                          className="input-f text-black appearance-none pr-10"
+                        >
+                          {schoolList.map((s) => (
+                            <option key={s.id} value={s.id}>{s.name} — {s.province}</option>
+                          ))}
+                        </select>
+                        <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+
+
+                {userRole === 'student' && (
+                  <div>
+                    <label className="label-xs block mb-1.5">Grade / Academic Level *</label>
                     <div className="relative">
                       <select
-                        value={selectedSchoolId}
-                        onChange={(e) => handleSchoolSelect(e.target.value)}
+                        value={grade}
+                        onChange={(e) => setGrade(e.target.value)}
                         className="input-f text-black appearance-none pr-10"
+                        disabled={isFetchingLevels || levels.length === 0}
+                        required
                       >
-                        {schoolList.map((s) => (
-                          <option key={s.id} value={s.id}>{s.name} — {s.province}</option>
-                        ))}
+                        {isFetchingLevels ? (
+                          <option>Loading levels...</option>
+                        ) : levels.length > 0 ? (
+                          <>
+                            <option value="">Select Level</option>
+                            {levels.map((l) => (
+                              <option key={l} value={l}>{l}</option>
+                            ))}
+                          </>
+                        ) : (
+                          <option value="">No levels available</option>
+                        )}
                       </select>
                       <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     </div>
-                  )}
-                </div>
-              )}
-
-
-
-              {userRole === 'student' && (
-                <div>
-                  <label className="label-xs block mb-1.5">Grade / Academic Level *</label>
-                  <div className="relative">
-                    <select
-                      value={grade}
-                      onChange={(e) => setGrade(e.target.value)}
-                      className="input-f text-black appearance-none pr-10"
-                      disabled={isFetchingLevels || levels.length === 0}
-                      required
-                    >
-                      {isFetchingLevels ? (
-                        <option>Loading levels...</option>
-                      ) : levels.length > 0 ? (
-                        <>
-                          <option value="">Select Level</option>
-                          {levels.map((l) => (
-                            <option key={l} value={l}>{l}</option>
-                          ))}
-                        </>
-                      ) : (
-                        <option value="">No levels available</option>
-                      )}
-                    </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   </div>
-                </div>
-              )}
-
-              {userRole === 'teacher' && (
-                <div>
-                  <label className="label-xs block mb-1.5">Specialization / Phase *</label>
-                  <div className="relative">
-                    <select
-                      value={teachingPhase}
-                      onChange={(e) => setTeachingPhase(e.target.value)}
-                      className="input-f text-black appearance-none pr-10"
-                      disabled={isFetchingPhases || teachingPhases.length === 0}
-                      required
-                    >
-                      {isFetchingPhases ? (
-                        <option>Loading specializations...</option>
-                      ) : teachingPhases.length > 0 ? (
-                        <>
-                          <option value="">Select Phase</option>
-                          {teachingPhases.map((p) => (
-                            <option key={p} value={p}>{p}</option>
-                          ))}
-                        </>
-                      ) : (
-                        <option value="">No phases available</option>
-                      )}
-                    </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  </div>
-                </div>
-              )}
-
-              {(userRole === 'student' || userRole === 'teacher') && (
-                <div>
-                  <label className="label-xs block mb-2">
-                    {userRole === 'student' ? 'Registered Subjects' : 'Subjects Taught'} (Select at least 2) *
-                  </label>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-2 border border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/50">
-                    {isFetchingSubjects ? (
-                      <div className="col-span-full flex items-center justify-center p-4 text-xs text-slate-400">
-                        <Loader2 size={14} className="animate-spin mr-2" /> Loading subjects...
-                      </div>
-                    ) : subjectList.length > 0 ? (
-                      subjectList.map((sub) => {
-                        const active = subjects.includes(sub);
-                        return (
-                          <button
-                            key={sub}
-                            type="button"
-                            onClick={() => toggleSubject(sub)}
-                            className={`p-2.5 text-left text-xs rounded-xl font-bold transition-all border ${active
-                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                              : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700/60 hover:border-slate-300'
-                              }`}
-                          >
-                            {active ? '✓ ' : ''}{sub}
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <p className="col-span-full text-center text-xs text-slate-400 p-4">Select level to see subjects</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-500/10 uppercase tracking-widest text-xs disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" /> Launching Core Environment...
-                  </>
-                ) : (
-                  <>
-                    Finalize Connection <ArrowRight size={14} />
-                  </>
                 )}
-              </button>
-            </form>
+
+                {userRole === 'teacher' && (
+                  <div>
+                    <label className="label-xs block mb-1.5">Specialization / Phase *</label>
+                    <div className="relative">
+                      <select
+                        value={teachingPhase}
+                        onChange={(e) => setTeachingPhase(e.target.value)}
+                        className="input-f text-black appearance-none pr-10"
+                        disabled={isFetchingPhases || teachingPhases.length === 0}
+                        required
+                      >
+                        {isFetchingPhases ? (
+                          <option>Loading specializations...</option>
+                        ) : teachingPhases.length > 0 ? (
+                          <>
+                            <option value="">Select Phase</option>
+                            {teachingPhases.map((p) => (
+                              <option key={p} value={p}>{p}</option>
+                            ))}
+                          </>
+                        ) : (
+                          <option value="">No phases available</option>
+                        )}
+                      </select>
+                      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
+                )}
+
+                {(userRole === 'student' || userRole === 'teacher') && (
+                  <div>
+                    <label className="label-xs block mb-2">
+                      {userRole === 'student' ? 'Registered Subjects' : 'Subjects Taught'} (Select at least 2) *
+                    </label>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-2 border border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/50">
+                      {isFetchingSubjects ? (
+                        <div className="col-span-full flex items-center justify-center p-4 text-xs text-slate-400">
+                          <Loader2 size={14} className="animate-spin mr-2" /> Loading subjects...
+                        </div>
+                      ) : subjectList.length > 0 ? (
+                        subjectList.map((sub) => {
+                          const active = subjects.includes(sub);
+                          return (
+                            <button
+                              key={sub}
+                              type="button"
+                              onClick={() => toggleSubject(sub)}
+                              className={`p-2.5 text-left text-xs rounded-xl font-bold transition-all border ${active
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                                : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-100 dark:border-slate-700/60 hover:border-slate-300'
+                                }`}
+                            >
+                              {active ? '✓ ' : ''}{sub}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <p className="col-span-full text-center text-xs text-slate-400 p-4">Select level to see subjects</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-500/10 uppercase tracking-widest text-xs disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" /> Launching Core Environment...
+                    </>
+                  ) : (
+                    <>
+                      Finalize Connection <ArrowRight size={14} />
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }
