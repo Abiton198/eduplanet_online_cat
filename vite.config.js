@@ -86,14 +86,51 @@ export default defineConfig(({ mode }) => ({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
 
         runtimeCaching: [
+          /**
+           * 🚫 MUST BE FIRST — bypass all cross-origin requests entirely.
+           *
+           * Covers every external service this app talks to:
+           *   - Render backend       (*.onrender.com)
+           *   - Firebase Storage     (firebasestorage.googleapis.com)
+           *   - Firestore            (firestore.googleapis.com)
+           *   - Firebase Auth        (identitytoolkit.googleapis.com)
+           *   - Firebase Auth tokens (securetoken.googleapis.com)
+           *   - PayFast              (payfast.co.za)
+           *   - Exchange rate API    (open.er-api.com)
+           *
+           * NetworkOnly calls fetch() directly — no caching, no timeout,
+           * no opaque-response clone error, no undefined fallback.
+           * This is what was causing "Failed to convert value to Response"
+           * when POST /exams/upload timed out against the 5 s budget.
+           */
+          {
+            urlPattern: ({ url }) => url.origin !== self.location.origin,
+            handler: "NetworkOnly",
+          },
+
+          /**
+           * 📄 Same-origin HTML (SPA shell — index.html).
+           *
+           * NetworkFirst so the app always tries to get the freshest shell.
+           * Timeout raised to 10 s — 5 s was triggering on cold Render
+           * starts and causing the fallback to return undefined.
+           * Falls back to cache when genuinely offline.
+           */
           {
             urlPattern: ({ request }) => request.destination === "document",
             handler: "NetworkFirst",
             options: {
               cacheName: "html-cache",
-              networkTimeoutSeconds: 5,
+              networkTimeoutSeconds: 10,
             },
           },
+
+          /**
+           * ⚡ Same-origin static assets (JS bundles, CSS, worker scripts).
+           *
+           * StaleWhileRevalidate: serve cached instantly, refresh in bg.
+           * Safe because Vite content-hashes every asset filename.
+           */
           {
             urlPattern: ({ request }) =>
               request.destination === "script" ||

@@ -73,31 +73,6 @@ function normalizeType(type) {
   return "open";
 }
 
-// Normalise MCQ options into a consistent [{key, value}] shape
-// Handles: [{key,value}], [{label,text}], [{option,text}], plain strings, {A:"...",B:"..."} objects
-function normalizeOptions(options) {
-  if (!options) return [];
-
-  // Object map like { A: "cat", B: "dog" }
-  if (!Array.isArray(options) && typeof options === "object") {
-    return Object.entries(options).map(([k, v]) => ({ key: k, value: String(v) }));
-  }
-
-  if (!Array.isArray(options) || options.length === 0) return [];
-
-  return options.map((opt, i) => {
-    if (typeof opt === "string") {
-      // Plain strings — assign letters A, B, C ...
-      return { key: String.fromCharCode(65 + i), value: opt };
-    }
-    if (typeof opt === "object") {
-      const key = opt.key || opt.label || opt.letter || opt.option || String.fromCharCode(65 + i);
-      const value = opt.value || opt.text || opt.content || opt.answer || "";
-      return { key: String(key).toUpperCase(), value: String(value) };
-    }
-    return { key: String.fromCharCode(65 + i), value: String(opt) };
-  });
-}
 
 const FontLoader = () => (
   <style>{`
@@ -399,10 +374,55 @@ function InputContent({ question, savedAnswer, saveAnswer }) {
   );
 }
 
+// ─── MarkdownTable Component ──────────────────────────────────────────────
+function MarkdownTable({ source }) {
+  if (!source) return null;
+  const lines = source.trim().split('\n').filter(l => l.trim());
+  if (lines.length < 2) return <pre style={{ fontSize: 13, overflowX: 'auto' }}>{source}</pre>;
+
+  const parseRow = (line) =>
+    line.split('|').map(c => c.trim()).filter((_, i, a) => i > 0 && i < a.length - 1);
+
+  const headers = parseRow(lines[0]);
+  const rows = lines.slice(2).map(parseRow); // skip the separator line
+
+  return (
+    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+      <thead>
+        <tr>
+          {headers.map((h, i) => (
+            <th key={i} style={{ padding: '8px 12px', background: '#f1f5f9', border: '1px solid #e2e8f0', fontWeight: 700, textAlign: 'left' }}>
+              {h}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row, ri) => (
+          <tr key={ri} style={{ background: ri % 2 === 0 ? '#fff' : '#f8fafc' }}>
+            {row.map((cell, ci) => (
+              <td key={ci} style={{ padding: '8px 12px', border: '1px solid #e2e8f0', fontVariantNumeric: 'tabular-nums' }}>
+                {cell}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // QUESTION CONTENT  (outside parent — stable reference)
 // ─────────────────────────────────────────────────────────────────────────────
 function QuestionContent({ question, index, totalQ, answers, skipped, saveAnswer, onPrev, onNext, onSkip, onSubmit, onOpenDrawer, saving, cardStyle }) {
+
+  useEffect(() => {
+    if (window.MathJax?.typesetPromise) {
+      window.MathJax.typesetPromise().catch(console.error);
+    }
+  }, [question?.questionLatex, question?.question_number]);
+
   if (!question) return null;
 
   return (
@@ -431,26 +451,46 @@ function QuestionContent({ question, index, totalQ, answers, skipped, saveAnswer
         <div style={S.qMark}>[{question.marks || 0} Marks]</div>
       </div>
 
-      {/* Image: shown for questions with diagrams, graphs, circuits, maps */}
+      {/* Diagram / graph / figure from page render */}
       {question.questionImageUrl && (
         <img
           src={question.questionImageUrl}
-          alt="Exam diagram"
-          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 mb-4 object-contain max-h-96"
+          alt="Exam figure"
+          style={{
+            width: '100%',
+            maxHeight: 400,
+            objectFit: 'contain',
+            borderRadius: 12,
+            border: '1.5px solid #e5e7eb',
+            marginBottom: 16,
+            display: 'block',
+          }}
         />
       )}
 
-      {/* Accounting table: rendered from markdown */}
+      {/* Accounting / data table from markdown */}
       {question.questionTable && (
-        <div className="overflow-x-auto mb-4 rounded-xl border border-slate-200 dark:border-slate-700">
+        <div style={{ overflowX: 'auto', marginBottom: 16, borderRadius: 10, border: '1.5px solid #e5e7eb' }}>
           <MarkdownTable source={question.questionTable} />
         </div>
       )}
 
-      {/* Maths equations: rendered by MathJax (add MathJax CDN to index.html) */}
+      {/* Mathematics equations — MathJax processes $...$ and $$...$$ */}
       {question.questionLatex && (
-        <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl font-mono text-sm"
-          dangerouslySetInnerHTML={{ __html: question.questionLatex }} />
+        <div
+          style={{
+            marginBottom: 16,
+            padding: '12px 16px',
+            background: '#f8f9ff',
+            border: '1.5px solid #e0e7ff',
+            borderRadius: 10,
+            fontSize: 15,
+            lineHeight: 1.8,
+            overflowX: 'auto',
+            fontFamily: 'serif',
+          }}
+          dangerouslySetInnerHTML={{ __html: question.questionLatex }}
+        />
       )}
 
       {/* ✅ key={index} resets InputContent's internal state on question change */}
@@ -639,10 +679,8 @@ export default function AIExamMocker({ student }) {
   const [agentQuestion, setAgentQuestion] = useState("");
   const [agentReply, setAgentReply] = useState("");
   const [agentLoading, setAgentLoading] = useState(false);
-  const { examId } = useParams();
   const answersRef = useRef({});
   const STUDENT_ID = useStudentId();
-  // ✅ inside AIExamMocker, after defining STUDENT_ID:
   const [studentInfo, setStudentInfo] = useState(null);
 
 
