@@ -660,10 +660,10 @@ export default function AuthPage({ setStudentInfo }) {
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6">How it works</p>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
-              { n: '01', title: 'Teacher uploads', body: 'Drop any Word doc — with or without a memo.' },
-              { n: '02', title: 'AI extracts', body: 'Questions, diagrams, and equations structured automatically.' },
-              { n: '03', title: 'Learner completes', body: 'Any device, any browser. Timed or open.' },
-              { n: '04', title: 'Instant marking', body: 'Partial credit, spelling forgiven, concept feedback.' },
+              { n: '01', title: 'Teacher uploads', body: 'Drop any assignment, test, exam or classwork (doc type) — with or without a memo.' },
+              { n: '02', title: 'AI extracts', body: 'Questions are structured automatically.' },
+              { n: '03', title: 'Learner completes', body: 'Any device, any browser. Timed or open' },
+              { n: '04', title: 'Instant marking', body: 'Partial credit, small spelling mistakes forgiven, concept feedback.' },
               { n: '05', title: 'Teacher sees all', body: 'Class overview, gaps, no data entry.' },
               { n: '06', title: 'Learner improves', body: 'AI coach teaches the exact concepts missed.' },
             ].map(({ n, title, body }) => (
