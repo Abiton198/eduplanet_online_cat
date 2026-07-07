@@ -707,7 +707,7 @@ export default function AuthPage({ setStudentInfo }) {
 
           {/* Caption under video */}
           <p className="text-xs text-slate-400 mt-3 text-center">
-            3-minute introduction · See how a teacher uploads, students complete, and results appear instantly
+            3-minute introduction · AI in Education for Africa.
           </p>
         </div>
         {/* ── END VIDEO ─────────────────────────────────────────────────────── */}
