@@ -54,10 +54,7 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
 
   const examActive = authenticated && selectedExam && !submitted;
   // Grade Filtering Logic
-  const cleanedGrade = (studentInfo?.grade || "").toLowerCase();
-  const gradeKey = cleanedGrade.includes("12") ? "Grade 12" : cleanedGrade.includes("11") ? "Grade 11" : "Grade 10";
   const [dynamicExams, setDynamicExams] = useState([]);
-  const [hasNotified, setHasNotified] = useState(false);
   const [seenExams, setSeenExams] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("seenExams") || "[]");

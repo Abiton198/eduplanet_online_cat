@@ -1,649 +1,374 @@
 <div align="center">
 
-# EduCAT — AI Agentic Smart Study Partner
+# Eduket OS
 
-**An autonomous AI agent for South African NSC CAT Grade 12 students.**  
-Built with Groq LLMs · Flask · RAG · SQLite · React · Firebase
+**A multi-tenant, AI-powered school management and examination platform for African education systems.**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-edu--cat.netlify.app-6366f1?style=for-the-badge&logo=netlify)](https://edu-cat.netlify.app)
-[![Backend API](https://img.shields.io/badge/API-PythonAnywhere-3B82F6?style=for-the-badge&logo=python)](https://abitonp.pythonanywhere.com)
-[![Model](https://img.shields.io/badge/LLM-llama--3.3--70b-f59e0b?style=for-the-badge)](https://groq.com)
-[![License](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
+Built by **Nextgen Skills** · Serving CAPS/NSC, ZIMSEC, and other curricula across South Africa and beyond
+
+[![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?style=for-the-badge&logo=react)](#technology-stack)
+[![Backend](https://img.shields.io/badge/Backend-Flask-3B82F6?style=for-the-badge&logo=flask)](#technology-stack)
+[![Database](https://img.shields.io/badge/Database-Firestore-FFA000?style=for-the-badge&logo=firebase)](#technology-stack)
+[![AI](https://img.shields.io/badge/AI-Groq%20LLM-f59e0b?style=for-the-badge)](#technology-stack)
+[![License](https://img.shields.io/badge/License-Proprietary-22c55e?style=for-the-badge)](#license)
 
 </div>
 
 ---
 
-## What is EduCAT?
+## Table of contents
 
-EduCAT is not a chatbot. It is an **AI agent** — a system where the LLM autonomously decides what to do next based on each student's situation. When a student sends a message, the agent reads their full memory context (past exam scores, weak topics, conversation history) and then picks from a set of tools: searching theory textbooks, retrieving weak-area data, generating a Socratic hint, grading a written answer, or updating a personalised study plan. The developer never hardcodes which action to take. The model decides.
-
-This distinction — agent vs pipeline — is what makes EduCAT genuinely adaptive. Every student gets a different experience because the agent's decisions are driven by that student's individual history.
+- [What is Eduket OS](#what-is-eduket-os)
+- [Who this is for](#who-this-is-for)
+- [Architecture overview](#architecture-overview)
+- [Technology stack](#technology-stack)
+- [Core subsystems](#core-subsystems)
+  - [Multi-tenancy & identity](#1-multi-tenancy--identity)
+  - [Dashboards](#2-dashboards)
+  - [Document extraction & exam pipeline](#3-document-extraction--exam-pipeline)
+  - [AI marking engine](#4-ai-marking-engine)
+  - [AI Tutor](#5-ai-tutor)
+  - [Reporting & analytics](#6-reporting--analytics)
+  - [Billing & pricing engine](#7-billing--pricing-engine)
+- [Data model](#data-model)
+- [Security model](#security-model)
+- [Project structure](#project-structure)
+- [Getting started](#getting-started)
+- [Environment variables](#environment-variables)
+- [Related products](#related-products)
+- [Known gaps & technical debt](#known-gaps--technical-debt)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## Table of contents
+## What is Eduket OS
 
-- [Architecture overview](#architecture-overview)
-- [What makes it agentic](#what-makes-it-agentic)
-- [Features](#features)
-- [Technology stack](#technology-stack)
-- [Project structure](#project-structure)
-- [Setup and installation](#setup-and-installation)
-- [Exam pipeline](#exam-pipeline)
-- [Key design decisions](#key-design-decisions)
-- [API reference](#api-reference)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
-- [License](#license)
+Eduket OS (internally also referenced as **Eduplanet OS** / **EduCAT**) is a full-stack school management and AI-driven examination platform. It gives schools a single system to run exams, mark them with AI assistance, track student progress, and manage billing — while giving students an adaptive AI tutor that responds to their individual performance history.
+
+The platform is **multi-tenant by design**: every school is an isolated data domain (`schoolId` is the universal partition key across the database), every user role (student, teacher, principal, parent) gets a purpose-built dashboard, and every institution can be on a different pricing tier, currency, and curriculum.
+
+This is not a single exam-taking app bolted onto a CMS. It is three integrated systems working together:
+
+1. **A school operations platform** — registration, roles, dashboards, billing.
+2. **An AI exam pipeline** — ingest a real exam document (PDF/DOCX), extract structured questions and memos, let students sit the exam, and mark it with AI.
+3. **An AI tutor and analytics layer** — a Groq-powered tutor with persistent memory of each student's weak areas, plus AI-generated performance gap analysis for parents, teachers, and principals.
+
+---
+
+## Who this is for
+
+- **Schools** — principals need billing clarity, cross-school data isolation, and a dashboard that reflects their actual student body, not a shared pool.
+- **Teachers** — need to upload exams quickly, remark AI-graded submissions when they disagree with the machine, and see class-wide performance at a glance.
+- **Students** — need an exam experience that doesn't lose their progress, and a tutor that already knows what they're bad at without being told.
+- **Parents** — need a report they can actually read: not raw scores, but *why* their child is struggling and what to do about it.
 
 ---
 
 ## Architecture overview
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│              React frontend  (Next.js + Tailwind)        │
-│  CATTutor · AIExamMocker · ExamResultsDisplay           │
-│  useStudentId hook → Firebase Auth → real student name  │
-└────────────────────────┬────────────────────────────────┘
-                         │  HTTPS  POST
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│           Flask REST API  (PythonAnywhere)               │
-│  /agent-chat  /submit  /question  /answer               │
-│  /exams  /dashboard  /clear-history                     │
-└────────────────────────┬────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│              AI Agent Loop  (agent.py)                   │
-│                                                         │
-│  system prompt + student context                        │
-│       ↓                                                 │
-│  Groq API  llama-3.3-70b-versatile                      │
-│  tool_choice="auto"  ←──────────────────────────────┐  │
-│       ↓                                             │  │
-│  tool calls?  ──yes──→  run tool  →  result ────────┘  │
-│       ↓ no                                              │
-│  final answer → student                                 │
-│                                                         │
-│  max 5 rounds · graceful fallback on tool_use_failed    │
-└──────────┬─────────────────────────────────────────────┘
-           │
-    ┌──────┴──────────────────────────────────────┐
-    │              Tool layer                      │
-    │                                             │
-    │  search_theory      → FAISS RAG index       │
-    │  get_weak_topics    → SQLite memory          │
-    │  get_session_history→ SQLite memory          │
-    │  generate_hint      → Groq (Socratic)        │
-    │  mark_open_answer   → model.py (AI grading) │
-    │  update_study_plan  → SQLite memory          │
-    │  get_study_plan     → SQLite memory          │
-    └──────┬──────────────────────────────────────┘
-           │
-    ┌──────┴──────────────────────────────────────┐
-    │              Data layer                      │
-    │                                             │
-    │  SQLite          student memory             │
-    │  Exam JSON files question + memo store      │
-    │  Firestore       exam attempts + results    │
-    │  FAISS index     theory book chunks         │
-    └─────────────────────────────────────────────┘
-           ▲
-           │  (one-time, offline)
-┌──────────┴──────────────────────────────────────┐
-│         Exam extraction pipeline                 │
-│         process_exams.py                        │
-│                                                 │
-│  NSC PDF → chunks → Groq → question JSON        │
-│  Memo PDF → chunks → Groq → answer injection    │
-│  Sliding window stitching · deduplication       │
-└─────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────┐
+│                     React + Vite Frontend (Netlify)                │
+│                                                                     │
+│  Student Dashboard · Teacher Dashboard · Principal Dashboard        │
+│  Parent Dashboard  · ExamResultsDisplay · ResultsTab · AITutor      │
+│  AIExamMocker · SchoolRegistration · Billing UI                     │
+└───────────────────┬───────────────────────────┬─────────────────────┘
+                    │                           │
+        Firebase SDK (direct reads)      HTTPS (POST/GET)
+                    │                           │
+                    ▼                           ▼
+┌───────────────────────────┐   ┌───────────────────────────────────┐
+│   Firebase (Firestore,     │   │      Flask REST API (Render)       │
+│   Auth, Storage)           │   │                                     │
+│                             │   │  /exams/upload  /exams/usage       │
+│  Security rules enforce     │   │  /agent-chat  /dashboard           │
+│  schoolId isolation on      │   │  /remark  /subject-gap-analysis    │
+│  every collection           │   │  /submit_exam  /start_exam         │
+└───────────────────┬─────────┘   └───────────────┬─────────────────────┘
+                    │                             │
+                    │                             ▼
+                    │              ┌───────────────────────────────────┐
+                    │              │      Groq LLM (llama-3.3-70b)       │
+                    │              │  Vision (per-page marking)          │
+                    │              │  Tool-calling agent loop            │
+                    │              │  Subject gap analysis generation    │
+                    │              └───────────────────────────────────┘
+                    │
+                    ▼
+┌───────────────────────────────────────────────────────────────────┐
+│              Document Extraction Pipeline (v4 architecture)         │
+│                                                                     │
+│  Uploaded exam file (.docx/.pdf)                                    │
+│       → LibreOffice conversion → PDF                                │
+│       → PyMuPDF renders each page as an image                      │
+│       → Uploaded to Firebase Storage                                │
+│       → Groq Vision reads each page image → structured question JSON│
+└───────────────────────────────────────────────────────────────────┘
 ```
 
----
+**Two data-access patterns are used deliberately, not interchangeably:**
 
-## What makes it agentic
-
-Most "AI" education tools are fixed pipelines. A student asks a question, a prompt is sent to an LLM, an answer comes back. The routing is hardcoded by the developer. EduCAT works differently.
-
-**The LLM is the router.** When a student says "what should I study?", the agent does not run a preset function. It reads the student's message, their weak topic history, and their recent exam scores — then decides to call `get_weak_topics`, then `get_session_history`, then `update_study_plan` with a personalised schedule it writes itself. A different student with different history gets a different tool sequence.
-
-**The loop is autonomous.** After each tool call, the LLM sees the result and decides whether to call another tool or respond. This continues for up to five rounds. A request that needs three tool calls uses three; a simple question that needs none gets answered directly. The agent allocates its own compute.
-
-**Memory is persistent.** Every wrong answer recorded in an exam updates the student's `weak_questions` table in SQLite. The agent reads this on every subsequent turn. A student who struggled with Question 4.7 last week will automatically receive more emphasis on operating systems concepts this week — without any explicit programming to make that happen.
-
-**Hints are Socratic, not revealing.** When a student asks for help mid-exam, the agent calls `generate_hint` which runs a separate constrained LLM prompt that guides without spoiling. The full memo answer is passed internally to the hint generator but explicitly blocked from appearing in the output.
-
----
-
-## Features
-
-### AI agent tutor (CATTutor)
-
-- Autonomous tool-calling loop powered by Groq llama-3.3-70b
-- RAG-grounded answers from CAT Grade 12 theory textbook using FAISS vector search
-- Persistent multi-turn conversation history stored in SQLite across sessions
-- Text-to-speech with voice selection, speed and pitch controls
-- Dark mode, font size scaling, fullscreen focus mode
-- Suggested topic chips on empty state
-- Clears both local state and server-side conversation history on reset
-
-### AI exam mocker (AIExamMocker)
-
-- Full NSC paper simulation supporting four question types:
-  - Multiple choice with radio options
-  - True/False with optional correction word input
-  - Matching with column A dropdown selection
-  - Open-ended with auto-growing textarea
-- Question navigator drawer with colour-coded dots (answered / skipped / unanswered / current)
-- Fullscreen mode with keyboard navigation (`←` `→` for questions, `Ctrl+F` to toggle, `Esc` to exit)
-- Real-time save on every answer change — no lost progress on navigation
-- Submit saves full marked results and AI feedback to Firestore immediately
-- Agent auto-updates personalised study plan after each submission
-- Post-submit agent chat panel lets students ask about specific questions
-
-### AI exam marking (model.py)
-
-- MCQ: exact letter match against memo — zero LLM cost, instant
-- True/False: case-insensitive match with correction word comparison using regex splitting
-- Matching: per-pair letter extraction and scoring, scales to marks proportionally
-- Open: LLM compares meaning (not wording) against memo using structured JSON output with score clamping
-- Memo sourced strictly from `q["memo"]` field — never from array index, eliminating the class of bug where question 1.1 received question 10.3.2's answer
-
-### Comprehensive results dashboard (ExamResultsDisplay)
-
-- Unified view merging three data sources: AI exam attempts, teacher-marked results, historical grades
-- Score timeline bar chart across all sources with colour coding by performance band
-- Weak-area analysis combining AI wrong-count tracking, legacy wrong answers, and AI marked results
-- Automated recommendations engine producing contextual cards:
-  - Urgent warning when average is below 50%
-  - Trend alert when last result drops more than 5 points
-  - MCQ strategy tip when three or more MCQ questions appear in weak areas
-  - Encouragement when performance is strong with few weak areas
-- Four tabs: My Progress (default) · AI Exams · Grade N · History
-- Student identity header showing resolved real name and exam count breakdown
-
-### Offline exam extraction pipeline (process_exams.py)
-
-- Accepts chunked PDF JSON from any chunking tool
-- Classifies files as exam paper or memo by keyword matching
-- Stitches all chunks into one text, then slides 6000-character overlapping windows
-- Sends each window to Groq with a strict schema prompt returning typed question JSON
-- Deduplicates questions across windows by completeness score (options populated, column lists present)
-- Extracts memo answers keyed by exact question number (1.1, 4.7.1, 9.3.2)
-- Injects answers into exam JSON strictly by question_number field match
-- Tracker file prevents re-extraction on subsequent runs
-- Validation prints Section A spot-check after every memo merge
-
-### Persistent student memory (memory.py)
-
-SQLite database with five tables:
-
-| Table | Contents |
-|-------|----------|
-| `students` | Student ID, display name, created timestamp |
-| `sessions` | Exam name, score, total, percentage, played_at |
-| `weak_questions` | Question number, wrong count, question text, type, topic, last seen |
-| `conversation_history` | Role, content, tool_call_id, tool_name, created_at |
-| `study_plan` | Plan text, updated_at |
-
-Wrong counts increment on failure and decrement on success — a question the student masters gradually disappears from weak areas.
-
-### Student identity hook (studentId.js)
-
-Priority resolution chain:
-1. Firestore `students/{uid}.name`
-2. Firebase Auth `displayName`
-3. Email prefix (`thabo.mokoena@school.com` → `thabo.mokoena`)
-4. Cached localStorage value from previous session
-5. Anonymous random fallback
-
-`useStudentId()` returns the cached value synchronously on first render (no flicker), then updates when Firebase resolves. Shared `educat_sid` key across all components ensures consistent identity in SQLite, Firestore, and agent calls.
+- The **React frontend reads Firestore directly** wherever a live, reactive UI matters (dashboards, results, exam titles) — protected entirely by Firestore Security Rules, not by API-level auth checks.
+- The **Flask backend is used for anything requiring server-side trust** — AI calls (cost/key protection), billing (PayFast signature verification), and write paths where `schoolId` and other identity fields must be derived server-side from a verified auth token rather than trusted from the client.
 
 ---
 
 ## Technology stack
 
 | Layer | Technology | Why |
-|-------|-----------|-----|
-| LLM | Groq — llama-3.3-70b-versatile | Fastest open-weight inference available; critical for student-facing latency |
-| Agent framework | Custom Python (agent.py) | Full control over retry logic, tool result capping, fallback behaviour |
-| RAG | FAISS + custom chunker | Zero-dependency similarity search; theory books indexed offline |
-| Backend | Flask (Python) | Synchronous request handling matches the blocking agent loop |
-| Persistent memory | SQLite (memory.py) | Server-local, zero-latency state for per-request memory reads/writes |
-| Exam pipeline | Python + Groq | Reuses the same LLM for both chat and document extraction |
-| Frontend | React + Next.js + TailwindCSS | Component-per-feature architecture; Tailwind for consistent styling |
-| Auth | Firebase Auth | Google sign-in out of the box; UID used as Firestore document key |
-| Database | Firestore | Student-facing exam attempt records readable from React without an API call |
-| Deployment | PythonAnywhere + Netlify | Flask runs persistently on PythonAnywhere; frontend auto-deploys on git push |
+|---|---|---|
+| Frontend | React + Vite | Fast dev iteration, component-per-feature structure |
+| Frontend hosting | Netlify | Auto-deploy on push, generous free tier for a multi-school SaaS |
+| Backend | Flask (Python) | Synchronous request handling matches the blocking AI marking/agent loop |
+| Backend hosting | Render | Persistent process (not serverless) needed for gunicorn workers + Firebase Admin SDK init |
+| Database | Firestore | Realtime, directly readable from the frontend under security rules — no API round-trip needed for dashboards |
+| Auth | Firebase Auth | Multi-role sign-in (student/teacher/principal/parent), UID used as the Firestore document key |
+| File storage | Firebase Storage | Stores rendered exam page images for the Groq Vision marking pipeline |
+| AI / LLM | Groq — `llama-3.1-8b-instant` and `qwen/qwen3-vl-8b` | Fast inference is a hard requirement for student-facing exam marking and tutoring latency |
+| Document conversion | LibreOffice (headless) | Converts uploaded `.docx` exams to PDF before page rendering |
+| PDF rendering | PyMuPDF | Renders each PDF page to an image for Groq Vision to read |
+| Payments | PayFast | South African payment gateway; multi-currency billing with ITN webhook verification |
+| Process model | gunicorn + `post_fork` hook | Firebase Admin SDK must be re-initialized per worker process — see [Known gaps](#known-gaps--technical-debt) |
+
+---
+
+## Core subsystems
+
+### 1. Multi-tenancy & identity
+
+Every collection in Firestore carries (or is expected to carry) a `schoolId` field, and every Firestore Security Rule that grants staff access checks `sameSchool(resource.data.schoolId)` before allowing a read or write. `schoolId` is never trusted from the client on create/update paths — it is always derived server-side from the authenticated user's own `users/{uid}` document.
+
+Roles are resolved the same way: `isTeacher()`, `isPrincipal()`, `isAdmin()`, and the combined `isStaff()` helper all read the caller's own `users/{uid}.role` field via `get()` inside the rule — never from a client-supplied claim.
+
+### 2. Dashboards
+
+Four distinct dashboards share the same underlying data but present it differently:
+
+- **Student Dashboard** — exam history, AI Tutor, personalised study plan, "My Progress" insights view (`ExamResultsDisplay.jsx`).
+- **Teacher Dashboard** — class-wide submission overview, per-student remarking (AI re-mark or manual), analytical report generation (`ResultsTab.jsx`).
+- **Principal Dashboard** — school-wide stats, billing tier, staff management — consolidated into a single auth-gated listener to avoid the cross-school leak issues an earlier version had.
+- **Parent Dashboard** — read-only, letterhead-style reports with plain-language performance summaries rather than raw marks.
+
+### 3. Document extraction & exam pipeline
+
+Teachers upload an existing exam document rather than authoring exams in a proprietary format. The **v4 extraction architecture** is:
+
+```
+.docx / .pdf upload
+   → LibreOffice (headless) converts to PDF
+   → PyMuPDF renders each page as a high-resolution image
+   → Each page image uploaded to Firebase Storage
+   → Groq Vision reads each page image and returns structured question JSON
+   → Questions merged, deduplicated, and memo answers injected by question_number
+```
+
+Memo (answer key) matching is done strictly by the `question_number` field on each question object — never by array index — specifically because an earlier index-based lookup caused questions to receive the wrong memo answer when page ordering didn't match section ordering.
+
+### 4. AI marking engine
+
+Four question types are supported, each marked differently:
+
+| Type | Marking method |
+|---|---|
+| Multiple choice | Exact letter match against memo — zero LLM cost, instant |
+| True/False | Case-insensitive match, with optional correction-word comparison |
+| Matching | Per-pair letter extraction, scored proportionally to marks available |
+| Open-ended | Groq compares *meaning*, not exact wording, against the memo, returning a structured JSON score with clamping so the model can't award more than the max marks |
+
+Teachers can trigger an **AI re-mark** (Groq re-reads the full question set and reapplies marks) or a **manual adjust** (direct per-question mark/status/feedback editing) via the Remark modal, with every change immediately reflected to both the teacher and student dashboards through the same Firestore listener.
+
+### 5. AI Tutor
+
+A Groq-powered, tool-calling agent (not a fixed prompt pipeline) with:
+
+- Persistent per-student memory of weak topics, session history, and study plan.
+- A constrained "Socratic hint" mode during live exams — the model is given the full memo answer internally but explicitly instructed never to reveal it, only to guide.
+- Tool isolation: the AI Tutor and active exam-taking cannot run simultaneously, to prevent a student using the tutor to answer exam questions live.
+
+### 6. Reporting & analytics
+
+Beyond the live dashboards, the platform generates **downloadable analytical assessment reports** (`ResultsTab.jsx`), letterhead-styled with the school's logo and name, covering:
+
+- Selectable reporting period (7/30/90/365 days, all-time, or a custom date range).
+- Selectable subject filter (all subjects, or a specific multi-select).
+- Overall performance, subject-by-subject breakdown (with subject teacher attributed), pass/fail counts, and trend.
+- **AI-generated subject gap analysis** — rather than just listing missed questions, a dedicated backend endpoint (`/subject-gap-analysis`) sends each subject's incorrect answers to Groq and returns a real diagnostic summary, root causes, and concrete study recommendations per subject.
+
+### 7. Billing & pricing engine
+
+A five-tier system (**Free, Silver, Gold, Platinum, Diamond**) with:
+
+- A pricing formula combining an institution-type multiplier and a currency-strength multiplier (USD-billed regions always bill at 3×, with no exceptions).
+- Live FX rates cached in Firestore rather than fetched per-request.
+- **PayFast** integration for multi-currency payment collection, including ITN (Instant Transaction Notification) webhook verification server-side.
+- Billing-protected fields (`tier`, `nextBillingDate`, `tierUpdatedAt`, `pfPaymentId`, `subscribedAt`) are write-locked in Firestore Security Rules to the Admin SDK only — no client, not even a school's own principal, can set them directly. This closes a prior vulnerability where any signed-in user could write these fields on any school's document.
+
+---
+
+## Data model
+
+Firestore collections, and the field that isolates them per-school:
+
+| Collection | Purpose | Isolation key |
+|---|---|---|
+| `users` | Base auth-linked profile, role, schoolId | `schoolId` |
+| `students` / `teachers` / `principals` | Role-specific profile documents, keyed by UID | `schoolId` |
+| `schools` | School metadata, billing tier, logo, name | — (own doc) |
+| `exams` | Exam metadata (title, subject, schoolId, teacher) | `schoolId` |
+| `exam_questions` | Question bank per exam (no own `schoolId` — resolved via parent exam) | via `examSchoolId()` |
+| `exam_attempts` | Student exam submissions, marked results, AI feedback | `schoolId`, `studentUid` |
+| `examResults` / `studentResults` / `prelimResults` / `midYearResults` / `novemberResults` | Legacy and periodic result records | `schoolId` |
+| `billing` | Per-school billing state | `schoolId` |
+| `paymentTransactions` | PayFast transaction records — Admin SDK only, no client access | — |
+| `auditLog` | Signed-in-readable/writable audit trail | — |
+| `admins` | Platform admin allowlist, keyed by email | — |
+
+> **A note on `exam_attempts` field naming:** attempt documents are written with either `studentId` (a display-name-style string) or `studentUid` (the Firebase Auth UID) depending on which upload flow created them — both fields exist for historical reasons and both are queried on the frontend to merge results. See [Known gaps](#known-gaps--technical-debt).
+
+---
+
+## Security model
+
+Firestore Security Rules — not the Flask API — are the primary enforcement layer for read access, since the frontend reads Firestore directly. Key principles the ruleset follows:
+
+- **Every role/school helper is null-safe.** `userDoc()`, `userSchoolId()`, `isTeacher()`, `sameSchool()` etc. never throw on a missing document — a missing `users/{uid}` doc degrades to "not staff," not a rule crash.
+- **`schoolId` is never client-authoritative on write.** `ownsNewResultData()` requires a new attempt/result document to be claimed by the *creator's own* `studentUid`/`studentId`, and if a `schoolId` is present, it must match the creator's own school.
+- **List/collection queries must be provable from their `where` clauses.** Firestore denies an entire query if it cannot statically prove the rule holds for every possible match — this has been the root cause of several "0 docs but no error" bugs in this codebase (see below), and is why every collection-level listener in this app must filter on a field the corresponding rule can actually check (typically `schoolId` or `studentUid`).
+- **Billing-protected fields are write-locked to the Admin SDK.** No rule branch — including the school's own principal — can touch `tier`, `nextBillingDate`, `tierUpdatedAt`, `pfPaymentId`, or `subscribedAt` directly.
+- **The wildcard fallback rule is allowlisted, not open.** A prior version allowed `create` on any collection for any signed-in user with no restriction, which — combined with `isAdmin()` only checking document *existence*, not content — allowed any user to self-grant admin by creating `admins/{their-own-email}`. This is fixed: the wildcard now only permits the same explicit collection allowlist for both `read` and `create`.
 
 ---
 
 ## Project structure
 
 ```
-educat/
+eduket-os/
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── ExamResultsDisplay.jsx    Student "My Progress" dashboard + AI exam results
+│   │   │   ├── ResultsTab.jsx            Teacher-facing results, remarking, report generation
+│   │   │   ├── AITutor.jsx               Persistent-memory tutor chat interface
+│   │   │   ├── AIExamMocker.jsx          Full exam-taking simulation UI
+│   │   │   └── SchoolRegistration.jsx    Multi-step school/role registration with AI-resolved
+│   │   │                                 curriculum/subject/province cascading fields
+│   │   └── utils/
+│   │       ├── firebase.js               Firebase project config
+│   │       └── StudentId.js              Shared student identity resolution hook
+│   └── firestore.rules                   Security rules (source of truth for access control)
 │
-├── app.py                    Flask API — all routes, session management
-├── agent.py                  AI agent loop, tool definitions, tool runners
-├── model.py                  Answer marking for all four question types
-├── memory.py                 SQLite schema, all read/write helpers
-├── rag.py                    FAISS RAG index — build and query
-├── process_exams.py          Offline PDF → structured exam JSON pipeline
+├── backend/
+│   ├── app.py                            Flask routes, session management
+│   ├── billing_routes.py                 PayFast integration, /api/billing/initiate
+│   ├── payfast-itn.js / payfast_itn.py   PayFast ITN webhook handler (Admin SDK writes)
+│   ├── model.py                          Per-question-type answer marking
+│   ├── agent.py                          AI tutor tool-calling loop
+│   ├── process_exams.py                  v4 document extraction pipeline
+│   └── memory.py                         Persistent per-student memory (weak topics, plan)
 │
-├── processed/                Input: chunked PDF JSON files
-├── exams/                    Output: extracted exam JSON with memo injected
-├── student_memory.db         SQLite database (auto-created on first run)
-├── processed_exams.json      Extraction tracker — prevents re-runs
-│
-├── .env                      GROQ_API_KEY (never committed)
-│
-└── src/
-    ├── components/
-    │   ├── CATTutor.jsx              AI tutor chat interface
-    │   ├── AIExamMocker.jsx          Full NSC exam simulation
-    │   └── ExamResultsDisplay.jsx    Unified results + progress dashboard
-    └── utils/
-        ├── firebase.js               Firebase project config
-        └── studentId.js              Shared student identity hook
+└── README.md
 ```
 
 ---
 
-## Setup and installation
+## Getting started
 
 ### Prerequisites
 
-- Python 3.10+
 - Node.js 18+
+- Python 3.10+
 - A [Groq API key](https://console.groq.com)
-- A Firebase project with Auth and Firestore enabled
-
-### Backend
-
-```bash
-# Clone the repository
-git clone https://github.com/abiton198/eduplanet_online_cat.git
-cd eduplanet_online_cat
-
-# Install Python dependencies
-pip install flask flask-cors groq python-dotenv faiss-cpu
-
-# Create environment file
-echo "GROQ_API_KEY=your_key_here" > .env
-
-# Start the development server
-python app.py
-# Runs on http://localhost:8000
-```
+- A Firebase project with Auth, Firestore, and Storage enabled
+- LibreOffice installed on the backend host (required for the extraction pipeline)
+- A PayFast merchant account (for billing — optional for local development)
 
 ### Frontend
 
 ```bash
-# Install Node dependencies
+cd frontend
 npm install
-
-# Start the development server
 npm run dev
-# Runs on http://localhost:3000
 ```
 
-Update the `API` constant at the top of each component to point to your backend:
+Set your Firebase config in `src/utils/firebase.js`, and point the `API` constant at your backend URL (local Flask instance or your Render deployment).
 
-```javascript
-const API = "http://localhost:8000";   // development
-// const API = "https://yourapp.pythonanywhere.com";  // production
-```
-
-### Firebase
-
-Create `src/utils/firebase.js`:
-
-```javascript
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
-
-const firebaseConfig = {
-  apiKey: "...",
-  authDomain: "...",
-  projectId: "...",
-  // ... rest of your config
-};
-
-const app = initializeApp(firebaseConfig);
-export const db  = getFirestore(app);
-export const auth = getAuth(app);
-```
-
-### Firestore indexes required
-
-Add these composite indexes in the Firebase console (you will be prompted with a direct link the first time each query runs):
-
-```
-Collection: exam_attempts
-  Field: studentId   ASC
-  Field: createdAt   DESC
-
-Collection: exam_attempts
-  Field: studentId   ASC
-  Field: createdAt   DESC
-  (second index for the name-based query)
-```
-
----
-
-## Exam pipeline
-
-The pipeline converts NSC past paper PDFs into the structured JSON format the exam mocker and agent use.
-
-### Step 1 — Chunk your PDFs
-
-Use any PDF chunker to split exam papers and memos into JSON files:
-
-```json
-[
-  { "source": "Nov_Theory_2024.pdf", "chunk_index": 0, "total_chunks": 10, "content": "..." },
-  { "source": "Nov_Theory_2024.pdf", "chunk_index": 1, "total_chunks": 10, "content": "..." }
-]
-```
-
-Place files in the `processed/` folder. Name conventions:
-- Exam papers: include keywords like `nov`, `theory`, `paper`, `term`, `p1`, `exam`
-- Memo files: include keywords like `memo`, `memorandum`, `marking`, `answers`
-
-### Step 2 — Run extraction
+### Backend
 
 ```bash
-python process_exams.py
+cd backend
+pip install flask flask-cors groq python-dotenv firebase-admin pymupdf
+echo "GROQ_API_KEY=your_key_here" > .env
+python app.py
 ```
 
-The pipeline:
-1. Classifies every JSON file as exam, memo, or skip
-2. For each exam: stitches all chunks → slides 6000-char windows → extracts questions via Groq
-3. Deduplicates questions by completeness, merges sections, saves to `exams/`
-4. For each memo: extracts all answers → matches to exam by shared year/month keywords → injects answers by question number
-5. Prints a Section A spot-check table so you can verify 1.1=C, 1.2=C etc. before deploying
+### Firestore rules & indexes
 
-### Step 3 — Verify output
+Deploy `firestore.rules` via the Firebase CLI:
 
 ```bash
-ls exams/
-# nov_theory_2024_exam.json
-# may_theory_2025_exam.json
-
-python -c "
-import json
-with open('exams/nov_theory_2024_exam.json') as f:
-    e = json.load(f)
-print(f'Questions: {e[\"total_questions\"]}')
-print(f'Memo merged: {e[\"memo_merged\"]}')
-for s in e['sections']:
-    print(f'Section {s[\"section\"]}: {len(s[\"questions\"])} questions')
-"
+firebase deploy --only firestore:rules
 ```
 
-### Output format
-
-```json
-{
-  "source": "Nov_Theory_2024.json",
-  "total_questions": 47,
-  "type_breakdown": { "mcq": 10, "matching": 1, "true_false": 5, "open": 31 },
-  "memo_merged": true,
-  "memo_source": "Nov_memo_2024.json",
-  "sections": [
-    {
-      "section": "A",
-      "section_title": "SECTION A",
-      "section_instructions": "Answer ALL the questions.",
-      "total_marks": 25,
-      "questions": [
-        {
-          "id": 1,
-          "question_number": "1.1",
-          "parent_question": "QUESTION 1: MULTIPLE-CHOICE QUESTIONS",
-          "parent_context": null,
-          "question": "A pointing device that allows for gestures like pinch-to-zoom...",
-          "type": "mcq",
-          "options": { "A": "Trackball", "B": "Stylus", "C": "Touchpad", "D": "Mouse" },
-          "marks": 1,
-          "memo": "C"
-        }
-      ]
-    }
-  ]
-}
-```
-
----
-
-## Key design decisions
-
-### Why an agent instead of a fixed pipeline
-
-A pipeline hardcodes routes: "if the user asks about a concept, call RAG". An agent lets the LLM decide when RAG is relevant, when memory is more useful, when to give a hint rather than an answer. This means the system handles unanticipated combinations — a student who asks "what should I study based on how I did in Q4?" gets the agent calling `get_weak_topics`, `get_session_history`, and `update_study_plan` in sequence, without any code path pre-written for that exact question.
-
-### Why Groq for the LLM
-
-Groq's LPU inference delivers llama-3.3-70b responses in under two seconds, compared to six to twelve seconds on comparable GPU-based APIs. For a student-facing application, this is a meaningful UX difference. The tool-calling API is also stable — the agent uses only primitive string and integer argument types because Groq rejects array-typed tool parameters, a constraint that was discovered through production errors and resolved by removing the `choose_practice_question` tool's array argument.
-
-### Why the memo lookup is strictly by question_number field
-
-The original bug that caused "Kickstarter" to appear as the answer for MCQ question 1.1 was a `load_exam_memo()` function that rebuilt a flat `{ question_number: memo }` dict by scanning the entire exam JSON, then looked up answers by question number from that external dict. An off-by-one or key collision meant question 1.1 received question 10.3.2's answer. The fix was architectural: the memo is embedded in `q["memo"]` by the extraction pipeline and accessed directly from the question dict. No external lookup, no possible mismatch.
-
-### Why sliding-window stitching in the extraction pipeline
-
-NSC exam PDFs chunk at page boundaries. The last MCQ option for question 1.2 is frequently on the next page from the question stem. Processing chunks individually means the LLM sees an incomplete question and either skips it or invents options. Stitching all chunks into one string and sliding over it with a 500-character overlap guarantees every question appears complete in at least one window.
-
-### Why SQLite for agent memory and Firestore for exam results
-
-Agent memory (weak topics, conversation history, study plan) is read and written on every agent request. SQLite is synchronous and server-local — zero network latency, consistent with Flask's synchronous request model. Firestore is used for exam attempt records because those need to be directly readable from the React frontend without routing through the Flask API, enabling the `ExamResultsDisplay` component to query Firestore directly using the Firebase SDK.
-
-### Why the student identity hook uses a priority chain
-
-Different students arrive at the system through different paths. Some are registered in Firestore with a full profile. Some are authenticated through Firebase Auth but have no profile doc. Some arrive anonymously. The priority chain handles all cases gracefully, always resolving to the most human-readable identifier available. The localStorage cache ensures that once resolved, the identity is available synchronously on every subsequent render without re-fetching.
-
----
-
-## API reference
-
-All endpoints accept and return JSON. Base URL in production: `https://abitonp.pythonanywhere.com`
-
-### POST /agent-chat
-
-Sends a message to the AI agent. The agent decides which tools to call and returns a final response.
-
-```json
-Request:
-{
-  "student_id": "Thabo Mokoena",
-  "message": "What should I study this week?"
-}
-
-Response:
-{
-  "response": "Based on your recent results, you struggled most with..."
-}
-```
-
-### POST /start-exam
-
-Initialises an exam session for a student.
-
-```json
-Request:
-{ "exam": "nov_theory_2024_exam.json", "student_id": "Thabo Mokoena" }
-
-Response:
-{ "session_id": "uuid", "total_questions": 47, "memo_merged": true }
-```
-
-### POST /question
-
-Returns a single question by index.
-
-```json
-Request:
-{ "session_id": "uuid", "index": 0 }
-
-Response:
-{
-  "question_number": "1.1",
-  "question": "A pointing device that allows...",
-  "type": "mcq",
-  "options": [{"key": "A", "value": "Trackball"}, ...],
-  "marks": 1,
-  "memo": "C",
-  "saved_answer": ""
-}
-```
-
-### POST /answer
-
-Saves a student's answer for a question.
-
-```json
-Request:
-{ "session_id": "uuid", "index": 0, "answer": "C" }
-
-Response:
-{ "status": "saved", "index": 0 }
-```
-
-### POST /submit
-
-Submits the exam, marks all answers, updates student memory, triggers study plan update.
-
-```json
-Request:
-{ "session_id": "uuid", "student_id": "Thabo Mokoena" }
-
-Response:
-{
-  "score": 38,
-  "total": 47,
-  "percentage": 80.9,
-  "feedback": "Excellent work! You scored above 75%...",
-  "results": [
-    {
-      "question_number": "1.1",
-      "question": "A pointing device...",
-      "type": "mcq",
-      "marks": 1,
-      "student_answer": "C",
-      "correct_answer": "C. Touchpad",
-      "score": 1,
-      "earned": 1,
-      "feedback": "Correct! Answer: C (Touchpad).",
-      "status": "correct"
-    }
-  ]
-}
-```
-
-### POST /dashboard
-
-Returns student's weak areas, session history, and study plan for the progress dashboard.
-
-```json
-Request:
-{ "student_id": "Thabo Mokoena" }
-
-Response:
-{
-  "weak": [
-    { "question_number": "4.7.1", "q_type": "open", "wrong_count": 3, "question_text": "..." }
-  ],
-  "sessions": [
-    { "exam_name": "nov_theory_2024_exam.json", "score": 38, "total": 47, "percentage": 80.9 }
-  ],
-  "study_plan": { "plan": "Focus on...", "updated_at": "2025-01-15 14:23:00" }
-}
-```
-
-### GET /exams
-
-Returns list of available exam files.
-
-```json
-Response:
-{ "exams": ["nov_theory_2024_exam.json", "may_theory_2025_exam.json"] }
-```
-
-### POST /clear-history
-
-Clears the student's conversation history from SQLite.
-
-```json
-Request:
-{ "student_id": "Thabo Mokoena" }
-Response:
-{ "status": "cleared" }
-```
-
----
-
-## Deployment
-
-### Backend — PythonAnywhere
-
-1. Upload these files to your PythonAnywhere home directory:
-   `app.py` · `agent.py` · `model.py` · `memory.py` · `rag.py`
-
-2. Upload the `exams/` folder with your processed exam JSON files
-
-3. In the PythonAnywhere Web tab, set the WSGI file to point to your Flask `app`
-
-4. Set the `GROQ_API_KEY` environment variable in the PythonAnywhere dashboard
-
-5. The SQLite database `student_memory.db` is created automatically on first run
-
-6. Reload the web app
-
-### Frontend — Netlify
-
-1. Push your repository to GitHub
-
-2. In Netlify, click "New site from Git" and connect your repository
-
-3. Build command: `npm run build`
-
-4. Publish directory: `out` (for Next.js static export) or `.next` (for SSR)
-
-5. Set the `API` constant in all three components to your PythonAnywhere URL before pushing
-
-Netlify auto-deploys on every push to your main branch.
+Composite indexes are required for several `where` + `orderBy` combinations (e.g. `exam_attempts` filtered by `schoolId` and ordered by `completedAt`). Firestore will surface a direct console link to create each missing index the first time the corresponding query runs — click through rather than pre-guessing every index by hand.
 
 ---
 
 ## Environment variables
 
 | Variable | Where | Description |
-|---------|-------|-------------|
-| `GROQ_API_KEY` | Backend `.env` | Required. Get from console.groq.com |
-| Firebase config | `src/utils/firebase.js` | Required. From Firebase project settings |
+|---|---|---|
+| `GROQ_API_KEY` | Backend `.env` | Required for all AI marking, tutoring, and gap-analysis calls |
+| `PAYFAST_MERCHANT_ID` / `PAYFAST_MERCHANT_KEY` / `PAYFAST_PASSPHRASE` | Backend `.env` | Required for billing; used in ITN signature verification |
+| Firebase Admin credentials | Backend (Render env, JSON content — not a filename string) | Required for all server-side Firestore/Storage writes |
+| Firebase client config | `frontend/src/utils/firebase.js` | Required for Auth/Firestore/Storage access from the browser |
 
-No other secrets required. The SQLite database is local to the server.
+---
+
+## Related products
+
+**EPRU Referee Portal** — a separate React/TypeScript application with its own Firebase backend, built for managing rugby referee appointments and coach dashboards. It shares engineering patterns with Eduket OS (schoolId-style tenant stamping, Firestore-rule-driven access) but is an independent codebase and deployment, not a module of this platform.
+
+---
+
+## Known gaps & technical debt
+
+Documented honestly, because a platform at this stage should be judged on how clearly it names its own weak points, not just its features:
+
+- **Inconsistent student identity fields on `exam_attempts`.** Some documents key the student by `studentId` (a display-name string) and others by `studentUid` (the Auth UID), depending on which write path created them. The frontend currently queries both and merges/deduplicates client-side. This works but means any Firestore rule authorizing this collection has to account for both field shapes — a future migration to a single canonical `studentUid` field (with `studentId` retained only as a display cache) would remove an entire class of "0 results but no error" bugs.
+- **`examId` on attempt documents doesn't always resolve to a real `exams` collection document.** Some attempts carry a generated session-style ID rather than the actual exam document ID, which breaks title lookups and any feature that needs to join back to exam metadata (e.g. subject-teacher attribution). The current mitigation is falling back to the `subject` field for display; the underlying write path should be audited so `examId` is guaranteed to reference a real document.
+- **Unfiltered Firestore listeners are an easy trap given the current rules design.** Because Firestore denies a whole query if it can't prove the rule from the `where` clause alone, any new `onSnapshot(collection(db, "..."))` added without a `schoolId`/`studentUid` filter will silently fail with `permission-denied` rather than partially succeeding. This has caused several debugging sessions in this codebase already; it's a pattern worth documenting explicitly for new contributors rather than rediscovering per-feature.
+- **Firebase Admin SDK + gunicorn worker forking.** Required a `post_fork` hook to reinitialize Firebase per worker process; any new backend deployment target needs to preserve this pattern or exam submission will intermittently hang.
+- **No automated test suite yet.** Bug-fixing so far has been reactive (console log → root cause → patch), which is appropriate at this stage but doesn't scale. Firestore rules in particular are a strong candidate for the Firebase Rules Unit Testing library, given how many past bugs have been rule-shape issues rather than application logic issues.
+- **PDF/diagram-based question types are not yet supported** in the extraction pipeline — only text-based MCQ, True/False, Matching, and Open questions.
+- **Report generation makes sequential AI calls per subject.** The `/subject-gap-analysis` endpoint currently issues one Groq call per subject in a report; for reports spanning many subjects this adds latency and could be restructured into a single batched call.
+
+---
+
+## Roadmap
+
+- [ ] Migrate `exam_attempts` to a single canonical student-identity field, with a one-time backfill script for legacy documents.
+- [ ] Audit and guarantee `examId` referential integrity between `exam_attempts` and `exams`.
+- [ ] Add Firebase Rules Unit Tests covering the multi-tenancy and billing-field-lock invariants described above.
+- [ ] Batch the subject gap analysis endpoint into a single AI call per report instead of one per subject.
+- [ ] Extend the extraction pipeline to support diagram/data-response question types (relevant for CAT Paper 2 practicals).
+- [ ] Extend curriculum support beyond CAPS/NSC and ZIMSEC extraction prompts to additional national curricula as new schools onboard.
+- [ ] Streaming responses for the AI Tutor agent loop (currently blocks until all tool-calling rounds complete).
+- [ ] Formal onboarding/setup documentation for new engineering collaborators, separate from this architectural overview.
 
 ---
 
 ## Contributing
 
-Contributions are welcome. Here are the most valuable areas:
+This is an actively developed, production platform serving live schools — changes to Firestore Security Rules or the billing pipeline in particular should be treated with the same care as a database migration, not a routine UI change. When in doubt:
 
-- **Streaming responses** — the agent loop currently blocks until all tool rounds complete. Adding Server-Sent Events to stream partial responses would significantly improve perceived latency
-- **More question types** — the pipeline currently handles MCQ, True/False, Matching, and Open. Diagram-based questions and data-response questions from NSC CAT P2 practical papers are not yet supported
-- **Additional subjects** — the RAG index and extraction prompts are tuned for CAT. Extending to IT, Mathematics, or other NSC subjects would require subject-specific extraction prompts and separate theory book indexes
-- **Vector database migration** — replacing the FAISS flat index with Pinecone or Weaviate would allow incremental updates without rebuilding the full index
-
-To contribute:
+1. Confirm which read pattern (direct Firestore listener vs. Flask endpoint) is appropriate for the data in question, per [Security model](#security-model).
+2. If adding a new Firestore query, confirm the corresponding rule can be *proven* from the query's `where` clauses before assuming it will work — see [Known gaps](#known-gaps--technical-debt).
+3. Never introduce a client-writable path for `schoolId`, `tier`, or any other identity/billing field — these must always be derived server-side.
 
 ```bash
-git fork https://github.com/abiton198/eduplanet_online_cat.git
 git checkout -b feature/your-feature-name
 # make changes
 git push origin feature/your-feature-name
@@ -654,23 +379,12 @@ git push origin feature/your-feature-name
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-## Acknowledgements
-
-- [Groq](https://groq.com) for LPU-accelerated llama-3.3-70b inference
-- [Meta AI](https://ai.meta.com) for the llama-3.3-70b-versatile model
-- [Firebase](https://firebase.google.com) for authentication and Firestore
-- [FAISS](https://github.com/facebookresearch/faiss) for vector similarity search
-- [TailwindCSS](https://tailwindcss.com) for the styling framework
-- The Department of Basic Education (DBE) for publishing NSC past papers
+Proprietary — © Nextgen Skills Development (Pvt) Ltd. Not licensed for redistribution without written permission.
 
 ---
 
 <div align="center">
 
-Built for South African students · Powered by open-weight LLMs · MIT Licensed
+Built for African schools · Multi-tenant by design · AI-assisted, human-verified
 
 </div>
