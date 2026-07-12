@@ -34,8 +34,8 @@ export const TIERS = [
         gradient: 'from-slate-400 to-slate-500',
         gradientBg: 'from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-750',
         accentColor: '#64748b',
-        limits: { students: 30, teachers: 2, exams: 5 },
-        features: ['10 students', '2 exams', '2 teachers', 'Basic AI marking'],
+        limits: { students: 10, teachers: 2, exams: 4 },
+        features: ['10 students', '4 exams', '2 teachers', 'Basic AI marking'],
     },
     {
         id: 'silver',
