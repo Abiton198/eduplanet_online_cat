@@ -866,18 +866,18 @@ export default function ExamResultsDisplay() {
       try {
         setLoading(true);
 
-        // Student profile
+        // 1. Fetch Student Profile Securely by UID
         const profileSnap = await getDoc(doc(db, 'students', user.uid));
         const profile = profileSnap.exists() ? profileSnap.data() : {};
-        const studentName = (profile.name || user.displayName || '').trim();
         const grade = extractGradeNumber(profile) || 12;
         setCurrentGrade(grade);
 
-        // Legacy exam results
+        // 2. Query Legacy Exam Results Securely by UID
         const legacySnap = await getDocs(query(
           collection(db, 'examResults'),
-          or(where('studentId', '==', user.uid), where('name', '==', studentName))
+          where('studentUid', '==', user.uid) // 🔒 Locked down target
         ));
+
         const hist = [], curr = [];
         legacySnap.forEach(docSnap => {
           const data = docSnap.data();
@@ -886,70 +886,25 @@ export default function ExamResultsDisplay() {
           const rec = { id: docSnap.id, ...data };
           g === grade ? curr.push(rec) : g < grade && hist.push(rec);
         });
+
         const sortDate = arr => arr.sort((a, b) => new Date(b.completedTime || 0) - new Date(a.completedTime || 0));
         setLegacyCurrent(sortDate(curr));
         setLegacyHistory(sortDate(hist));
 
-        // AI exam attempts — query by ALL possible student IDs
-        // studentId from hook may be a custom string like "Abiton" (not Firebase UID)
-        const sid = getCachedStudentId() || studentId || '';
+        // 3. Query AI Exam Attempts Securely by UID
+        const uidSnap = await getDocs(query(
+          collection(db, 'exam_attempts'),
+          where('studentUid', '==', user.uid) // 🔒 Locked down target
+        ));
 
-        const possibleIds = [...new Set([user.uid, sid, user.email, studentName].filter(Boolean))];
-
-        console.log('[ExamResults] querying exam_attempts by IDs:', possibleIds);
-
-        // studentUid is the field the rules can actually prove — query it directly
-        const uidSnap = await getDocs(
-          query(collection(db, 'exam_attempts'), where('studentUid', '==', user.uid))
-        ).catch(err => { console.warn('[ExamResults] studentUid query failed:', err); return { docs: [] }; });
-
-        // studentId queries: only the uid-shaped candidate will ever be provable by rules;
-        const idSnaps = await Promise.all(
-          possibleIds.map(id =>
-            getDocs(query(collection(db, 'exam_attempts'), where('studentId', '==', id)))
-              .catch(err => { console.warn(`[ExamResults] studentId query failed for "${id}":`, err); return { docs: [] }; })
-          )
-        );
-
-        const allSnaps = [uidSnap, ...idSnaps];
-
-        // Log what came back per ID
-        allSnaps.forEach((snap, i) => {
-          console.log(`[ExamResults] "${possibleIds[i]}" → ${snap.docs.length} docs`);
-        });
-
-        // Merge, deduplicate by doc ID
-        const map = new Map();
-        allSnaps.forEach(snap => {
-          snap.docs.forEach(docSnap => {
-            if (!map.has(docSnap.id)) {
-              map.set(docSnap.id, docSnap);
-            }
-          });
-        });
-
-        console.log(`[ExamResults] total unique docs: ${map.size}`);
-
-        // Normalise — percentage pulled from top-level OR metadata
-        // Sort by completedAt / submittedAt (NOT createdAt — that field doesn't exist)
-        const attempts = [...map.values()]
+        const attempts = uidSnap.docs
           .map(docSnap => normaliseAttempt(docSnap, {}))
           .sort((a, b) => b._tsSeconds - a._tsSeconds);
-
-        console.log('[ExamResults] attempts after normalise:', attempts.map(a => ({
-          id: a.id,
-          studentId: a.studentId,
-          examId: a.examId,
-          percentage: a.percentage,
-          score: a.score,
-          total: a.total,
-          _tsSeconds: a._tsSeconds,
-        })));
 
         setAiAttempts(attempts);
 
       } catch (err) {
-        console.error('[ExamResults] fatal error:', err);
+        console.error('[ExamResults] Secure fetch failed:', err);
       } finally {
         setLoading(false);
       }
