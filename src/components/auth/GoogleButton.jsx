@@ -12,25 +12,6 @@
 
 export function GoogleButton({ onClick, disabled }) {
     return (
-        // <button
-        //     type="button"
-        //     onClick={onClick}
-        //     disabled={disabled}
-        //     className="w-full py-4 border-2 border-slate-100 dark:border-slate-800
-        //          hover:bg-slate-50 dark:hover:bg-slate-800
-        //          disabled:opacity-50 disabled:cursor-not-allowed
-        //          rounded-2xl flex items-center justify-center gap-3
-        //          transition-all font-bold text-sm dark:text-white"
-        // >
-        //     <img
-        //         src="https://www.gstatic.com/images/branding/product/1x/gsa_64dp.png"
-        //         className="w-5 h-5"
-        //         alt="Google logo"
-        //     />
-        //     Continue with Google
-        // </button>
-
-
         <button
             type="button"
             onClick={onClick}

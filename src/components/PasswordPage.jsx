@@ -2236,7 +2236,7 @@ function LandingFooter() {
                        border-t border-slate-200 dark:border-slate-800 py-10 px-4">
       <div className="max-w-6xl mx-auto">
         <p className="text-center text-xs text-slate-400 mb-4 font-medium">
-          CAPS · ZIMSEC · Cambridge · IEB · National Curriculum and more
+          CAPS · SACAI · Cambridge · IEB · National Curriculum and more
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-between
                         gap-4 pt-4 border-t border-slate-200 dark:border-slate-800">
@@ -2252,7 +2252,7 @@ function LandingFooter() {
               className="text-xs text-slate-400 hover:text-indigo-500 transition-colors">
               Terms
             </a>
-            <a href="mailto:support@eduket.tech"
+            <a href="/contact"
               className="text-xs text-slate-400 hover:text-indigo-500 transition-colors">
               Contact
             </a>

@@ -68,6 +68,9 @@ import SchoolRegistration from './components/SchoolRegistration';
 import PrincipalDashboard from './components/PrincipalDashboard';
 import { SchoolProvider } from './utils/schoolContext';
 import logo from './img/eduket.png';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+import ContactUs from './pages/ContactUs';
 
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -586,6 +589,15 @@ function App() {
                 </RequireRole>
               }
             />
+
+            {/* ── Privacy policy ──────────────────────────────────── */}
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+
+            {/* ── Terms of service ──────────────────────────────────── */}
+            <Route path="/terms" element={<TermsOfService />} />
+
+            {/* ── Contact us ──────────────────────────────────── */}
+            <Route path="/contact" element={<ContactUs />} />
 
             {/* ── Catch-all → landing ──────────────────────────────────── */}
             <Route path="*" element={<Navigate to="/" replace />} />
