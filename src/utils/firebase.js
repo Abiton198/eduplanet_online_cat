@@ -35,12 +35,12 @@ const provider = new GoogleAuthProvider();
 // Must be initialised BEFORE getFirestore(), getAuth(), getStorage().
 // In development (localhost) a debug token is used instead of reCAPTCHA
 // so you can test without the app being deployed — see Step 5.
-// if (import.meta.env.DEV) {
-//     // This tells App Check to use the debug token in development.
-//     // The debug token is printed to the browser console — copy it to
-//     // Firebase App Check console (Step 5).
-//     self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-// }
+if (import.meta.env.DEV) {
+    // This tells App Check to use the debug token in development.
+    // The debug token is printed to the browser console — copy it to
+    // Firebase App Check console (Step 5).
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+}
 
 initializeAppCheck(app, {
     provider: new ReCaptchaV3Provider(
@@ -57,3 +57,5 @@ initializeAppCheck(app, {
 
 // Export Firestore & Auth
 export { db, auth, signInAnonymously, provider, storage, app };
+
+

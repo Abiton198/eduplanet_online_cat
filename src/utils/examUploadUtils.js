@@ -5,6 +5,17 @@
  * Covers Windows (doc/docx), Linux/Ubuntu (odt + LibreOffice variants),
  * and universal PDF.
  */
+
+// ── Add these imports at the TOP of the file (with your other imports) ──
+import {
+    ref,
+    uploadBytes,
+    getDownloadURL,
+    updateMetadata,
+} from 'firebase/storage';
+import { storage } from './firebase';
+
+
 export const ALLOWED_EXAM_TYPES = {
     // PDF
     'application/pdf': '.pdf',
@@ -98,4 +109,58 @@ export const isOpenDocumentFormat = (file) => {
     if (!file) return false;
     const ext = file.name.split('.').pop().toLowerCase();
     return ['odt', 'ott'].includes(ext);
+};
+
+export const uploadExamFile = async (
+    file,
+    schoolFolder,
+    subject,
+    examId,
+    prefix = 'exam',
+) => {
+    const error = validateExamFile(file, prefix === 'memo' ? 'Memo' : 'Exam file');
+    if (error) throw new Error(error);
+
+    const safeSubject = subject.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
+    const safeFileName = `${prefix}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const storagePath = `exams/${schoolFolder}/${safeSubject}/${examId}/${safeFileName}`;
+    const fileRef = ref(storage, storagePath);
+
+    // Upload the file
+    await uploadBytes(fileRef, file, {
+        contentType: file.type || 'application/octet-stream',
+        customMetadata: {
+            originalName: file.name,
+            uploadedAt: new Date().toISOString(),
+        },
+    });
+
+    // Revoke the download token Firebase auto-generated.
+    // After this, the file can only be accessed via Firebase SDK
+    // which goes through Storage security rules — no public URL.
+    await updateMetadata(fileRef, {
+        customMetadata: {
+            originalName: file.name,
+            uploadedAt: new Date().toISOString(),
+            tokenRevoked: 'true',
+        },
+    });
+
+    const url = await getDownloadURL(fileRef);
+
+    return {
+        path: storagePath,
+        url,
+        fileName: file.name,
+        fileType: getFileTypeLabel(file),
+    };
+};
+
+export const getSecureFileUrl = async (storagePath) => {
+    try {
+        return await getDownloadURL(ref(storage, storagePath));
+    } catch (err) {
+        console.error('[Storage] getSecureFileUrl failed:', err.code);
+        throw new Error('Could not load file. You may not have permission to access it.');
+    }
 };

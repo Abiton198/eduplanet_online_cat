@@ -25,6 +25,67 @@ function formatTime(seconds) {
   return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
 
+function AssignmentDueStrip({ dueDate }) {
+  const [remaining, setRemaining] = React.useState(() => calcRemaining(dueDate));
+
+  function calcRemaining(target) {
+    if (!target) return null;
+    const diff = new Date(target).getTime() - Date.now();
+    if (diff <= 0) return { expired: true, days: 0, hours: 0, minutes: 0, seconds: 0, totalMs: 0 };
+    return {
+      expired: false,
+      days: Math.floor(diff / 86400000),
+      hours: Math.floor((diff % 86400000) / 3600000),
+      minutes: Math.floor((diff % 3600000) / 60000),
+      seconds: Math.floor((diff % 60000) / 1000),
+      totalMs: diff,
+    };
+  }
+
+  React.useEffect(() => {
+    if (!dueDate) return;
+    const interval = setInterval(() => setRemaining(calcRemaining(dueDate)), 1000);
+    return () => clearInterval(interval);
+  }, [dueDate]);
+
+  if (!remaining) return null;
+
+  const critical = !remaining.expired && remaining.totalMs < 3600000;   // < 1 hr
+  const warning = !remaining.expired && remaining.totalMs < 86400000;   // < 24 hrs
+  const urgent = critical || remaining.expired;
+
+  // Under 24 hrs: show precise HH:MM:SS, matching the exam timer's feel
+  // Over 24 hrs: show "3d 14h left" — a ticking clock isn't useful that far out
+  const display = remaining.expired
+    ? 'Submission closed'
+    : remaining.days > 0
+      ? `${remaining.days}d ${String(remaining.hours).padStart(2, '0')}h left`
+      : `${String(remaining.hours).padStart(2, '0')}:${String(remaining.minutes).padStart(2, '0')}:${String(remaining.seconds).padStart(2, '0')}`;
+
+  return (
+    <div
+      className={`flex items-center gap-4 px-6 py-2 rounded-2xl border
+        ${urgent
+          ? 'bg-red-500/10 border-red-400/30'
+          : warning
+            ? 'bg-amber-500/10 border-amber-400/30'
+            : 'bg-white/10 border-white/20'
+        }`}
+    >
+      <Clock
+        size={20}
+        className={urgent ? 'text-red-400 animate-pulse' : warning ? 'text-amber-400' : ''}
+      />
+      <span
+        className={`text-2xl font-mono font-bold ${urgent ? 'text-red-400' : warning ? 'text-amber-400' : ''
+          }`}
+      >
+        {display}
+      </span>
+    </div>
+  );
+}
+
 export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDark, toggleTheme }) {
   const navigate = useNavigate();
 
@@ -65,6 +126,7 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
   const studentName = studentInfo?.name;
 
 
+
   // ─── AUTH & PROFILE SYNC ──────────────────────────────────────────────
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (u) => {
@@ -88,6 +150,69 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
   useEffect(() => {
     if (!studentInfo) navigate("/");
   }, [studentInfo, navigate]);
+
+
+
+  // 2. Format Time Helper (HH:MM:SS or MM:SS)
+  const formatTime = (totalSeconds) => {
+    if (totalSeconds <= 0) return '00:00';
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    const pad = (num) => String(num).padStart(2, '0');
+
+    if (hrs > 0) {
+      return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+    }
+    return `${pad(mins)}:${pad(secs)}`;
+  };
+
+  // 3. Persistent Timer Effect
+  useEffect(() => {
+    const isAssignment = selectedExam?.type === 'assignment' || selectedExam?.assessmentType === 'assignment';
+    if (!selectedExam || isAssignment) return;
+
+    const storageKey = `exam_start_${selectedExam.id}`;
+    const durationMins = Number(selectedExam.examDuration || selectedExam.duration || 60);
+    const totalDurationSecs = durationMins * 60;
+
+    // Track or resume the initial start time
+    let startTime = localStorage.getItem(storageKey);
+    if (!startTime) {
+      startTime = Date.now().toString();
+      localStorage.setItem(storageKey, startTime);
+    }
+
+    // Helper calculation to figure out exact seconds left against system clock
+    const calculateSecondsLeft = () => {
+      const elapsedSeconds = Math.floor((Date.now() - Number(startTime)) / 1000);
+      const remaining = totalDurationSecs - elapsedSeconds;
+      return remaining > 0 ? remaining : 0;
+    };
+
+    // Set initial calculated time
+    setTimeLeft(calculateSecondsLeft());
+
+    // Ticker loop
+    const intervalId = setInterval(() => {
+      const currentRemaining = calculateSecondsLeft();
+      setTimeLeft(currentRemaining);
+
+      if (currentRemaining <= 0) {
+        clearInterval(intervalId);
+        localStorage.removeItem(storageKey); // Clean up
+
+        // 🚨 CRITICAL: Trigger the auto-submit function for the student here!
+        if (typeof handleAutoSubmit === 'function') {
+          handleAutoSubmit();
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [selectedExam]);
+
+
 
   // ─── TIMER LOGIC ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -162,6 +287,8 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
     });
   }, [examActive]);
 
+
+  // ─── ANTI-CHEAT: BLOCK right-CLICK AND COPY + MONITOR TAB CLOSING ────────  
   useEffect(() => {
     if (!examActive) return;
     const block = (e) => e.preventDefault();
@@ -178,71 +305,126 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
     };
   }, [examActive, handleFocusViolation]);
 
+  // ─── EARLY EXIT GRACE (NON-DESTRUCTIVE SAVE) ─────────────────────────────  
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      // If it's an assignment, they are allowed to leave and come back freely
+      const isAssignment = selectedExam.type === 'assignment' || selectedExam.assessmentType === 'assignment';
+      if (isAssignment) return;
+
+      if (document.hidden && !submitted) {
+        // 🚀 Auto-scores existing answers rather than zeroing out the grade document
+        actuallySubmitExam({ forceZero: false, isEarlyExit: true });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [answers, submitted]);
+
   // ─── SUBMISSION LOGIC ─────────────────────────────────────────────────
   const handleChange = (id, answer) => {
     setAnswers((prev) => ({ ...prev, [id]: answer }));
   };
 
+
+  // ─── ACTUAL EXAM SUBMISSION (FIREBASE) ───────────────────────────────  
   const handleSubmitExam = () => {
     const qs = questions[selectedExam.title] || [];
     const missing = qs.filter((q) => !answers[q.id]);
 
+    // Check if this is an assignment or an exam
+    const isAssignment = selectedExam.type === 'assignment' || selectedExam.assessmentType === 'assignment';
+
     if (missing.length > 0) {
       setTriedSubmit(true);
       setUnansweredIds(new Set(missing.map(q => q.id)));
+
       swal.fire({
-        title: "Unfinished!",
-        text: `You have ${missing.length} questions left. Submit anyway?`,
+        title: isAssignment ? "Unfinished Assignment" : "Unfinished Exam!",
+        text: `You have ${missing.length} unanswered items left. Submit anyway?`,
         icon: "warning",
         showCancelButton: true,
         confirmButtonText: "Submit Anyway",
-        cancelButtonText: "Review Questions",
+        cancelButtonText: "Go Back",
       }).then((res) => {
-        if (res.isConfirmed) actuallySubmitExam(false);
+        if (res.isConfirmed) actuallySubmitExam({ forceZero: false, isEarlyExit: false });
       });
       return;
     }
-    actuallySubmitExam(false);
+    actuallySubmitExam({ forceZero: false, isEarlyExit: false });
   };
 
-  const actuallySubmitExam = async (forceZero = false) => {
+  const actuallySubmitExam = async ({ forceZero = false, isEarlyExit = false } = {}) => {
     if (isSubmittingRef.current || submitted) return;
     isSubmittingRef.current = true;
     setSubmitted(true);
 
     const qs = questions[selectedExam.title] || [];
     let score = 0;
+
+    // Calculate accurate score based on answers locked in up to this point
     const finalAnswers = qs.map((q) => {
       const isCorrect = answers[q.id] === q.correctAnswer;
       if (!forceZero && isCorrect) score++;
-      return { question: q.question, answer: answers[q.id] || "No Answer", correct: isCorrect };
+      return {
+        question: q.question,
+        answer: answers[q.id] || "No Answer",
+        correct: isCorrect
+      };
     });
+
+    const totalQuestions = qs.length || 1; // Prevent division by zero errors
+    const finalScore = forceZero ? 0 : score;
+    const isAssignment = selectedExam.type === 'assignment' || selectedExam.assessmentType === 'assignment';
 
     const result = {
       studentId: user?.uid,
       name: studentInfo.name,
       grade: studentInfo.grade,
       exam: selectedExam.title,
-      score: forceZero ? 0 : score,
-      total: qs.length,
-      percentage: ((score / qs.length) * 100).toFixed(1),
-      timeSpent: formatTime(15 * 60 - timeLeft),
+      assessmentType: isAssignment ? 'assignment' : 'exam',
+      score: finalScore,
+      total: totalQuestions,
+      percentage: ((finalScore / totalQuestions) * 100).toFixed(1),
+      // Safely check if examDuration exists on the object, fallback to default 15 min calculation frame
+      timeSpent: isAssignment ? "N/A" : formatTime((parseInt(selectedExam.examDuration) || 15) * 60 - timeLeft),
       completedTime: new Date().toISOString(),
       disqualified: forceZero,
+      submittedViaExit: isEarlyExit // 📊 Meta-tag for teachers to see they closed the screen early
     };
 
     try {
       await addDoc(collection(db, "examResults"), result);
+
+      // Increment localStorage tracking entries smoothly
       const key = `${studentInfo.name}_${selectedExam.title}_attempts`;
       localStorage.setItem(key, String(parseInt(localStorage.getItem(key) || "0") + 1));
 
+      // Tailor sweetalert configurations to match context status
+      let alertTitle = "Submitted Successfully!";
+      let alertText = `Final Score: ${finalScore}/${totalQuestions} (${result.percentage}%)`;
+      let alertIcon = "success";
+
+      if (forceZero) {
+        alertTitle = "Disqualified";
+        alertText = "Test submitted with 0% due to security policy violations.";
+        alertIcon = "error";
+      } else if (isEarlyExit && !isAssignment) {
+        alertTitle = "Exam Saved on Exit";
+        alertText = `You navigated away. Your progress was locked in and graded. Score: ${finalScore}/${totalQuestions}`;
+        alertIcon = "info";
+      }
+
       swal.fire({
-        title: forceZero ? "Disqualified" : "Great Job!",
-        text: forceZero ? "Test submitted with 0% due to cheating." : `Final Score: ${score}/${qs.length}`,
-        icon: forceZero ? "error" : "success"
+        title: alertTitle,
+        text: alertText,
+        icon: alertIcon
       }).then(() => navigate("/results"));
     } catch (e) {
       console.error("Save Error:", e);
+      isSubmittingRef.current = false; // Release lock if submission fails
+      setSubmitted(false);
     }
   };
 
@@ -606,15 +788,37 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
       {/* ─── ACTIVE EXAM UI ─── */}
       {examActive && (
         <div className="fixed inset-0 z-[60] bg-indigo-950 text-white overflow-y-auto">
+
           {/* Timer Strip */}
           <div className="sticky top-0 z-[70] bg-black/40 backdrop-blur-md p-4 border-b border-white/10 flex justify-between items-center px-10">
-            <h2 className="text-xl font-black italic">{selectedExam.title}</h2>
-            <div className="flex items-center gap-4 bg-white/10 px-6 py-2 rounded-2xl border border-white/20">
-              <Clock size={20} className={timeLeft < 180 ? 'text-red-400 animate-pulse' : ''} />
-              <span className={`text-2xl font-mono font-bold ${timeLeft < 180 ? 'text-red-400' : ''}`}>
-                {formatTime(timeLeft)}
-              </span>
-            </div>
+            <h2 className="text-xl font-black italic text-white">{selectedExam.title}</h2>
+
+            {(selectedExam.type === 'assignment' || selectedExam.assessmentType === 'assignment') ? (
+              // ── STUDENT ASSIGNMENT DUE DATE STRIP ────────────────────────────────────────
+              <div className="flex items-center gap-3 bg-indigo-500/10 px-5 py-2 rounded-2xl border border-indigo-500/20 text-indigo-200">
+                <span className="text-xs font-black uppercase tracking-widest text-indigo-400">Due:</span>
+                <span className="text-sm font-bold font-mono">
+                  {selectedExam.dueDate ? (
+                    new Date(selectedExam.dueDate).toLocaleDateString('en-ZA', {
+                      day: 'numeric',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })
+                  ) : (
+                    'No due date'
+                  )}
+                </span>
+              </div>
+            ) : (
+              // ── STUDENT ACTIVE COUNTDOWN TIMER STRIP ───────────────────────────────
+              <div className="flex items-center gap-4 bg-white/10 px-6 py-2 rounded-2xl border border-white/20 text-white">
+                <Clock size={20} className={timeLeft < 180 ? 'text-red-400 animate-pulse' : ''} />
+                <span className={`text-2xl font-mono font-bold ${timeLeft < 180 ? 'text-red-400' : ''}`}>
+                  {formatTime(timeLeft)}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="max-w-3xl mx-auto py-20 px-6">

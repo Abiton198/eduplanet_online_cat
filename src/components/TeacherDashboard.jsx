@@ -16,7 +16,6 @@ import { Monitor } from 'lucide-react';
 import { useGooglePicker } from '../utils/useGooglePicker';
 import { fetchLevels } from '../utils/academicResolver';
 import { useAiList } from './SchoolRegistration';
-
 import {
   saveExamMetadata,
   ensureUserFirestoreDocs,
@@ -25,10 +24,21 @@ import {
 import { updateExamInAudit, updateExamStatusInAudit } from "../utils/firestoreHelpers"
 
 import { runExamDeletion } from '../utils/examDeleteUtils';
-import { validateExamFile, getFileTypeLabel, isOpenDocumentFormat } from '../utils/examUploadUtils';
 import { ResultsTab } from './ResultsTab';
 import { serverTimestamp } from "firebase/firestore";
 import { useSchool } from '../utils/schoolContext';
+import {
+  uploadExamFile,
+  validateExamFile,
+  getFileTypeLabel,
+  isOpenDocumentFormat,
+  ACCEPT_STRING,
+} from '../utils/examUploadUtils';
+import { ExamTimePicker } from '../utils/ExamTimePicker';
+
+
+
+
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -170,14 +180,23 @@ function EditExamModal({ exam, onSave, onClose }) {
 // matching the structure of the upload wizard.
 
 function AuditRow({ exam, onEdit, onDelete, expanded, onToggle }) {
-  const statusCfg = STATUS_CONFIG[exam.status] || { label: exam.status || 'Processing', cls: 'bg-slate-100 text-slate-500' };
+  // 🔎 Fix this at the top of your AuditRow component:
+  const parseDate = (val) => {
+    if (!val) return null;
+    // If it's a Firestore Timestamp object, it will have a toDate() method
+    if (typeof val.toDate === 'function') return val.toDate();
+    return new Date(val);
+  };
 
-  const uploadDate = exam.uploadedAt
-    ? new Date(exam.uploadedAt).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })
+  const uploadedDateObj = parseDate(exam.uploadedAt);
+  const uploadDate = uploadedDateObj
+    ? uploadedDateObj.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })
     : '—';
-  const uploadTime = exam.uploadedAt
-    ? new Date(exam.uploadedAt).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
+  const uploadTime = uploadedDateObj
+    ? uploadedDateObj.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
     : '';
+
+  const statusCfg = STATUS_CONFIG[exam.status] || { label: exam.status || 'Processing', cls: 'bg-slate-100 text-slate-500' };
 
   // Format duration exactly as the upload wizard labels it
   const formatDuration = (mins) => {
@@ -199,7 +218,7 @@ function AuditRow({ exam, onEdit, onDelete, expanded, onToggle }) {
         {/* Status dot */}
         <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${exam.status === 'ready' ? 'bg-green-500' :
           exam.status === 'pending_extraction' ? 'bg-amber-400 animate-pulse' :
-            exam.status === 'indexed' ? 'bg-purple-500' : 'bg-blue-500'
+            exam.status === 'indexed' ? 'bg-purple-500' : 'bg-blue-500' // ← Catch-all default
           }`} />
 
         {/* Main info */}
@@ -297,22 +316,37 @@ function AuditRow({ exam, onEdit, onDelete, expanded, onToggle }) {
 
           {/* Metadata summary — mirrors the upload wizard's "Ready to upload" summary */}
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">📋 Exam Details</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">📋 Assessment Details</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2">
               <DetailItem label="Title" value={exam.title} />
               <DetailItem label="Subject" value={exam.subject} />
               <DetailItem label="Grade" value={exam.grade ? `Grade ${exam.grade}` : null} />
               <DetailItem label="Year" value={exam.year} />
               <DetailItem label="Curriculum" value={exam.curriculum} />
-              {/* ── Exam Duration — new field ── */}
-              <DetailItem
-                label="Time Allocation"
-                value={durationLabel}
-                highlight={!!durationLabel}
-              />
+
+              {/* ── Dynamic Assignment vs Exam Field ── */}
+              {exam.type === 'assignment' || exam.assessmentType === 'assignment' ? (
+                <DetailItem
+                  label="Deadline"
+                  value={exam.dueDate ? (
+                    new Date(exam.dueDate).toLocaleDateString('en-ZA', {
+                      day: 'numeric',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })
+                  ) : 'No due date set'}
+                  highlight={!!exam.dueDate}
+                />
+              ) : (
+                <DetailItem
+                  label="Time Allocation"
+                  value={durationLabel || 'No duration set'}
+                  highlight={!!durationLabel}
+                />
+              )}
             </div>
           </div>
-
           {/* Footer metadata */}
           <div className="flex flex-wrap gap-4 text-[10px] font-bold text-slate-400">
             {exam.examId && (
@@ -345,95 +379,93 @@ function DetailItem({ label, value, highlight = false }) {
 }
 
 
-// Time picker that looks like a clock - this is for the exam duration  
-function DurationWheelPicker({ value, onChange }) {
-  const hours = Array.from({ length: 5 }, (_, i) => i); // 0–4 hrs
-  const minutes = [0, 15, 30, 45];
+// ───────────────────────────────────────────────────────────────────────────
+// TIME COUNTDOWN COMPONENT
+// ───────────────────────────────────────────────────────────────────────────
 
-  const initialH = Math.floor(value / 60);
-  const initialM = value % 60;
+function useCountdown(targetISO) {
+  const [remaining, setRemaining] = React.useState(() => calc(targetISO));
 
-  const hRef = React.useRef(null);
-  const mRef = React.useRef(null);
-  const ITEM_HEIGHT = 40;
-  const PAD = 60;
+  function calc(target) {
+    if (!target) return null;
+    const diff = new Date(target).getTime() - Date.now();
+    if (diff <= 0) return { expired: true, days: 0, hours: 0, minutes: 0, seconds: 0, totalMs: 0 };
+    return {
+      expired: false,
+      days: Math.floor(diff / 86400000),
+      hours: Math.floor((diff % 86400000) / 3600000),
+      minutes: Math.floor((diff % 3600000) / 60000),
+      seconds: Math.floor((diff % 60000) / 1000),
+      totalMs: diff,
+    };
+  }
 
   React.useEffect(() => {
-    if (hRef.current) hRef.current.scrollTop = initialH * ITEM_HEIGHT;
-    if (mRef.current) mRef.current.scrollTop = minutes.indexOf(initialM) * ITEM_HEIGHT;
-  }, []);
+    if (!targetISO) return;
+    const interval = setInterval(() => setRemaining(calc(targetISO)), 1000);
+    return () => clearInterval(interval);
+  }, [targetISO]);
 
-  const handleScroll = (ref, list, isHour) => {
-    if (!ref.current) return;
-    const index = Math.round(ref.current.scrollTop / ITEM_HEIGHT);
-    const clamped = Math.max(0, Math.min(list.length - 1, index));
-    const selected = list[clamped];
+  return remaining;
+}
 
-    const h = isHour ? selected : Math.floor(value / 60);
-    const m = isHour ? value % 60 : selected;
-    const total = h * 60 + m;
-    onChange(total === 0 ? 5 : total); // never allow 0 — minimum 5 min
+function SubmissionCountdown({ dueDate, compact = false }) {
+  const remaining = useCountdown(dueDate);
+  if (!dueDate || !remaining) return null;
+
+  // Urgency thresholds
+  const urgency = remaining.expired
+    ? 'expired'
+    : remaining.totalMs < 3600000 ? 'critical'     // < 1 hour
+      : remaining.totalMs < 86400000 ? 'warning'      // < 24 hours
+        : 'normal';
+
+  const styles = {
+    normal: 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-100 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300',
+    warning: 'bg-amber-50 dark:bg-amber-950/30 border-amber-100 dark:border-amber-900 text-amber-700 dark:text-amber-300',
+    critical: 'bg-rose-50 dark:bg-rose-950/30 border-rose-100 dark:border-rose-900 text-rose-700 dark:text-rose-300 animate-pulse',
+    expired: 'bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400',
   };
 
-  const currentH = Math.floor(value / 60);
-  const currentM = value % 60;
+  if (remaining.expired) {
+    return (
+      <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border font-black text-sm ${styles.expired}`}>
+        <span>⏹</span> Submissions closed
+      </div>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-black ${styles[urgency]}`}>
+        {remaining.days > 0 && `${remaining.days}d `}
+        {String(remaining.hours).padStart(2, '0')}:
+        {String(remaining.minutes).padStart(2, '0')}:
+        {String(remaining.seconds).padStart(2, '0')}
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="relative flex justify-center gap-1" style={{ height: 160 }}>
-        <div
-          className="absolute left-0 right-0 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl pointer-events-none"
-          style={{ top: '50%', height: ITEM_HEIGHT, transform: 'translateY(-50%)' }}
-        />
-        <div
-          ref={hRef}
-          onScroll={() => handleScroll(hRef, hours, true)}
-          className="overflow-y-scroll text-center relative z-10 scrollbar-none"
-          style={{ height: 160, width: 70, scrollSnapType: 'y mandatory' }}
-        >
-          <div style={{ height: PAD }} />
-          {hours.map((h) => (
-            <div
-              key={h}
-              style={{ height: ITEM_HEIGHT, scrollSnapAlign: 'center' }}
-              className={`flex items-center justify-center font-black transition-all ${h === currentH ? 'text-indigo-600 text-xl' : 'text-slate-400 text-base'
-                }`}
-            >
-              {h}
-            </div>
-          ))}
-          <div style={{ height: PAD }} />
-        </div>
-
-        <div className="flex items-center text-xl font-black text-slate-400">:</div>
-
-        <div
-          ref={mRef}
-          onScroll={() => handleScroll(mRef, minutes, false)}
-          className="overflow-y-scroll text-center relative z-10 scrollbar-none"
-          style={{ height: 160, width: 70, scrollSnapType: 'y mandatory' }}
-        >
-          <div style={{ height: PAD }} />
-          {minutes.map((m) => (
-            <div
-              key={m}
-              style={{ height: ITEM_HEIGHT, scrollSnapAlign: 'center' }}
-              className={`flex items-center justify-center font-black transition-all ${m === currentM ? 'text-indigo-600 text-xl' : 'text-slate-400 text-base'
-                }`}
-            >
-              {String(m).padStart(2, '0')}
-            </div>
-          ))}
-          <div style={{ height: PAD }} />
-        </div>
-      </div>
-
-      <p className="text-xs text-slate-400 dark:text-slate-500">
-        Selected:{' '}
-        <span className="font-bold text-indigo-500">
-          {currentH > 0 ? `${currentH} hr ` : ''}{currentM} min
-        </span>
+    <div className={`p-4 rounded-2xl border ${styles[urgency]}`}>
+      <p className="text-xs font-black uppercase tracking-widest mb-2 opacity-70">
+        Time remaining
       </p>
+      <div className="flex gap-3">
+        {[
+          { label: 'Days', value: remaining.days },
+          { label: 'Hrs', value: remaining.hours },
+          { label: 'Min', value: remaining.minutes },
+          { label: 'Sec', value: remaining.seconds },
+        ].map(({ label, value }) => (
+          <div key={label} className="text-center">
+            <div className="text-2xl font-black tabular-nums">
+              {String(value).padStart(2, '0')}
+            </div>
+            <div className="text-[10px] uppercase tracking-wide opacity-60">{label}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -493,11 +525,20 @@ export default function TeacherDashboard() {
   const [selectedGrade, setSelectedGrade] = useState('');
   const [skipMemo, setSkipMemo] = useState(false);
 
+  const [assessmentType, setAssessmentType] = useState('exam'); // 'exam' | 'assignment'
+  const [dueDate, setDueDate] = useState(null); // ISO string, e.g. "2026-07-20T14:30"
+  const [examType, setExamType] = useState('exam');   // 'exam' | 'test' | 'assignment'
+
   // 1. Get unique grades from the students list to populate the dropdown
   const availableGrades = useMemo(() => {
     const grades = students.map(s => s.grade).filter(Boolean);
     return [...new Set(grades)].sort(); // Returns unique, sorted grades
   }, [students]);
+
+
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [examSubject, setExamSubject] = useState('');
+  const [subjectName, setSubjectName] = useState('');
 
   // ─── Auth listener ────────────────────────────────────────────────── 
   useEffect(() => {
@@ -522,25 +563,27 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     const schoolId = teacherProfile?.schoolId;
-    if (!user || !schoolId) return;           // wait until profile loads
+    if (!user || !schoolId) return; // wait until profile loads
 
     const examsUnsub = onSnapshot(
       query(
         collection(db, 'exams'),
-        where('uploadedBy', '==', user.uid)  // ← back to uploadedBy, now rules allow it
+        where('uploadedBy', '==', user.uid) // Perfect! Rules love this.
       ),
+
       (snap) => {
+        // 1. Map documents and add tracking IDs
         const exams = snap.docs.map((d) => ({
           ...d.data(),
           id: d.id,
           examId: d.data().examId || d.id,
         }));
-        exams.sort((a, b) =>
-          new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0)
-        );
 
-        const myExams = exams.filter(e => e.uploadedBy === user.uid);
-        setUploadedExams(myExams);
+        // 2. Sort them by date descending (Newest first)
+        exams.sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
+
+        // 3. Set state directly (no redundant array filtering needed!)
+        setUploadedExams(exams);
       },
       (err) => {
         console.error('[Audit] Failed to load exams:', err.message);
@@ -617,99 +660,114 @@ export default function TeacherDashboard() {
 
   // ─── UPLOAD ──────────────────────────────────────────────────────────────
   const handleExamUpload = async () => {
-    const examFileError = validateExamFile(examFile, 'Question paper');
 
-    if (!paperTitle.trim() || !paperSubject) {
-      Swal.fire({ icon: 'warning', title: 'Missing Info', text: 'Please complete all fields.', confirmButtonColor: '#4F46E5' });
+    // // ── SUBJECT CHECK VALIDATION ────────────────────────────────────
+    // if (!selectedSubject) {
+    //   Swal.fire({
+    //     icon: 'warning',
+    //     title: 'Subject Missing',
+    //     text: 'Please select a subject dropdown option before uploading the file.',
+    //     confirmButtonColor: '#4F46E5',
+    //   });
+    //   return;
+    // }
+
+    // ── 1. Validate files before touching anything ─────────────────────────
+    const examError = validateExamFile(examFile, 'Exam file');
+
+    if (examError) {
+      Swal.fire({ icon: 'warning', title: 'Invalid File', text: examError });
       return;
     }
-    if (examFileError) {
-      Swal.fire({ icon: 'warning', title: 'Invalid File', text: examFileError, confirmButtonColor: '#4F46E5' });
-      return;
-    }
-    if (!skipMemo) {
-      const memoFileError = validateExamFile(memoFile, 'Marking memo');
-      if (memoFileError) {
-        Swal.fire({ icon: 'warning', title: 'Invalid File', text: memoFileError, confirmButtonColor: '#4F46E5' });
+    if (!skipMemo && memoFile) {
+      const memoError = validateExamFile(memoFile, 'Memo file');
+      if (memoError) {
+        Swal.fire({ icon: 'warning', title: 'Invalid Memo', text: memoError });
         return;
       }
     }
 
-    const user = auth.currentUser;
-    if (!user?.uid) { Swal.fire({ icon: 'error', title: 'Not logged in' }); return; }
-
     setIsUploading(true);
-    setUploadProgress('Preparing upload...');
+    setUploadProgress('Uploading exam file…');
 
     try {
-      const userDocSnap = await getDoc(doc(db, 'users', user.uid));
-      const userData = userDocSnap.exists() ? userDocSnap.data() : {};
-      const schoolId = userData.schoolId ?? teacherProfile?.schoolId ?? 'unknown';
-
-      const schoolName = (teacherProfile?.school || schoolId)
-        .replace(/[^a-zA-Z0-9\s-]/g, '')
-        .replace(/\s+/g, '_')
-        .substring(0, 40);
-
-      const schoolFolder = `${schoolId}_${schoolName}`;
-      const subjectFolder = paperSubject.replace(/\s+/g, '_');
       const examId = `${user.uid}_${Date.now()}`;
-      const storagePath = `exams/${schoolFolder}/${subjectFolder}/${examId}`;
-      const storage = getStorage();
+      const schoolFolder = `${teacherProfile.schoolId}_${(teacherProfile.schoolName || teacherProfile.school || 'School')
+        .replace(/\s+/g, '_')
+        .replace(/[^a-zA-Z0-9_-]/g, '')
+        }`;
 
-      // ── Upload exam paper ──────────────────────────────────────────────────
-      setUploadProgress('Uploading question paper...');
-      const examRef = ref(storage, `${storagePath}/exam_${examFile.name}`);
-      await uploadBytes(examRef, examFile);
-      const examUrl = await getDownloadURL(examRef);
-      const examFilePath = `${storagePath}/exam_${examFile.name}`;
+      // ── 2. Upload exam file to Firebase Storage ───────────────────────────
+      const exam = await uploadExamFile(
+        examFile,
+        schoolFolder,
+        selectedSubject,
+        examId,
+        'exam',
+      );
 
-      // ── Upload memo (only if provided) ─────────────────────────────────────
-      let memoUrl = '';
-      let memoFilePath = '';
+      // ── 3. Upload memo file if provided ───────────────────────────────────
+      let memo = { path: '', url: '', fileName: '', fileType: '' };
       if (!skipMemo && memoFile) {
-        setUploadProgress('Uploading marking memo...');
-        const memoRef = ref(storage, `${storagePath}/memo_${memoFile.name}`);
-        await uploadBytes(memoRef, memoFile);
-        memoUrl = await getDownloadURL(memoRef);
-        memoFilePath = `${storagePath}/memo_${memoFile.name}`;
+        setUploadProgress('Uploading memo file…');
+        memo = await uploadExamFile(
+          memoFile,
+          schoolFolder,
+          selectedSubject,
+          examId,
+          'memo',
+        );
       }
 
-      // ── Save metadata via Flask backend ────────────────────────────────────
-      setUploadProgress('Saving to Eduket AI...');
-      const idToken = await user.getIdToken();
-      const response = await fetch(`${API}/exams/upload`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          examId,
-          teacherName: `${teacherProfile?.title || ''} ${teacherProfile?.surname || 'Teacher'}`.trim(),
-          schoolName: teacherProfile?.school || schoolId,
-          schoolFolder,
-          title: paperTitle.trim(),
-          year: paperYear,
-          subject: paperSubject,
-          curriculum: selectedCurriculum || curriculum,  // fix: was always sending default 'CAPS'
-          grade: paperGrade,
-          examFileType: getFileTypeLabel(examFile),
-          memoFileType: skipMemo ? '' : getFileTypeLabel(memoFile),
-          examDuration,
-          examFileName: examFile.name,
-          memoFileName: skipMemo ? '' : (memoFile?.name ?? ''),
-          examStorageUrl: examUrl,
-          memoStorageUrl: memoUrl,
-          examStoragePath: examFilePath,
-          memoStoragePath: memoFilePath,
-          aiMarkingOnly: skipMemo,
-        }),
-      });
+      // ── 4. Send paths + metadata to Flask backend ─────────────────────────
+      setUploadProgress('Creating exam record…');
+      const token = await user.getIdToken();
 
+      const currentActiveType = assessmentType || examType || 'exam';
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/exams/upload`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            examId,
+            title: paperTitle || "Untitled Assessment",
+
+            // 🔑 FIXED: Changed from selectedSubject to paperSubject to match your input state hook
+            subject: paperSubject || teacherSubjects[0] || "",
+
+            grade: selectedGrade || "12",
+            curriculum: selectedCurriculum,
+            examType: currentActiveType,
+            examDuration: currentActiveType === 'assignment' ? 0 : (parseInt(examDuration) || 60),
+            dueDate: currentActiveType === 'assignment' ? dueDate : null,
+            examFileName: exam.fileName,
+            examFileType: exam.fileType,
+            examStoragePath: exam.path,
+            examStorageUrl: exam.url,
+            memoFileName: memo.fileName || '',
+            memoFileType: memo.fileType || '',
+            memoStoragePath: memo.path || '',
+            memoStorageUrl: memo.url || '',
+            aiMarkingOnly: skipMemo || !memoFile,
+            teacherName: teacherProfile.displayName || teacherProfile.name || 'Teacher',
+            schoolId: teacherProfile.schoolId,
+            schoolName: teacherProfile.schoolName || teacherProfile.school || '',
+            schoolFolder,
+            uploadedBy: user.uid,
+            year: new Date().getFullYear().toString(),
+          }),
+        }
+      );
+
+      setUploadProgress('Finalising…');
       const saved = await response.json();
 
-      // ── Tier limit reached ─────────────────────────────────────────────────
+      // ── 5. Response handling ──────────────────────────────────────────────
       if (response.status === 403 && saved.error === 'limit_reached') {
         await Swal.fire({
           icon: 'warning',
@@ -725,21 +783,21 @@ export default function TeacherDashboard() {
         throw new Error(saved?.error || 'Failed to create exam record');
       }
 
-      fetchUsage();
+      // Update frontend usage quota metrics
+      if (typeof fetchUsage === 'function') fetchUsage();
 
-      // ── Reset wizard state ─────────────────────────────────────────────────
+      // Clear wizard workflow parameters on success
       setUploadStep(1);
       setExamFile(null);
       setMemoFile(null);
       setSkipMemo(false);
       setPaperTitle('');
 
-      // ── Success notification — teacher knows upload worked ─────────────────
       await Swal.fire({
         icon: 'success',
         title: 'Exam Uploaded!',
         html: `
-        <strong>${paperTitle}</strong> has been uploaded successfully.<br/>
+        <strong>${paperTitle || "Assessment"}</strong> has been uploaded successfully.<br/>
         <span style="font-size:13px;color:#6b7280">
           AI extraction is running in the background.<br/>
           Questions will appear in the Audit Trail within a minute.
@@ -751,7 +809,7 @@ export default function TeacherDashboard() {
         timerProgressBar: true,
       });
 
-      setActiveTab('audit');
+      if (typeof setActiveTab === 'function') setActiveTab('audit');
 
     } catch (err) {
       console.error('[Upload]', err);
@@ -761,7 +819,6 @@ export default function TeacherDashboard() {
       setUploadProgress('');
     }
   };
-
 
   // ─── EDIT ────────────────────────────────────────────────────────────────
   const handleEdit = (exam) => setEditingExam(exam);
@@ -1197,13 +1254,62 @@ export default function TeacherDashboard() {
                         </div>
                       </div>
 
-                      {/* Exam duration — present in BOTH branches so teacher can always set it */}
+                      {/* Assessment Type Selection Buttons */}
                       <div className="space-y-2">
                         <label className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                          Time Allocation
+                          Assessment Type
                         </label>
-                        <DurationWheelPicker value={examDuration} onChange={setExamDuration} />
+                        <div className="grid grid-cols-2 gap-2">
+                          {['exam', 'assignment'].map((type) => (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={() => {
+                                setAssessmentType(type);
+                                if (typeof setExamType === 'function') {
+                                  setExamType(type); // 🔑 Syncs examType with assessmentType on click
+                                }
+                              }}
+                              className={`py-2.5 rounded-xl text-sm font-black capitalize transition-all border
+          ${assessmentType === type
+                                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                                  : 'bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                                }`}
+                            >
+                              {type}
+                            </button>
+                          ))}
+                        </div>
                       </div>
+
+                      {/* Time Picker Conditional Check */}
+                      {assessmentType === 'assignment' ? (
+                        // ── ASSIGNMENT DUE DATE MODE ──────────────────────────────────────────
+                        <div className="space-y-2">
+                          <label className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                            Submission Due Date & Time
+                          </label>
+                          <ExamTimePicker
+                            key="datetime-picker" // 🔑 Remounts the component cleanly for assignment mode
+                            mode="datetime"
+                            value={dueDate}
+                            onChange={setDueDate}
+                          />
+                        </div>
+                      ) : (
+                        // ── EXAM / TEST TIMED DURATION MODE ───────────────────────────────────
+                        <div className="space-y-2">
+                          <label className="text-sm font-black text-slate-700 dark:text-slate-300">
+                            Set Exam Time Limit
+                          </label>
+                          <ExamTimePicker
+                            key="duration-picker" // 🔑 Remounts the component cleanly for timed mode
+                            mode="duration"
+                            value={examDuration}
+                            onChange={setExamDuration}
+                          />
+                        </div>
+                      )}
 
                       {/* Summary */}
                       <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5 space-y-2 text-sm">
@@ -1216,10 +1322,38 @@ export default function TeacherDashboard() {
                         <SummaryRow label="Year" value={paperYear} />
                         <SummaryRow label="Paper" value={examFile?.name} />
                         <SummaryRow label="Memo" value="None — AI marking" />
-                        <SummaryRow
-                          label="Duration"
-                          value={`${Math.floor(examDuration / 60) > 0 ? `${Math.floor(examDuration / 60)} hr ` : ''}${examDuration % 60} min`}
-                        />
+                        {/* Duration OR Due Date — depends on assessment type */}
+                        {assessmentType === 'assignment' ? (
+                          <SummaryRow
+                            label="Due Date"
+                            value={
+                              dueDate
+                                ? new Date(dueDate).toLocaleDateString('en-ZA', {
+                                  weekday: 'short',
+                                  day: 'numeric',
+                                  month: 'long',
+                                  year: 'numeric',
+                                })
+                                : 'No due date set'
+                            }
+                          />
+                        ) : (
+                          <SummaryRow
+                            label="Duration"
+                            value={
+                              (() => {
+                                if (!examDuration || examDuration === 0) return 'No time limit';
+                                const hours = Math.floor(examDuration / 60);
+                                const mins = examDuration % 60;
+
+                                const hourStr = hours > 0 ? `${hours} hr${hours > 1 ? 's' : ''}` : '';
+                                const minStr = mins > 0 ? `${mins} min${mins > 1 ? 's' : ''}` : '';
+
+                                return [hourStr, minStr].filter(Boolean).join(' ');
+                              })()
+                            }
+                          />
+                        )}
                       </div>
 
                       {/* Upload progress */}
@@ -1341,13 +1475,7 @@ export default function TeacherDashboard() {
                         </div>
                       )}
 
-                      {/* Exam duration — always visible in memo branch */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                          Exam Time Allocation
-                        </label>
-                        <DurationWheelPicker value={examDuration} onChange={setExamDuration} />
-                      </div>
+
 
                       {/* Actions */}
                       <div className="flex gap-4">
@@ -1366,6 +1494,7 @@ export default function TeacherDashboard() {
                           {examUsage?.atLimit ? 'Upload Limit Reached' : 'FINALIZE UPLOAD'}
                         </button>
                       </div>
+                      <SubmissionCountdown dueDate={dueDate} />
                     </div>
                   )}
                 </div>
@@ -1399,14 +1528,30 @@ export default function TeacherDashboard() {
               {/* Stats strip */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
-                  { label: 'Total', value: uploadedExams.length, color: 'indigo' },
-                  { label: 'Ready', value: uploadedExams.filter((e) => e.status === 'ready').length, color: 'green' },
-                  { label: 'Pending', value: uploadedExams.filter((e) => e.status === 'pending_extraction').length, color: 'amber' },
-                  { label: 'Subjects', value: new Set(uploadedExams.map((e) => e.subject).filter(Boolean)).size, color: 'purple' },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className={`bg-${color}-50 dark:bg-${color}-900/20 rounded-2xl p-4 border border-${color}-100 dark:border-${color}-800`}>
-                    <p className={`text-2xl font-black text-${color}-600 dark:text-${color}-400`}>{value}</p>
-                    <p className={`text-[10px] font-black uppercase tracking-widest text-${color}-500 dark:text-${color}-400 mt-0.5`}>{label}</p>
+                  {
+                    label: 'Total',
+                    value: uploadedExams.length,
+                    cls: 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400'
+                  },
+                  {
+                    label: 'Ready',
+                    value: uploadedExams.filter((e) => e.status === 'ready').length,
+                    cls: 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800 text-green-600 dark:text-green-400'
+                  },
+                  {
+                    label: 'Pending',
+                    value: uploadedExams.filter((e) => e.status === 'pending_extraction').length,
+                    cls: 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800 text-amber-600 dark:text-amber-400'
+                  },
+                  {
+                    label: 'Subjects',
+                    value: new Set(uploadedExams.map((e) => e.subject).filter(Boolean)).size,
+                    cls: 'bg-purple-50 dark:bg-purple-900/20 border-purple-100 dark:border-purple-800 text-purple-600 dark:text-purple-400'
+                  },
+                ].map(({ label, value, cls }) => (
+                  <div key={label} className={`rounded-2xl p-4 border ${cls}`}>
+                    <p className="text-2xl font-black">{value}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mt-0.5">{label}</p>
                   </div>
                 ))}
               </div>
