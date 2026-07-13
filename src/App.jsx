@@ -48,6 +48,7 @@ import {
 import {
   Home, FileText, BarChart3,
   School, Sparkles, LayoutDashboard,
+  Sun, Moon,
 } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -156,7 +157,11 @@ function App() {
   // Local UI state
   const [results, setResults] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem('eduket-theme');
+    if (saved) return saved === 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
   const [showTutor, setShowTutor] = useState(false);
 
   const location = useLocation();
@@ -292,6 +297,17 @@ function App() {
     return () => { document.body.style.overflow = 'unset'; };
   }, [showTutor]);
 
+  // ── Dark mode: sync class + persist ───────────────────────────────────────
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('eduket-theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
+
 
   // ── Derived role flags ─────────────────────────────────────────────────────
   // These are the single source of truth for role-based rendering in the
@@ -357,7 +373,6 @@ function App() {
             <div className="max-w-7xl mx-auto px-6 py-4
                             flex items-center justify-between">
 
-              {/* Logo */}
               <Link to="/" className="flex items-center gap-3 group">
                 <div className="relative">
                   <img
@@ -370,6 +385,17 @@ function App() {
                   />
                 </div>
               </Link>
+
+              <button
+                onClick={() => setIsDark(prev => !prev)}
+                className="h-11 w-11 rounded-full flex items-center justify-center
+                           text-gray-600 dark:text-gray-300
+                           hover:bg-gray-100 dark:hover:bg-gray-700
+                           transition-all duration-300 shadow-sm shrink-0"
+                title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {isDark ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
 
               {/* Desktop nav links */}
               <nav className="hidden lg:flex items-center gap-1">
