@@ -1,16 +1,15 @@
-// Import Firebase functions
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore"; // Firestore
-import { getAuth, signInAnonymously, GoogleAuthProvider } from "firebase/auth"; // Auth
-import { getAnalytics } from "firebase/analytics";
-import { getStorage } from "firebase/storage";
+import { initializeApp } from 'firebase/app';
+import {
+    getAuth, setPersistence,
+    browserSessionPersistence
+} from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 import {
     initializeAppCheck,
     ReCaptchaV3Provider
 } from 'firebase/app-check';
 
-
-// Firebase configuration
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -18,44 +17,34 @@ const firebaseConfig = {
     storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
-    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-const storage = getStorage(app);
-const analytics = getAnalytics(app);
-const provider = new GoogleAuthProvider();
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
 
+// ── Tab isolation ────────────────────────────────────────────────────────
+// browserSessionPersistence stores the auth token in sessionStorage
+// instead of localStorage. sessionStorage is NEVER shared between tabs.
+//
+// Result:
+//   ✓ Tab A signed in → Tab B opens fresh (not signed in)
+//   ✓ Sign out on Tab A → Tab B stays signed in
+//   ✓ Refresh Tab A → still signed in (sessionStorage survives refresh)
+//   ✗ Duplicate tab (Ctrl+Shift+T) → starts fresh (acceptable trade-off)
+//
+// Set this BEFORE any sign-in call — it controls where the token is stored.
+setPersistence(auth, browserSessionPersistence).catch(console.error);
 
-// ── App Check with reCAPTCHA v3 ───────────────────────────────────────────
-// Must be initialised BEFORE getFirestore(), getAuth(), getStorage().
-// In development (localhost) a debug token is used instead of reCAPTCHA
-// so you can test without the app being deployed — see Step 5.
-if (import.meta.env.DEV) {
-    // This tells App Check to use the debug token in development.
-    // The debug token is printed to the browser console — copy it to
-    // Firebase App Check console (Step 5).
-    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-}
+// ── App Check ────────────────────────────────────────────────────────────
+// if (import.meta.env.DEV) {
+//   self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+// }
 
 initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider(
-        import.meta.env.VITE_RECAPTCHA_SITE_KEY
-    ),
-    // Automatically refreshes the App Check token in the background.
-    // When false the token is fetched once and never refreshed —
-    // users who stay on the page for hours would get rejected.
+    provider: new ReCaptchaV3Provider(import.meta.env.VITE_RECAPTCHA_SITE_KEY),
     isTokenAutoRefreshEnabled: true,
 });
 
-// In this same file, add: export const getAppCheckToken = () => getToken(appCheck);
-// (You'll also need import { getToken } from 'firebase/app-check'; at the top.)
-
-// Export Firestore & Auth
-export { db, auth, signInAnonymously, provider, storage, app };
-
-
+export default app;
