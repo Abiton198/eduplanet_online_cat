@@ -1203,7 +1203,7 @@ import {
   ChevronDown, Sparkles, Building2, Search,
 } from 'lucide-react';
 import { auth, db } from '../utils/firebase';
-// import logoSrc from './img/eduket.png';
+import logoSrc from '../img/eduket.png';
 import { ProfileSetupWizard } from './ProfileSetupWizard';
 
 
@@ -1387,10 +1387,10 @@ function LandingNavbar({ profile, onOpenModal, onDashboard, onSignOut }) {
 
         {/* Logo */}
         <a href="/" className="flex items-center gap-2.5 group">
-          {/* <img src={logoSrc} alt="Eduket OS"
-            className="h-9 w-auto rounded-xl shadow-sm group-hover:scale-105
-                          transition-transform duration-300 dark:invert dark:hue-rotate-180" />
-          <span className="hidden sm:block text-lg font-black text-slate-800
+          <img src={logoSrc} alt="Eduket OS"
+            className="h-24 w-auto rounded-xl shadow-sm group-hover:scale-105
+                          transition-transform duration-300 dark:invert dark:hue-rotate-180 mt-2" />
+          {/* <span className="hidden sm:block text-lg font-black text-slate-800
                            dark:text-white tracking-tight">
             Eduket <span className="text-indigo-600">OS</span>
           </span> */}
