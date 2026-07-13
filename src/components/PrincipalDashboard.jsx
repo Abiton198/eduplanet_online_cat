@@ -156,9 +156,9 @@ function ScoreBadge({ score }) {
     const color = score >= 70 ? 'text-emerald-600 bg-emerald-50' :
         score >= 50 ? 'text-amber-600 bg-amber-50' :
             score >= 40 ? 'text-orange-600 bg-orange-50' :
-                'text-red-600 bg-red-50';
+                'text-green-600 bg-red-50';
     return (
-        <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${color}`}>{score}%</span>
+        <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${color}`}>{score}</span>
     );
 }
 
@@ -436,10 +436,10 @@ export default function PrincipalDashboard({ principal }) {
                 const fetchAllAttempts = async () => {
                     try {
                         // ── TEMP DIAGNOSTIC ──────────────────────────────────────
-                        const myUserDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-                        console.log('[DIAG] my users/{uid} doc:', myUserDoc.data());
-                        console.log('[DIAG] querying schoolId:', schoolId);
-                        // ── END DIAGNOSTIC ───────────────────────────────────────
+                        // const myUserDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+                        // console.log('[DIAG] my users/{uid} doc:', myUserDoc.data());
+                        // console.log('[DIAG] querying schoolId:', schoolId);
+                        // // ── END DIAGNOSTIC ───────────────────────────────────────
 
                         const snap = await getDocs(
                             query(collection(db, 'exam_attempts'), where('schoolId', '==', schoolId))
@@ -501,18 +501,28 @@ export default function PrincipalDashboard({ principal }) {
             (a) => a.studentUid === uid || a.studentId === uid
         );
 
-    const examAttempts = (exam) =>
-        schoolAttempts.filter(
-            (a) =>
-                a.examId === exam.id ||
-                a.sourceUploadId === exam.id ||
-                a.exam_id === exam.id
-        );
+    const examAttempts = (exam) => {
+        // exam can be either the full object or just an id string
+        const examObj = typeof exam === 'string' ? { id: exam } : exam;
+        const id = examObj.id;
+        const customId = examObj.examId;   // the field set during upload
+
+        return schoolAttempts.filter(a => {
+            // Never match undefined === undefined — always require a real value
+            if (!a.examId && !a.sourceUploadId && !a.exam_id) return false;
+
+            return (
+                (a.examId && (a.examId === id || a.examId === customId)) ||
+                (a.sourceUploadId && (a.sourceUploadId === id || a.sourceUploadId === customId)) ||
+                (a.exam_id && (a.exam_id === id || a.exam_id === customId))
+            );
+        });
+    };
 
     // Add this tracer in your Principal Dashboard
-    console.log("--- Dashboard Data Audit ---");
-    console.log("Total raw attempts fetched:", schoolAttempts.length);
-    console.log("Filtered school attempts:", schoolAttempts.length);
+    // console.log("--- Dashboard Data Audit ---");
+    // console.log("Total raw attempts fetched:", schoolAttempts.length);
+    // console.log("Filtered school attempts:", schoolAttempts.length);
 
     filteredStudents.forEach(s => {
         const teacherViewAttempts = studentAttempts(s.uid);
@@ -1109,7 +1119,7 @@ export default function PrincipalDashboard({ principal }) {
                             <div className="flex items-center justify-between flex-wrap gap-3">
                                 <h2 className="text-sm font-black text-slate-700 dark:text-white">All Exams</h2>
                                 <select value={filterExam} onChange={e => setFilterExam(e.target.value)}
-                                    className="px-2.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 dark:bg-slate-800 outline-none font-bold">
+                                    className="px-2.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 dark:bg-slate-800 outline-none font-bold text-slate-200">
                                     <option value="All">All Subjects</option>
                                     {allSubjects.map(s => <option key={s}>{s}</option>)}
                                 </select>
@@ -1117,7 +1127,7 @@ export default function PrincipalDashboard({ principal }) {
 
                             <div className="space-y-3">
                                 {exams.filter(ex => filterExam === 'All' || ex.subject === filterExam).map(ex => {
-                                    const atts = examAttempts(ex.id);
+                                    const atts = examAttempts(ex);
                                     const avg = averageScore(atts);
                                     const pr = passRate(atts);
                                     const isOpen = selectedExam === ex.id;
