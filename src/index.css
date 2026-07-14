@@ -2,20 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
-
-
-
-/* confirm submit exam button */
-.swal2-confirm-green {
-  background-color: #28a745 !important;
-  /* Bootstrap green */
-  color: white !important;
+:root {
+  --bg-primary: #0A0D14;
+  --bg-card: #141822;
+  --accent: #1EA1FE;
+  --accent-hover: #4BB8FF;
+  --text-primary: #F3F6FB;
+  --text-muted: #AEB7C7;
+  --danger: #FF3B5C;
+  --success: #22C55E;
 }
 
-.swal2-cancel-red {
-  background-color: #dc3545 !important;
-  /* Bootstrap red */
-  color: white !important;
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-zilla {
+  font-family: 'Zilla Slab', Georgia, serif;
+}
+
+.font-plex-sans {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+}
+
+.font-plex-mono {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
+.font-caveat {
+  font-family: 'Caveat', 'Segoe Script', cursive;
 }
 
 .scrollbar-none::-webkit-scrollbar {
