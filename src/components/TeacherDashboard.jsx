@@ -528,6 +528,7 @@ export default function TeacherDashboard() {
   const [assessmentType, setAssessmentType] = useState('exam'); // 'exam' | 'assignment'
   const [dueDate, setDueDate] = useState(null); // ISO string, e.g. "2026-07-20T14:30"
   const [examType, setExamType] = useState('exam');   // 'exam' | 'test' | 'assignment'
+  const [aiFocus, setAiFocus] = useState('');
 
   // 1. Get unique grades from the students list to populate the dropdown
   const availableGrades = useMemo(() => {
@@ -760,6 +761,7 @@ export default function TeacherDashboard() {
             schoolFolder,
             uploadedBy: user.uid,
             year: new Date().getFullYear().toString(),
+            aiFocus: aiFocus || '',
           }),
         }
       );
@@ -1051,11 +1053,19 @@ export default function TeacherDashboard() {
 
                   {/* Subject + Year */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {teacherSubjects.length <= 1 ? (
+                    {teacherSubjects.length === 0 ? (
+                      <input
+                        type="text"
+                        value={paperSubject}
+                        onChange={(e) => setPaperSubject(e.target.value)}
+                        placeholder="Subject (e.g. CAT, Mathematics)"
+                        className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600"
+                      />
+                    ) : teacherSubjects.length === 1 ? (
                       <div className="p-5 border-2 border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Subject</p>
                         <p className="font-bold text-sm text-slate-700 dark:text-slate-200">
-                          {teacherSubjects[0] || 'No subject on file — contact your principal'}
+                          {teacherSubjects[0]}
                         </p>
                       </div>
                     ) : (
@@ -1081,12 +1091,9 @@ export default function TeacherDashboard() {
                   {/* Curriculum + Grade */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {schoolCurricula.length <= 1 ? (
-                      /* Auto-filled curriculum — still syncs selectedCurriculum so
-                         the grade dropdown is enabled immediately */
                       <div
                         className="p-5 border-2 border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800/50"
                         ref={(el) => {
-                          // Sync on mount so grade dropdown is never stuck disabled
                           if (schoolCurricula[0] && !selectedCurriculum) {
                             setSelectedCurriculum(schoolCurricula[0]);
                           }
@@ -1130,6 +1137,20 @@ export default function TeacherDashboard() {
                       {levelsError} — Retry
                     </button>
                   )}
+
+                  {/* AI Focus Areas */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                      AI Focus Areas <span className="text-slate-300 dark:text-slate-600">(optional)</span>
+                    </label>
+                    <textarea
+                      value={aiFocus}
+                      onChange={(e) => setAiFocus(e.target.value)}
+                      placeholder="Tell the AI what to focus on when marking this paper. E.g. 'Mark strictly for terminology and practical application', or 'Focus on problem-solving steps, not just final answers'"
+                      rows={3}
+                      className="w-full p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600 resize-none"
+                    />
+                  </div>
 
                   <button
                     onClick={() => setUploadStep(2)}
