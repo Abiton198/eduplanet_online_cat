@@ -308,19 +308,21 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
   // ─── EARLY EXIT GRACE (NON-DESTRUCTIVE SAVE) ─────────────────────────────  
   useEffect(() => {
     const handleVisibilityChange = () => {
-      // If it's an assignment, they are allowed to leave and come back freely
-      const isAssignment = selectedExam.type === 'assignment' || selectedExam.assessmentType === 'assignment';
+      // Guard — selectedExam may be null after submission or reset
+      if (!selectedExam) return;
+
+      const isAssignment = selectedExam.type === 'assignment'
+        || selectedExam.assessmentType === 'assignment';
       if (isAssignment) return;
 
       if (document.hidden && !submitted) {
-        // 🚀 Auto-scores existing answers rather than zeroing out the grade document
         actuallySubmitExam({ forceZero: false, isEarlyExit: true });
       }
     };
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [answers, submitted]);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [answers, submitted, selectedExam]);
 
   // ─── SUBMISSION LOGIC ─────────────────────────────────────────────────
   const handleChange = (id, answer) => {

@@ -1,29 +1,17 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
-import App from "./App";
-import "./index.css";
-import { UserProvider } from "./contexts/UserContext";
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import App from './App';
+import './index.css';
+import { UserProvider } from './contexts/UserContext';
+import { initAppCheck } from './utils/firebase';
 
-/**
- * 🔄 PWA Auto Update Registration
- * - Checks for new versions automatically
- * - Reloads app when update is available
- */
-import { registerSW } from "virtual:pwa-register";
+// ── Mount React FIRST ──────────────────────────────────────────────────
+// Nothing runs before this. UserContext, firebase.js, App Check — all
+// lazy. React's dispatcher is fully ready before any of them execute.
+const root = ReactDOM.createRoot(document.getElementById('root'));
 
-registerSW({
-  immediate: true,
-  onNeedRefresh() {
-    // 🔥 Automatically reload when a new version is available
-    window.location.reload();
-  },
-  onOfflineReady() {
-    console.log("App is ready to work offline");
-  },
-});
-
-ReactDOM.createRoot(document.getElementById("root")).render(
+root.render(
   <React.StrictMode>
     <UserProvider>
       <BrowserRouter>
@@ -32,3 +20,22 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </UserProvider>
   </React.StrictMode>
 );
+
+// ── Initialise App Check AFTER React mounts ────────────────────────────
+// Deferred so initializeAppCheck() does not run during module evaluation.
+// The import() is dynamic — firebase/app-check is not even loaded until
+// React has fully rendered the first frame.
+initAppCheck();
+
+// ── Register PWA AFTER React mounts ───────────────────────────────────
+import('virtual:pwa-register').then(({ registerSW }) => {
+  registerSW({
+    immediate: false,
+    onNeedRefresh() {
+      setTimeout(() => window.location.reload(), 1000);
+    },
+    onOfflineReady() {
+      console.log('App ready offline');
+    },
+  });
+});

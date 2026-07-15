@@ -1,10 +1,12 @@
 const curricula = [
   { name: 'CAPS', status: 'South Africa' },
-  { name: 'SACAI', status: 'South Africa' },
-  { name: 'IEB', status: 'South Africa' },
-  { name: 'Cambridge', status: 'International' },
-  { name: 'ZIMSEC', status: 'Zimbabwe' },
-  { name: 'NCS', status: 'South Africa' },
+  { name: 'CBC', status: 'Kenya/Rwanda' },
+  { name: 'BECE', status: 'Botswana' },
+  { name: 'NERDC/UBE', status: 'Nigeria' },
+  { name: 'ZIMSEC/Cambridge', status: 'Zimbabwe' },
+  { name: 'ECZ', status: 'Zambia' },
+  { name: 'WASSCE', status: 'Ghana' },
+  { name: 'GCSE', status: 'Uganda' },
 ]
 
 export default function CTA() {
@@ -59,7 +61,7 @@ export default function CTA() {
 
           <div className="px-[22px] py-3 bg-[#0d111a] border-t border-[#232c3d] font-plex-mono text-[11px] text-[#4ade80] flex items-center gap-2">
             <span className="w-[6px] h-[6px] rounded-full bg-[#4ade80] shadow-[0_0_8px_rgba(74,222,128,0.6)]" />
-            6 curricula supported · growing every term
+            All Curricula supported · growing every term
           </div>
         </div>
       </div>

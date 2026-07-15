@@ -1,14 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import {
-    getAuth, setPersistence,
-    browserSessionPersistence
-} from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import {
-    initializeAppCheck,
-    ReCaptchaV3Provider
-} from 'firebase/app-check';
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -19,30 +12,37 @@ const firebaseConfig = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+// ── Core services — safe to initialise at module load time ─────────────
 const app = initializeApp(firebaseConfig);
+
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
-
-// ── App Check with reCAPTCHA v3 ───────────────────────────────────────────
-// Must be initialised BEFORE getFirestore(), getAuth(), getStorage().
-// In development (localhost) a debug token is used instead of reCAPTCHA
-// so you can test without the app being deployed — see Step 5.
-if (import.meta.env.DEV) {
-    // This tells App Check to use the debug token in development.
-    // The debug token is printed to the browser console — copy it to
-    // Firebase App Check console (Step 5).
-    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-}
-
-initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider(
-        import.meta.env.VITE_RECAPTCHA_SITE_KEY
-    ),
-    // Automatically refreshes the App Check token in the background.
-    // When false the token is fetched once and never refreshed —
-    // users who stay on the page for hours would get rejected.
-    isTokenAutoRefreshEnabled: true,
-});
-
 export default app;
+
+// ── App Check — call this AFTER React mounts, not here ─────────────────
+// initializeAppCheck() was running synchronously at import time,
+// which corrupts React's internal dispatcher before useState is ready.
+export async function initAppCheck() {
+    try {
+        const { initializeAppCheck, ReCaptchaV3Provider } =
+            await import('firebase/app-check');
+
+        if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-restricted-globals
+            self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+        }
+
+        initializeAppCheck(app, {
+            provider: new ReCaptchaV3Provider(
+                import.meta.env.VITE_RECAPTCHA_SITE_KEY
+            ),
+            isTokenAutoRefreshEnabled: true,
+        });
+
+        console.log('[AppCheck] Initialised');
+    } catch (err) {
+        console.warn('[AppCheck] Failed to initialise:', err.message);
+        // Non-fatal — app continues without App Check in dev/test
+    }
+}
