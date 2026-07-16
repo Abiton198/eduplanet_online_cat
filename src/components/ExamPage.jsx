@@ -604,35 +604,11 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
                   What would you like to do?
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Choose one — you cannot switch between tools once you start.
+                  Choose your exam session — you cannot switch between tabs once you start.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
-
-                {/* Tutor Card */}
-                <button
-                  onClick={() => setActiveTool('tutor')}
-                  className="group flex flex-col items-center gap-4 p-8 bg-indigo-50 dark:bg-indigo-900/30
-                       border-2 border-indigo-200 dark:border-indigo-700 rounded-3xl
-                       hover:border-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-900/50
-                       transition-all shadow-sm hover:shadow-lg text-left"
-                >
-                  <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center">
-                    <Sparkles size={32} className="text-white" />
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-black text-indigo-700 dark:text-indigo-300 mb-1">
-                      AI Tutor
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                      Study concepts, get explanations, and practise with your AI mentor step by step.
-                    </p>
-                  </div>
-                  <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest">
-                    Start Tutoring →
-                  </span>
-                </button>
 
                 {/* Exam Card */}
                 <button
@@ -650,51 +626,14 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
                       AI Exam
                     </h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                      Attempt a teacher uploaded exam and AI-marked or memoised  exam under timed conditions.
+                      Attempt a teacher uploaded exam or assignment and get it AI-marked or memoised under timed conditions.
                     </p>
                   </div>
                   <span className="text-xs font-bold text-green-500 uppercase tracking-widest">
-                    Start Exam →
+                    Start Session →
                   </span>
                 </button>
 
-              </div>
-
-              <p className="text-xs text-gray-400 dark:text-gray-600 text-center max-w-md">
-                🔒 For academic integrity, the AI Tutor is completely disabled while you are in an exam,
-                and the exam is disabled while you are using the tutor.
-              </p>
-            </div>
-          )}
-
-          {/* Active: Tutor only */}
-          {activeTool === 'tutor' && (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Active tool bar */}
-              <div className="flex items-center justify-between px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 border-b dark:border-gray-800">
-                <div className="flex items-center gap-2">
-                  <Sparkles size={16} className="text-indigo-600" />
-                  <span className="text-sm font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">
-                    AI Tutor — Active
-                  </span>
-                  <span className="text-[10px] bg-indigo-200 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full font-bold">
-                    🔒 Exam locked
-                  </span>
-                </div>
-                <button
-                  onClick={() => {
-                    const confirm = window.confirm('Exit the AI Tutor and return to tool selection?');
-                    if (confirm) setActiveTool(null);
-                  }}
-                  className="text-xs text-gray-500 hover:text-red-500 font-bold px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-red-300 transition-colors"
-                >
-                  ← Back to Menu
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4">
-                <div className="bg-gray-50 dark:bg-gray-900 rounded-3xl p-4 border dark:border-gray-800 shadow-inner min-h-full">
-                  <CATTutor />
-                </div>
               </div>
             </div>
           )}
@@ -707,10 +646,7 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
                 <div className="flex items-center gap-2">
                   <FileText size={16} className="text-green-600" />
                   <span className="text-sm font-black text-green-700 dark:text-green-300 uppercase tracking-widest">
-                    AI Exam — Active
-                  </span>
-                  <span className="text-[10px] bg-green-200 dark:bg-green-800 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full font-bold">
-                    🔒 Tutor locked
+                    AI Session — Active
                   </span>
                 </div>
                 <button

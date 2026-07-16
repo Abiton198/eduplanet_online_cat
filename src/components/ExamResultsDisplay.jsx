@@ -13,6 +13,10 @@ import {
 
 const API = 'https://chatbot-backend-educat.onrender.com';
 import { useStudentId, getCachedStudentId } from '../utils/StudentId';
+import AIMentor from './AIMentor';
+import SubjectRecommendations from './SubjectRecommendations';
+
+
 
 /* ── Grade normaliser ──────────────────────────────────────────────────────── */
 const extractGradeNumber = (data = {}) => {
@@ -401,6 +405,20 @@ const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory
   const [chatHistory, setChatHistory] = useState([]);   // { role: 'user'|'assistant', content: string }[]
   const chatScrollRef = useRef(null);
   const [asking, setAsking] = useState(false);
+  // ── Auth token for AI Mentor API calls ────────────────────────────────
+  const [authToken, setAuthToken] = useState('');
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  useEffect(() => {
+    if (!user) return;
+    // Tokens expire after 1 hour — refresh every 50 minutes
+    const getToken = () => user.getIdToken(true).then(setAuthToken);
+    getToken();
+    const interval = setInterval(getToken, 50 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [user]);
+
 
   useEffect(() => {
     if (!studentId) return;
@@ -473,24 +491,7 @@ const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory
     return [...map.values()].sort((a, b) => b.count - a.count).slice(0, 12);
   }, [aiAttempts]);
 
-  const recommendations = useMemo(() => {
-    const recs = [];
-    const { avg, trend, failing, total } = stats;
-    if (total === 0) return [];
-    if (avg >= 75) recs.push({ icon: '🌟', type: 'success', title: 'Excellent academic performance', body: 'You consistently demonstrate strong understanding. Keep challenging yourself with advanced questions.' });
-    else if (avg >= 50) recs.push({ icon: '📈', type: 'info', title: 'Good progress with room for improvement', body: 'You have a solid foundation. Strengthening weaker concepts could push you to distinction level.' });
-    else recs.push({ icon: '⚠️', type: 'danger', title: 'Foundational concepts require attention', body: 'Focus on rebuilding fundamental concepts before attempting advanced questions.' });
-    if (trend !== null) {
-      if (trend > 5) recs.push({ icon: '🚀', type: 'success', title: 'Learning trajectory is improving', body: 'Your recent performance shows measurable improvement. Keep up your study plan.' });
-      if (trend < -5) recs.push({ icon: '📉', type: 'danger', title: 'Performance trend is declining', body: 'Recent assessments show a decrease. Review previous work before progressing.' });
-    }
-    if (allWeakAreas.length > 0) {
-      const top3 = allWeakAreas.slice(0, 3).map(w => w.key).join(', ');
-      recs.push({ icon: '🧠', type: 'warning', title: 'Concepts requiring revision', body: `Recurring gaps found in: ${top3}. Prioritise these before new material.` });
-    }
-    if (failing > 0) recs.push({ icon: '🔴', type: 'danger', title: `${failing} assessment${failing > 1 ? 's' : ''} below pass mark`, body: 'Revise the concepts identified and attempt similar questions again.' });
-    return recs;
-  }, [stats, allWeakAreas]);
+
 
 
   // ── Agent Chat with Learning Profile & Latest Attempt Data ─────────
@@ -662,30 +663,9 @@ const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory
         <Empty icon={Clock} text="No exam results yet — complete some exams to see your progress" />
       )}
 
-      {/* Recommendations */}
-      {recommendations.length > 0 && (
-        <div className="bg-white border rounded-xl p-4 shadow-sm">
-          <p className="text-[10px] font-black uppercase text-gray-400 mb-3">💡 Personalised Recommendations</p>
-          <div className="space-y-3">
-            {recommendations.map((r, i) => {
-              const styles = {
-                success: 'bg-green-50 border-green-200',
-                info: 'bg-blue-50 border-blue-200',
-                warning: 'bg-amber-50 border-amber-200',
-                danger: 'bg-red-50 border-red-200',
-              };
-              return (
-                <div key={i} className={`border rounded-lg p-3 ${styles[r.type] || styles.info}`}>
-                  <p className="font-black text-[11px] mb-0.5">{r.icon} {r.title}</p>
-                  <p className="text-[11px] opacity-80 leading-relaxed">{r.body}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Subject recommendations */}
+      <SubjectRecommendations aiAttempts={aiAttempts} />
 
-      {/* Weak areas */}
 
 
       {/* Study plan from /dashboard API */}
@@ -702,126 +682,18 @@ const ProgressDashboard = ({ studentId, aiAttempts, legacyCurrent, legacyHistory
       {/* AI Academic Mentor */}
       <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 rounded-2xl p-5 text-white shadow-xl">
 
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center">
-              <Bot size={18} />
-            </div>
-            <div>
-              <h3 className="font-black">AI Academic Mentor</h3>
-              <p className="text-[10px] uppercase tracking-wider text-slate-400">
-                Personalised Coaching Based On All Your Assessments
-              </p>
-            </div>
-          </div>
-          {chatHistory.length > 0 && (
-            <button
-              onClick={() => setChatHistory([])}
-              className="text-[10px] text-slate-400 hover:text-red-400 transition-colors px-2 py-1 rounded border border-white/10 hover:border-red-400"
-            >
-              Clear Chat
-            </button>
-          )}
-        </div>
-
         {/* Conversation window */}
         <div
           ref={chatScrollRef}
           className="flex flex-col gap-3 mb-4 max-h-96 overflow-y-auto pr-1"
           style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}
         >
-          {chatHistory.length === 0 ? (
-            /* Prompt suggestions — only shown when no conversation yet */
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {[
-                'What is my weakest concept?',
-                'Am I improving?',
-                'Explain my last mistakes',
-                '─────────────────',           // visual divider
-                'Help me study functions',
-                'Teach me networking basics',
-                'Explain databases in detail',
-                'How do spreadsheet formulas work?',
-                'Teach me hardware vs software',
-                'Give me practice questions',
-                'Create a full study guide',
-                'Test my understanding now',
-              ].filter(p => p !== '─────────────────').map((prompt, i) => (
-                <button
-                  key={i}
-                  onClick={() => setAgentQ(prompt)}
-                  className="bg-white/10 hover:bg-indigo-500 transition-all rounded-lg p-2 text-[10px] text-left"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-          ) : (
-            chatHistory.map((msg, i) => (
-              <div
-                key={i}
-                className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                {/* Avatar — assistant only */}
-                {msg.role === 'assistant' && (
-                  <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center flex-shrink-0 mt-1">
-                    <Bot size={13} />
-                  </div>
-                )}
-
-                {/* Bubble */}
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 text-[12px] leading-relaxed whitespace-pre-wrap
-              ${msg.role === 'user'
-                      ? 'bg-indigo-600 text-white rounded-br-sm'
-                      : 'bg-white/10 text-white border border-white/10 rounded-bl-sm'
-                    }`}
-                >
-                  {msg.content}
-                </div>
-
-                {/* Avatar — user only */}
-                {msg.role === 'user' && (
-                  <div className="w-7 h-7 rounded-full bg-slate-600 flex items-center justify-center flex-shrink-0 mt-1 text-[10px] font-black">
-                    {studentId?.charAt(0)?.toUpperCase() || 'S'}
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-
-          {/* Typing indicator */}
-          {asking && (
-            <div className="flex gap-2 justify-start">
-              <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center flex-shrink-0">
-                <Bot size={13} />
-              </div>
-              <div className="bg-white/10 border border-white/10 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
-                <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Input row */}
-        <div className="flex gap-2">
-          <input
-            value={agentQ}
-            onChange={e => setAgentQ(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); askAgent(); } }}
-            placeholder="Ask your AI Mentor anything about your learning..."
-            className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-3 text-sm placeholder-slate-400 outline-none focus:border-indigo-400 transition-colors"
+          <AIMentor
+            authToken={authToken}
+            apiUrl={import.meta.env.VITE_API_URL}
+            studentId={studentId}
+            examResults={aiAttempts}
           />
-          <button
-            onClick={askAgent}
-            disabled={asking || !agentQ.trim()}
-            className="bg-indigo-600 hover:bg-indigo-700 px-5 rounded-lg font-bold disabled:opacity-40 transition-colors"
-          >
-            {asking ? '...' : '↑'}
-          </button>
         </div>
       </div>
 
@@ -842,6 +714,7 @@ export default function ExamResultsDisplay() {
   const [currentGrade, setCurrentGrade] = useState(null);
   const [activeTab, setActiveTab] = useState('insights');
   const studentId = useStudentId();
+
 
   // ── 1. Load exam titles (for display labels only) ──────────────────────────
   useEffect(() => {

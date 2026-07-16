@@ -6,15 +6,11 @@ import {
   collection, addDoc, serverTimestamp, onSnapshot,
   query, orderBy, getDoc, getDocs, doc, where, setDoc, limit
 } from "firebase/firestore";
-
-
-
-// const API = "https://chatbot-backend-educat.onrender.com";
-const API = import.meta.env.VITE_API_URL;
 import { useStudentId } from "./StudentId";
 import { useParams } from "react-router-dom";
 import { auth } from "./firebase";
 
+const API = import.meta.env.VITE_API_URL;
 // ─── Style tokens ─────────────────────────────────────────────────────────────
 const S = {
   wrap: { fontFamily: "'DM Sans', sans-serif", maxWidth: 800, margin: "0 auto", padding: "24px 16px", color: "#1a1a2e", minHeight: "100vh", background: "#f4f6fb" },
@@ -813,6 +809,7 @@ export default function AIExamMocker({ student }) {
 
   // ── Start exam ─────────────────────────────────────────────────────────────
   const startExam = async () => {
+    const token = await auth.currentUser?.getIdToken(true);
     if (!selectedExam) return;
     setLoading(true);
 
@@ -828,7 +825,10 @@ export default function AIExamMocker({ student }) {
 
       const res = await fetch(`${API}/start_exam`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ exam_id: examId, student_id: STUDENT_ID }),
       });
 
@@ -907,19 +907,40 @@ export default function AIExamMocker({ student }) {
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const submitExam = async () => {
+
+    // ── Auth guard ──────────────────────────────────────────────────────
+    if (!auth.currentUser) {
+      alert('Session expired. Please sign in again.');
+      return;
+    }
+    const uid = auth.currentUser.uid;
+
+    // ── Unanswered check ────────────────────────────────────────────────
     if (!timeExpired) {
       const unanswered = totalQ - Object.keys(answers).length;
-      if (unanswered > 0 && !confirm(`You have ${unanswered} unanswered question(s). Submit anyway?`)) return;
+      if (
+        unanswered > 0 &&
+        !confirm(`You have ${unanswered} unanswered question(s). Submit anyway?`)
+      ) return;
     }
+
     setSaving(true);
     setTimeExpired(false);
     if (isFullscreen) exitFullscreen();
 
     try {
+      // ── Fresh token ────────────────────────────────────────────────────
+      const token = await auth.currentUser.getIdToken(true);
+
+      // ── Call Flask /submit ─────────────────────────────────────────────
       const res = await fetch(`${API}/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
+          session_id: sessionId,
           exam_id: selectedExam,
           student_id: STUDENT_ID,
           answers,
@@ -927,68 +948,84 @@ export default function AIExamMocker({ student }) {
       });
 
       const data = await res.json();
-      console.log("Submit response:", data);
+      console.log('[Submit] response:', data);
+
       if (!res.ok || data.error) {
-        alert(data.error || "Submission failed. Please try again.");
-        return;
+        alert(data.error || 'Submission failed. Please try again.');
+        return;   // finally still runs — setSaving(false) is called
       }
 
+      // ── Build Firestore document ───────────────────────────────────────
+      // Use uid (verified non-null above) everywhere — no optional chaining needed
       const saveData = removeUndefined({
+        // Identity — both fields needed for Firestore rule evaluation
         studentId: STUDENT_ID,
-        studentUid: auth.currentUser?.uid,       // ✅ UID for principal queries
-        schoolId: studentInfo?.schoolId || null, // ✅ critical — scopes to school
-        examId: selectedExam,                    // ✅ already there but now used in doc ID
-        subject: data.subject || "",
+        studentUid: uid,                         // ← consistent, verified
+        schoolId: studentInfo?.schoolId || null,
+
+        // Exam reference
+        examId: selectedExam,
+        subject: data.subject || '',
+        title: data.title || data.subject || selectedExam,
+
+        // Answers
         answers,
         skipped: [...skipped],
         answeredCount: Object.keys(answers).length,
+
+        // Marks
         score: data.score,
         total: data.total,
         percentage: data.percentage,
         markedResults: data.results || [],
-        aiFeedback: data.feedback || "",
-        analysis: data.analysis || {},
-        overallSummary: data.analysis?.overallSummary || "",
+
+        // AI feedback
+        aiFeedback: data.feedback || '',
+        conceptGaps: data.concept_gaps || [],
+        overallSummary: data.analysis?.overallSummary || '',
         strengths: data.analysis?.strengths || [],
         weaknesses: data.analysis?.weaknesses || [],
         studyPlan: data.analysis?.studyPlan || [],
+        analysis: {
+          ...(data.analysis || {}),
+          conceptGaps: data.concept_gaps || [],
+        },
+
+        // Timestamps
         submittedAt: serverTimestamp(),
         completedAt: serverTimestamp(),
+
         metadata: {
           markingVersion: 2,
           generatedAt: new Date().toISOString(),
         },
       });
 
-      // ✅ deterministic doc ID prevents duplicate submissions
-      const attemptRef = doc(db, 'exam_attempts', `${STUDENT_ID}_${selectedExam}`);
+      // ── Write to Firestore ─────────────────────────────────────────────
+      // Deterministic doc ID prevents duplicate submissions
+      const attemptRef = doc(
+        db,
+        'exam_attempts',
+        `${uid}_${selectedExam}`      // ← use uid not STUDENT_ID for consistency
+      );
       await setDoc(attemptRef, saveData, { merge: true });
-      console.log("Saved to Firestore:", saveData);
+      console.log('[Submit] Saved to Firestore:', attemptRef.id);
 
-      // ✅ log to auditLog so principal sees activity
-      await addDoc(collection(db, 'auditLog'), {
-        type: 'ai_mark',
-        description: `Exam submitted and marked`,
-        actorName: STUDENT_ID,
-        studentName: STUDENT_ID,
-        studentUid: auth.currentUser?.uid || null,
-        examTitle: data.subject || selectedExam,
-        examId: selectedExam,
-        schoolId: studentInfo?.schoolId || null,
-        timestamp: serverTimestamp(),
-      });
+      // ── NOTE: auditLog write removed ───────────────────────────────────
+      // Firestore rules have allow write: if false on auditLog.
+      // The Flask /submit endpoint writes to auditLog via Admin SDK.
+      // Client-side auditLog writes always fail with permission-denied.
 
       setResults(data);
       setSubmitted(true);
 
     } catch (err) {
-      console.error("Submit failed:", err);
-      alert(err.message || "Network error. Please try again.");
+      console.error('[Submit] failed:', err);
+      alert(err.message || 'Network error. Please try again.');
     } finally {
-      setSaving(false);
+      setSaving(false);   // ← always runs — button never stays stuck
     }
   };
-
 
   // ── Cancel ─────────────────────────────────────────────────────────────────
   const cancelExam = () => {
@@ -1018,7 +1055,7 @@ export default function AIExamMocker({ student }) {
       <div style={S.wrap}>
         <FontLoader />
         <div style={S.card}>
-          <h1 style={S.title}>🤖 EduCAT AI Exam Engine</h1>
+          <h1 style={S.title}>Eduket AI Exam Engine</h1>
           <p style={S.subtitle}>Select an active paper to begin your exam simulation.</p>
           <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "20px 0" }} />
           <label style={{ fontSize: 14, fontWeight: 700, display: "block", marginBottom: 6 }}>Available Assessments:</label>

@@ -77,10 +77,9 @@ export function useAuthModal({
         onSuccess?.(profile);
     }, [setStudentInfo, onSuccess, resetForm]);
 
-    // ── Email / password submit ────────────────────────────────────────────────
 
+    // ── Email / password submit ────────────────────────────────────────────────
     const handleEmailSubmit = useCallback(async (email, password, captchaToken, resetCaptcha) => {
-        // 1. Guard check: Make sure they didn't bypass the reCAPTCHA
         if (!captchaToken) {
             setError('Please complete the security check first.');
             return;
@@ -90,26 +89,30 @@ export function useAuthModal({
         setIsSubmitting(true);
 
         try {
-            // 2. Create the user inside Firebase Auth
-            const credential = await createUserWithEmailAndPassword(auth, email, password);
-            const uid = credential.user.uid;
+            if (isRegistering) {
+                // ── REGISTER — use the imported registerWithEmail from authHandlers
+                const credential = await registerWithEmail(email, password);
+                const uid = credential.user.uid;
+                resetForm();
+                onClose?.();
+                onNeedsSetup?.(uid, email);
 
-            // 3. Flow to the next setup stage or write user profile
-            resetForm();
-            onClose?.();
-            onNeedsSetup?.(uid, email); // This redirects them to complete registration
+            } else {
+                // ── SIGN IN — use the imported signInWithEmail from authHandlers
+                const credential = await signInWithEmail(email, password);
+                const uid = credential.user.uid;
+                await handleExistingUser(uid);
+            }
 
         } catch (err) {
-            // Handle common Firebase errors gracefully
+            console.error('[Auth]', err.code, err.message);
             const msg = getFriendlyAuthError(err.code);
-            setError(msg || 'An unexpected error occurred during signup.');
-
-            // IMPORTANT: Reset the captcha widget on failure so they can retry
+            setError(msg || 'An unexpected error occurred. Please try again.');
             resetCaptcha?.();
         } finally {
             setIsSubmitting(false);
         }
-    }, [onNeedsSetup, onClose, resetForm]);
+    }, [isRegistering, onNeedsSetup, onClose, resetForm, handleExistingUser]);
 
     // ── Google sign-in ─────────────────────────────────────────────────────────
     // Google can be used for both new and returning users.
