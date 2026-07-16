@@ -40,8 +40,8 @@ export const TIERS = [
     {
         id: 'silver',
         label: 'Silver',
-        monthlyPrice: 999,
-        annualPrice: 9990,
+        monthlyPrice: 1299,
+        annualPrice: 12990,
         icon: Zap,
         gradient: 'from-blue-500 to-cyan-500',
         gradientBg: 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20',

@@ -61,7 +61,7 @@ export default function CTA() {
 
           <div className="px-[22px] py-3 bg-[#0d111a] border-t border-[#232c3d] font-plex-mono text-[11px] text-[#4ade80] flex items-center gap-2">
             <span className="w-[6px] h-[6px] rounded-full bg-[#4ade80] shadow-[0_0_8px_rgba(74,222,128,0.6)]" />
-            All Curricula supported · growing every term
+            All Curricula supported · growing every term (Maths & Accounts still under trial)
           </div>
         </div>
       </div>
