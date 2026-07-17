@@ -66,6 +66,11 @@ function normalizeType(type) {
   if (t.includes("true") || t.includes("false")) return "true_false";
   if (t.includes("match") || t.includes("column") || t.includes("link")) return "matching";
   if (t.includes("essay") || t.includes("long")) return "essay";
+  // ── NEW types from extraction engine v5.1 ────────────────────────────
+  if (t.includes("proof") || t.includes("show")) return "proof";
+  if (t.includes("calc") || t.includes("comput")) return "calculation";
+  if (t.includes("short") || t.includes("brief")) return "short_answer";
+  if (t.includes("account")) return "accounting_statement";
   return "open";
 }
 
@@ -268,9 +273,13 @@ function InputContent({ question, savedAnswer, saveAnswer }) {
     const colA = question.columnA || question.column_a || question.premises || question.left || [];
     const colB = question.columnB || question.column_b || question.responses || question.right || [];
 
-    const toRows = (arr) => {
-      if (!Array.isArray(arr)) return [];
-      return arr.map((item, i) => {
+    const toRows = (src) => {
+      // New extraction engine returns objects: {"(a)": "text", "(b)": "text"}
+      if (src && typeof src === "object" && !Array.isArray(src)) {
+        return Object.entries(src).map(([key, label]) => ({ key, label }));
+      }
+      if (!Array.isArray(src)) return [];
+      return src.map((item, i) => {
         if (typeof item === "string") return { key: String(i + 1), label: item };
         return {
           key: String(item.key || item.number || item.id || i + 1),
@@ -279,9 +288,13 @@ function InputContent({ question, savedAnswer, saveAnswer }) {
       });
     };
 
-    const toCols = (arr) => {
-      if (!Array.isArray(arr)) return [];
-      return arr.map((item, i) => {
+    const toCols = (src) => {
+      // New extraction engine returns objects: {"A": "text", "B": "text"}
+      if (src && typeof src === "object" && !Array.isArray(src)) {
+        return Object.entries(src).map(([key, label]) => ({ key, label }));
+      }
+      if (!Array.isArray(src)) return [];
+      return src.map((item, i) => {
         if (typeof item === "string") return { key: String.fromCharCode(65 + i), label: item };
         return {
           key: String(item.key || item.letter || item.id || String.fromCharCode(65 + i)),
@@ -370,6 +383,42 @@ function InputContent({ question, savedAnswer, saveAnswer }) {
   );
 }
 
+
+
+// ─── ParentContext Panel ──────────────────────────────────────────────────────
+function ParentContextPanel({ context }) {
+  const [open, setOpen] = React.useState(true);
+  if (!context) return null;
+  return (
+    <div style={{
+      marginBottom: 16, borderRadius: 10,
+      border: '1.5px solid #fcd34d', background: '#fffbeb', overflow: 'hidden',
+    }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width: '100%', display: 'flex', justifyContent: 'space-between',
+          alignItems: 'center', padding: '8px 14px', background: 'none',
+          border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700,
+          color: '#92400e', textTransform: 'uppercase', letterSpacing: 1,
+        }}
+      >
+        <span>📄 Read this before answering</span>
+        <span>{open ? '▲ Hide' : '▼ Show'}</span>
+      </button>
+      {open && (
+        <div style={{
+          padding: '8px 14px 14px', fontSize: 13, color: '#374151',
+          lineHeight: 1.7, whiteSpace: 'pre-wrap', borderTop: '1px solid #fde68a',
+          maxHeight: 260, overflowY: 'auto',
+        }}>
+          {context}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── MarkdownTable Component ──────────────────────────────────────────────
 function MarkdownTable({ source }) {
   if (!source) return null;
@@ -443,6 +492,9 @@ function QuestionContent({ question, index, totalQ, answers, skipped, saveAnswer
 
       <div style={S.qRow}>
         <div style={S.qNum}>Q {index + 1}</div>
+        {question.parentContext && (
+          <ParentContextPanel context={question.parentContext} />
+        )}
         <div style={S.qText}>{question.text}</div>
         <div style={S.qMark}>[{question.marks || 0} Marks]</div>
       </div>
@@ -864,6 +916,13 @@ export default function AIExamMocker({ student }) {
         options: q.options || [],
         section: q.section || "Section A",
         order: idx,
+        questionLatex: q.question_latex || null,
+        questionTable: q.question_table || null,
+        parentContext: q.parent_context || null,
+        parentQuestion: q.parent_question || null,
+        columnA: q.column_a || null,
+        columnB: q.column_b || null,
+        hasVisual: q.has_visual || false,
       }));
 
       console.log("[startExam] normalized[0]:", normalized[0]);
