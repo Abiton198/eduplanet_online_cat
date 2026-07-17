@@ -662,16 +662,22 @@ export default function TeacherDashboard() {
   // ─── UPLOAD ──────────────────────────────────────────────────────────────
   const handleExamUpload = async () => {
 
-    // // ── SUBJECT CHECK VALIDATION ────────────────────────────────────
-    // if (!selectedSubject) {
-    //   Swal.fire({
-    //     icon: 'warning',
-    //     title: 'Subject Missing',
-    //     text: 'Please select a subject dropdown option before uploading the file.',
-    //     confirmButtonColor: '#4F46E5',
-    //   });
-    //   return;
-    // }
+    // ── Time validation ─────────────────────────────────────────────────────
+    const timeNotSet = assessmentType === 'assignment'
+      ? !dueDate || new Date(dueDate) <= new Date()
+      : !examDuration || examDuration <= 0;
+
+    if (timeNotSet) {
+      await Swal.fire({
+        icon: 'warning',
+        title: assessmentType === 'assignment' ? 'Due Date Required' : 'Duration Required',
+        text: assessmentType === 'assignment'
+          ? 'Please set a future due date and time before uploading this assignment.'
+          : `Please set how long students have to complete this ${assessmentType}. Use the time picker above.`,
+        confirmButtonColor: '#4F46E5',
+      });
+      return;
+    }
 
     // ── 1. Validate files before touching anything ─────────────────────────
     const examError = validateExamFile(examFile, 'Exam file');
@@ -1217,6 +1223,35 @@ export default function TeacherDashboard() {
                     </button>
                   )}
 
+                  {/* Time Picker Conditional Check */}
+                  {assessmentType === 'assignment' ? (
+                    // ── ASSIGNMENT DUE DATE MODE ──────────────────────────────────────────
+                    <div className="space-y-2">
+                      <label className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                        Submission Due Date & Time
+                      </label>
+                      <ExamTimePicker
+                        key="datetime-picker" // 🔑 Remounts the component cleanly for assignment mode
+                        mode="datetime"
+                        value={dueDate}
+                        onChange={setDueDate}
+                      />
+                    </div>
+                  ) : (
+                    // ── EXAM / TEST TIMED DURATION MODE ───────────────────────────────────
+                    <div className="space-y-2">
+                      <label className="text-sm font-black text-slate-700 dark:text-slate-300">
+                        Set Exam Time Limit
+                      </label>
+                      <ExamTimePicker
+                        key="duration-picker" // 🔑 Remounts the component cleanly for timed mode
+                        mode="duration"
+                        value={examDuration}
+                        onChange={setExamDuration}
+                      />
+                    </div>
+                  )}
+
                   <div className="flex gap-4">
                     <button
                       onClick={() => setUploadStep(1)}
@@ -1303,34 +1338,24 @@ export default function TeacherDashboard() {
                         </div>
                       </div>
 
-                      {/* Time Picker Conditional Check */}
-                      {assessmentType === 'assignment' ? (
-                        // ── ASSIGNMENT DUE DATE MODE ──────────────────────────────────────────
-                        <div className="space-y-2">
-                          <label className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                            Submission Due Date & Time
-                          </label>
-                          <ExamTimePicker
-                            key="datetime-picker" // 🔑 Remounts the component cleanly for assignment mode
-                            mode="datetime"
-                            value={dueDate}
-                            onChange={setDueDate}
-                          />
-                        </div>
-                      ) : (
-                        // ── EXAM / TEST TIMED DURATION MODE ───────────────────────────────────
-                        <div className="space-y-2">
-                          <label className="text-sm font-black text-slate-700 dark:text-slate-300">
-                            Set Exam Time Limit
-                          </label>
-                          <ExamTimePicker
-                            key="duration-picker" // 🔑 Remounts the component cleanly for timed mode
-                            mode="duration"
-                            value={examDuration}
-                            onChange={setExamDuration}
-                          />
-                        </div>
-                      )}
+
+
+                      {/* ── Time not set warning ─────────────────────────────────────────────── */}
+                      {(assessmentType === 'assignment'
+                        ? !dueDate || new Date(dueDate) <= new Date()
+                        : !examDuration || examDuration <= 0
+                      ) && (
+                          <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20
+                  border border-red-200 dark:border-red-800 rounded-2xl">
+                            <span className="text-red-500 text-base flex-shrink-0">⚠</span>
+                            <p className="text-xs font-bold text-red-700 dark:text-red-300">
+                              {assessmentType === 'assignment'
+                                ? 'A due date is required before uploading. Set it above.'
+                                : 'A time duration is required before uploading. Set it above.'
+                              }
+                            </p>
+                          </div>
+                        )}
 
                       {/* Summary */}
                       <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5 space-y-2 text-sm">
@@ -1396,13 +1421,28 @@ export default function TeacherDashboard() {
                         >
                           <ArrowLeft size={16} /> Back
                         </button>
-                        <button
-                          onClick={handleExamUpload}
-                          disabled={isUploading || examUsage?.atLimit}
-                          className="flex-[2] bg-green-600 hover:bg-green-700 text-white p-5 rounded-2xl font-black text-sm shadow-lg shadow-green-500/20 disabled:opacity-40 transition-colors"
-                        >
-                          {examUsage?.atLimit ? 'Upload Limit Reached' : 'FINALIZE UPLOAD'}
-                        </button>
+                        {(() => {
+                          const timeNotSet = assessmentType === 'assignment'
+                            ? !dueDate || new Date(dueDate) <= new Date()
+                            : !examDuration || examDuration <= 0;
+
+                          return (
+                            <button
+                              onClick={handleExamUpload}
+                              disabled={isUploading || examUsage?.atLimit || timeNotSet}
+                              className="flex-[2] bg-green-600 hover:bg-green-700 text-white p-5 rounded-2xl font-black text-sm shadow-lg shadow-green-500/20 disabled:opacity-40 transition-colors"
+                            >
+                              {examUsage?.atLimit
+                                ? 'Upload Limit Reached'
+                                : timeNotSet
+                                  ? assessmentType === 'assignment'
+                                    ? '⚠ Set Due Date First'
+                                    : '⚠ Set Duration First'
+                                  : 'FINALIZE UPLOAD'
+                              }
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
 
