@@ -726,16 +726,17 @@ export default function ExamResultsDisplay() {
     return () => unsub();
   }, []);
 
-
-
-  // ── 2. Load all student results ────────────────────────────────────────────
-  // NOTE: examTitles intentionally NOT in deps — removing it prevents the
-  // re-fetch race condition. examTitles is only used for display labels and
-  // normaliseAttempt is called again when examTitles updates via the memo below.
+  // ── 2. Load all student results (Real-Time Subscriptions) ──────────────────
   useEffect(() => {
     const auth = getAuth();
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) { setLoading(false); return; }
+    let unsubAI = () => { }; // Store unsubscribe function for cleanup
+
+    const unsubAuth = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
 
@@ -745,10 +746,10 @@ export default function ExamResultsDisplay() {
         const grade = extractGradeNumber(profile) || 12;
         setCurrentGrade(grade);
 
-        // 2. Query Legacy Exam Results Securely by UID
+        // 2. Query Legacy Exam Results Securely by UID (One-time pull)
         const legacySnap = await getDocs(query(
           collection(db, 'examResults'),
-          where('studentUid', '==', user.uid) // 🔒 Locked down target
+          where('studentUid', '==', user.uid)
         ));
 
         const hist = [], curr = [];
@@ -764,26 +765,36 @@ export default function ExamResultsDisplay() {
         setLegacyCurrent(sortDate(curr));
         setLegacyHistory(sortDate(hist));
 
-        // 3. Query AI Exam Attempts Securely by UID
-        const uidSnap = await getDocs(query(
+        // 3. Setup Real-time Listener for AI Exam Attempts Securely by UID 🌟
+        const aiQuery = query(
           collection(db, 'exam_attempts'),
-          where('studentUid', '==', user.uid) // 🔒 Locked down target
-        ));
+          where('studentUid', '==', user.uid)
+        );
 
-        const attempts = uidSnap.docs
-          .map(docSnap => normaliseAttempt(docSnap, {}))
-          .sort((a, b) => b._tsSeconds - a._tsSeconds);
+        unsubAI = onSnapshot(aiQuery, (snapshot) => {
+          const attempts = snapshot.docs
+            .map(docSnap => normaliseAttempt(docSnap, examTitles)) // Pass active examTitles mapping
+            .sort((a, b) => b._tsSeconds - a._tsSeconds);
 
-        setAiAttempts(attempts);
+          setAiAttempts(attempts);
+          setLoading(false);
+        }, (error) => {
+          console.error("AI Attempts Listener Error:", error);
+          setLoading(false);
+        });
 
       } catch (err) {
-        console.error('[ExamResults] Secure fetch failed:', err);
-      } finally {
+        console.error("Error setting up dashboard data:", err);
         setLoading(false);
       }
     });
-    return () => unsub();
-  }, [studentId]);
+
+    // Cleanup both subscriptions when component unmounts
+    return () => {
+      unsubAuth();
+      unsubAI();
+    };
+  }, [examTitles]);
 
   // ── 3. Apply examTitles to attempts once titles load ───────────────────────
   // This avoids re-fetching Firestore just because titles arrived late

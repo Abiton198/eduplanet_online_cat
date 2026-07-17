@@ -443,13 +443,18 @@ function ReportPeriodModal({ onClose, onGenerate, availableSubjects }) {
 
 
 // ── Single attempt card ───────────────────────────────────────────────────────
-function AttemptCard({ attempt, teacherMode, onRemark }) {
+function AttemptCard({ attempt, teacherMode, onRemark, displayName }) {
     const [expanded, setExpanded] = useState(false);
     const pct = attempt.percentage ?? 0;
     const date = attempt.completedAt?.toDate?.()?.toLocaleDateString("en-ZA", {
         day: "numeric", month: "short", year: "numeric",
     }) ?? "—";
-    const title = attempt.resolvedTitle || attempt.examTitle || attempt.exam || "Exam";
+
+    // ── Strip File Extension & Resolve Title ──
+    // Uses the passed displayName prop first, fallback to document fields, then strips the file extension
+    const rawTitle = displayName || attempt.resolvedTitle || attempt.title || attempt.examTitle || attempt.exam || "Exam";
+    const title = rawTitle.replace(/\.(pdf|docx|doc|txt|odt)$/i, '');
+
     const isRemarked = !!attempt.remarkedAt;
 
     return (
@@ -483,6 +488,7 @@ function AttemptCard({ attempt, teacherMode, onRemark }) {
                 </div>
 
                 <div className="flex-1 min-w-0">
+                    {/* Display clean name without extensions */}
                     <p className="font-bold text-sm truncate">{title}</p>
                     <p className="text-xs text-slate-400 mt-0.5">{date}</p>
                     <div className="flex gap-3 mt-2 flex-wrap">
@@ -721,9 +727,22 @@ export function ResultsTab({ studentId, teacherMode = false }) {
         return () => unsub();
     }, []);
 
+    // ── 1. Load entire exam profiles (Mapped correctly by examId) ──
+    useEffect(() => {
+        const unsub = onSnapshot(collection(db, 'exams'), snap => {
+            const map = {};
+            snap.forEach(d => {
+                const data = d.data();
+                // Use data.examId if it exists, otherwise fall back to d.id
+                const key = data.examId || d.id;
+                map[key] = { id: d.id, ...data };
+            });
+            setExamTitles(map);
+        });
+        return () => unsub();
+    }, []);
+
     // ── Resolve school name + (student mode) own profile name/grade ────────────
-
-
     useEffect(() => {
         const auth = getAuth();
         const unsub = onAuthStateChanged(auth, async (user) => {
@@ -1202,32 +1221,101 @@ export function ResultsTab({ studentId, teacherMode = false }) {
                         </div>
 
                         {/* Attempt cards */}
-                        {filtered.map(a => (
-                            <div key={a.id} className="space-y-3 mb-6">
-                                <AttemptCard attempt={a} teacherMode={teacherMode} />
+                        {filtered.map(a => {
+                            // 1. Resolve matching key (checks both examId and exam fields)
+                            const examIdKey = a.examId || a.exam;
+                            const linkedExam = examTitles[examIdKey] || {};
 
-                                <div className="flex items-center gap-2">
-                                    {/* Teacher-only: Remark button */}
-                                    {teacherMode && (
+                            // 2. STAGE FALLBACKS: Check the linked exam first, then the local attempt fields directly
+                            // This guarantees that even if the exams subscription hasn't loaded yet, it shows the details.
+                            const rawFileName = linkedExam.examFileName
+                                || a.examFileName
+                                || linkedExam.title
+                                || a.title
+                                || a.examTitle
+                                || 'Exam';
+
+                            // Strip out the file extensions cleanly
+                            const displayExamName = rawFileName.replace(/\.(pdf|docx|doc|txt|odt)$/i, '');
+
+                            // Direct cross-reference fallback for Subject & Teacher Name
+                            const displaySubject = linkedExam.subject || a.subject || 'Home Language';
+                            const displayTeacher = linkedExam.teacherName || a.teacherName || a.teacher || 'Thabo';
+
+                            // 3. Date formatting logic
+                            const ts = a._tsSeconds || a.submittedAt?.seconds || a.completedAt?.seconds;
+                            const formattedDateTime = ts
+                                ? new Date(ts * 1000).toLocaleString("en-ZA", {
+                                    dateStyle: 'medium',
+                                    timeStyle: 'short'
+                                })
+                                : '—';
+
+                            // 4. Status Tag styling
+                            let statusTag = { text: 'AI-Marked', bg: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border-indigo-200/50' };
+                            if (a.remarkedByTeacher || a.remarkedAt) {
+                                statusTag = { text: 'Teacher Remarked', bg: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200/50' };
+                            } else if (a.aiRemarkedAt || a.isAiRemarked) {
+                                statusTag = { text: 'AI Remarked', bg: 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200/50' };
+                            }
+
+                            return (
+                                <div key={a.id} className="space-y-4 mb-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-2xl shadow-sm">
+
+                                    {/* Meta Header */}
+                                    <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800 text-xs">
+                                        <div className="space-y-1 text-left flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+
+                                                <span className="px-2 py-0.5 text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-md">
+                                                    {displaySubject}
+                                                </span>
+                                            </div>
+
+                                            <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                                                Instructor: <span className="text-slate-600 dark:text-slate-300 font-semibold">{displayTeacher}</span>
+                                                <span className="mx-1.5">•</span>
+                                                <span>{formattedDateTime}</span>
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center gap-1.5 self-start sm:self-center">
+                                            <span className={`px-2.5 py-1 text-[10px] font-black tracking-wider uppercase rounded-full border ${statusTag.bg}`}>
+                                                {statusTag.text}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Display the Card with custom title override */}
+                                    <AttemptCard
+                                        attempt={a}
+                                        teacherMode={teacherMode}
+                                        displayName={displayExamName}
+                                    />
+
+                                    {/* Actions Footer */}
+                                    <div className="flex items-center gap-2 pt-1">
+                                        {teacherMode && (
+                                            <button
+                                                onClick={() => setRemarkTarget(a)}
+                                                className="px-4 py-2 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 text-sm font-semibold flex items-center gap-2 transition-all"
+                                            >
+                                                <Pencil size={14} />
+                                                {a.remarkedAt ? "Re-remark" : "Remark"}
+                                            </button>
+                                        )}
+
                                         <button
-                                            onClick={() => setRemarkTarget(a)}
-                                            className="px-4 py-2 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 text-sm font-semibold flex items-center gap-2 transition-all"
+                                            onClick={() => handleDownload(a)}
+                                            className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-semibold flex items-center gap-2 transition-all text-slate-700 dark:text-slate-200"
                                         >
-                                            <Pencil size={14} />
-                                            {a.remarkedAt ? "Re-remark" : "Remark"}
+                                            <Download size={16} />
+                                            Export PDF
                                         </button>
-                                    )}
-
-                                    <button
-                                        onClick={() => handleDownload(a)}
-                                        className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-semibold flex items-center gap-2 transition-all"
-                                    >
-                                        <Download size={16} />
-                                        Export PDF
-                                    </button>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </>
                 )}
             </div>

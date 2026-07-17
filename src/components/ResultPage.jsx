@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { collection, query, where, onSnapshot, query as firestoreQuery } from "firebase/firestore";
 import { db } from "../utils/firebase";
-import StudentSummaryCard from "../utils/StudentSummaryCard";
+
 
 export default function ResultPage({ studentInfo }) {
   const [user, setUser] = useState(null);
