@@ -32,13 +32,14 @@ import {
     where,
     getDocs,
     serverTimestamp,
+    writeBatch,
 } from 'firebase/firestore';
+import { db, auth } from '../utils/firebase';
 import {
     GraduationCap, BookOpen, LayoutDashboard,
     ArrowRight, ArrowLeft, CheckCircle2,
     Search, Building2, Sparkles,
 } from 'lucide-react';
-import { db } from '../utils/firebase';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 const TITLES = ['Mr', 'Mrs', 'Ms', 'Dr', 'Prof', 'Rev'];
@@ -151,10 +152,10 @@ function StepDots({ current, total }) {
                 <div
                     key={i}
                     className={`rounded-full transition-all duration-300 ${i < current
-                            ? 'w-6 h-2 bg-indigo-600'
-                            : i === current
-                                ? 'w-8 h-2 bg-indigo-600'
-                                : 'w-2 h-2 bg-slate-300 dark:bg-slate-700'
+                        ? 'w-6 h-2 bg-indigo-600'
+                        : i === current
+                            ? 'w-8 h-2 bg-indigo-600'
+                            : 'w-2 h-2 bg-slate-300 dark:bg-slate-700'
                         }`}
                 />
             ))}
@@ -255,7 +256,7 @@ function StepRole({ role, onSelect }) {
                         {selected && (
                             <CheckCircle2 size={20}
                                 className={`flex-shrink-0 ${color === 'emerald' ? 'text-emerald-500' :
-                                        color === 'violet' ? 'text-violet-500' : 'text-indigo-500'
+                                    color === 'violet' ? 'text-violet-500' : 'text-indigo-500'
                                     }`}
                             />
                         )}
@@ -419,7 +420,8 @@ function StepSchool({ role, school, onChange, uid }) {
                 where('searchName', '<=', query.toLowerCase() + '\uf8ff'),
             );
             const snap = await getDocs(q);
-            setResults(snap.docs.map(d => ({ id: d.id, ...d.to_dict() })));
+            // setResults(snap.docs.map(d => ({ id: d.id, ...d.to_dict() })));
+            setResults(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         } catch (err) {
             // Search index may not exist — show manual entry
             setResults([]);
@@ -629,6 +631,7 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
 
+
     const STEP_TITLES = [
         'Who are you?',
         'Your details',
@@ -655,20 +658,46 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
 
     // ── Save to Firestore ─────────────────────────────────────────────────────
     const saveProfile = async () => {
+        const user = auth.currentUser;
+
+        if (!user) {
+            console.error("No authenticated user found");
+            return;
+        }
+
         setSaving(true);
         setError('');
+
         try {
+            const currentUid = user.uid;
             const displayName = `${details.title ? details.title + ' ' : ''}${details.firstName} ${details.lastName}`.trim();
             const profileCol = role === 'principal' ? 'principals' :
                 role === 'teacher' ? 'teachers' : 'students';
 
-            // Generate school id for principals
-            let schoolId = school.schoolId || '';
+            // 1. Initialize the batch
+            const batch = writeBatch(db);
 
+            // 2. Setup the school ID structure
+            let schoolId = school.schoolId || '';
             if (role === 'principal' && !schoolId) {
-                // Create the school document
-                schoolId = `${uid}_${school.name.replace(/\s+/g, '_').substring(0, 30)}`;
-                await setDoc(doc(db, 'schools', schoolId), {
+                schoolId = `${currentUid}_${school.name.replace(/\s+/g, '_').substring(0, 30)}`;
+            }
+
+            // 3. Queue up the base user document
+            const userRef = doc(db, 'users', currentUid);
+            batch.set(userRef, {
+                uid: currentUid,
+                email,
+                displayName,
+                role,
+                schoolId: schoolId || '',
+                createdAt: serverTimestamp(),
+            });
+
+            // 4. Queue up the school creation if principal
+            if (role === 'principal' && school.name) {
+                const schoolRef = doc(db, 'schools', schoolId);
+                batch.set(schoolRef, {
                     schoolId,
                     schoolName: school.name,
                     searchName: school.name.toLowerCase(),
@@ -677,41 +706,37 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
                     address: school.address || '',
                     institutionType: details.institutionType || '',
                     tier: 'free',
-                    registeredBy: uid,
+                    registeredBy: currentUid,
+                    principalUid: currentUid,
                     createdAt: serverTimestamp(),
                 });
+
             }
 
-            // Write the role-specific profile
+            // 5. Queue up the role-specific profile document
             const profileData = {
-                uid,
+                uid: currentUid,
                 email,
                 displayName,
                 name: displayName,
                 firstName: details.firstName,
                 lastName: details.lastName,
                 role,
-                schoolId: schoolId || '',
+                schoolId: schoolId,
                 schoolName: school.name || '',
                 createdAt: serverTimestamp(),
+                ...(role === 'principal' && { tier: 'free' }),
                 ...(details.title && { title: details.title }),
                 ...(details.grade && { grade: details.grade }),
                 ...(details.subjects && { subjects: details.subjects }),
                 ...(details.institutionType && { institutionType: details.institutionType }),
             };
 
-            // Write to role-specific collection
-            await setDoc(doc(db, profileCol, uid), profileData);
+            const profileRef = doc(db, profileCol, currentUid);
+            batch.set(profileRef, profileData);
 
-            // Write to users index (used by App.jsx routing)
-            await setDoc(doc(db, 'users', uid), {
-                uid,
-                email,
-                displayName,
-                role,
-                schoolId: schoolId || '',
-                createdAt: serverTimestamp(),
-            });
+            // 6. Commit everything simultaneously
+            await batch.commit();
 
             // Advance to done screen
             setStep(3);
@@ -739,6 +764,16 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
     };
 
     const handleFinish = () => {
+        // Match the schoolId generation from the batch write above
+        // so the profile carries the same schoolId Firestore stored.
+        let resolvedSchoolId = school.schoolId || '';
+        if (role === 'principal' && !resolvedSchoolId && school.name) {
+            resolvedSchoolId = `${uid}_${school.name
+                .replace(/\s+/g, '_')
+                .substring(0, 30)}`;
+        }
+        if (!resolvedSchoolId) resolvedSchoolId = uid;
+
         const profile = {
             uid,
             email,
@@ -749,7 +784,7 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
             grade: details.grade || '',
             subjects: details.subjects || [],
             schoolName: school.name || '',
-            schoolId: school.schoolId || '',
+            schoolId: resolvedSchoolId,
         };
         onComplete?.(profile);
     };

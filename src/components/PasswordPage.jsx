@@ -8,7 +8,7 @@ import {
   signOut,
 } from 'firebase/auth';
 import {
-  doc, getDoc, setDoc,
+  doc, getDoc
 } from 'firebase/firestore';
 import ReCAPTCHA from 'react-google-recaptcha';
 import Swal from 'sweetalert2';
@@ -332,32 +332,48 @@ export default function PasswordPage({ setStudentInfo, userProfile }) {
     setSetupPending(true);
   };
 
+  // ── handleSetupComplete ──────────────────────────────────
   const handleSetupComplete = async (profile) => {
     setSetupPending(false);
     if (!profile) return;
-    if (profile.role === 'student') {
-      setStudentInfo?.(profile);
-      localStorage.setItem('user-session', JSON.stringify(profile));
-      await Swal.fire({
-        icon: 'success', title: 'Welcome to Eduket OS!',
-        text: 'Your student profile is ready. Find your first exam below.',
-        confirmButtonColor: '#1EA1FE', timer: 4000, timerProgressBar: true,
-      });
-      navigate('/exam');
-    } else if (profile.role === 'teacher') {
-      await Swal.fire({
-        icon: 'success', title: 'Welcome, Teacher!',
-        text: 'Your profile is set up. Start by uploading your first exam.',
-        confirmButtonColor: '#1EA1FE', timer: 4000, timerProgressBar: true,
-      });
-      navigate('/teacher-dashboard');
-    } else if (profile.role === 'principal') {
-      await Swal.fire({
-        icon: 'success', title: 'School registered!',
-        text: 'Your school is live. Invite teachers and students to join.',
-        confirmButtonColor: '#1EA1FE', timer: 4000, timerProgressBar: true,
-      });
-      navigate('/principal-dashboard');
+
+    try {
+      if (profile.role === 'student') {
+        setStudentInfo?.(profile);
+        localStorage.setItem('user-session', JSON.stringify(profile));
+        await Swal.fire({
+          icon: 'success', title: 'Welcome to Eduket OS!',
+          text: 'Your student profile is ready. Find your first exam below.',
+          confirmButtonColor: '#1EA1FE', timer: 4000, timerProgressBar: true,
+        });
+        window.location.href = '/exam';
+
+      }
+
+      else if (profile.role === 'teacher') {
+        await Swal.fire({
+          icon: 'success', title: 'Welcome, Teacher!',
+          text: 'Your profile is set up. Start by uploading your first exam.',
+          confirmButtonColor: '#1EA1FE', timer: 4000, timerProgressBar: true,
+        });
+        window.location.href = '/teacher-dashboard';
+      }
+      else if (profile.role === 'principal') {
+        await Swal.fire({
+          icon: 'success', title: 'School registered!',
+          text: 'Your school is live. Invite teachers and students to join.',
+          confirmButtonColor: '#1EA1FE', timer: 4000, timerProgressBar: true,
+        });
+        // Use window.location instead of navigate() — this triggers a full
+        // page reload which re-fires onAuthStateChanged with the profile
+        // already written in Firestore. navigate() does not re-trigger
+        // onAuthStateChanged so userProfile stays null and RequireRole
+        // redirects back to /.
+        window.location.href = '/principal-dashboard';
+      }
+
+    } catch (err) {
+      console.error('[ProfileSetup] Navigation failed:', err);
     }
   };
 

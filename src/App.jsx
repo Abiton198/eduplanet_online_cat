@@ -223,40 +223,59 @@ function App() {
   //
   // Critical: setLoading(false) must be called even on error — otherwise the
   // app is stuck on the spinner with no way out.
+
+  const getDocWithRetry = async (docRef, retries = 3) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const snap = await getDoc(docRef);
+        return snap;
+      } catch (err) {
+        const isPermission = err.code === 'permission-denied';
+        if (isPermission && i < retries - 1) {
+          // Brief window after registration where rules engine hasn't
+          // seen the newly written users/{uid} yet — wait and retry
+          await new Promise(r => setTimeout(r, 1200 * (i + 1)));
+          continue;
+        }
+        throw err;
+      }
+    }
+  };
+
+  //  useEffect after defining getDocWithRetry
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-
       if (!firebaseUser) {
         setUser(null);
         setUserProfile(null);
         setLoading(false);
         return;
       }
-
       setUser(firebaseUser);
-
+      // ── Replace the try block in App.jsx temporarily ──────────────────────────
       try {
+        // Read 1 — users/{uid}
+        await firebaseUser.getIdToken(true);
+        console.log('[App] Reading users/', firebaseUser.uid);
         const userSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
+        console.log('[App] users snap exists:', userSnap.exists());
 
         if (!userSnap.exists()) {
-          // Firebase Auth account exists but no Firestore profile yet.
-          // This happens between createUserWithEmailAndPassword and the
-          // ProfileSetupWizard writing to Firestore — stay on loading.
           setUserProfile(null);
           setLoading(false);
           return;
         }
 
         const { role, schoolId } = userSnap.data();
+        console.log('[App] role:', role, 'schoolId:', schoolId);
 
-        // Read the role-specific profile document
+        // Read 2 — role-specific profile
         const profileCol = role === 'principal' ? 'principals'
-          : role === 'teacher' ? 'teachers'
-            : 'students';
+          : role === 'teacher' ? 'teachers' : 'students';
 
-        const profSnap = await getDoc(
-          doc(db, profileCol, firebaseUser.uid)
-        );
+        console.log('[App] Reading', profileCol, '/', firebaseUser.uid);
+        const profSnap = await getDoc(doc(db, profileCol, firebaseUser.uid));
+        console.log('[App] profile snap exists:', profSnap.exists());
 
         const profile = profSnap.exists()
           ? { ...profSnap.data(), role, schoolId, uid: firebaseUser.uid }
@@ -265,25 +284,20 @@ function App() {
         setUserProfile(profile);
 
         if (role === 'student') {
-          // Persist student session for ProtectedRoute / ExamPage compatibility
           setStudentInfo(profile);
           localStorage.setItem('user-session', JSON.stringify(profile));
         } else {
-          // A teacher or principal signing in must NOT inherit a previous
-          // student session from the same device. Clear it explicitly.
           setStudentInfo(null);
           localStorage.removeItem('user-session');
         }
 
       } catch (err) {
-        console.error('[App] Profile load error:', err);
-        // Don't leave the app stuck on a spinner — show the landing page
+        console.error('[App] Profile load error:', err.code, err.message);
+        console.error('[App] Error details:', JSON.stringify(err));
         setUserProfile(null);
       }
-
       setLoading(false);
     });
-
     return () => unsub();
   }, []);
 
