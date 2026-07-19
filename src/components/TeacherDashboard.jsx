@@ -978,10 +978,11 @@ export default function TeacherDashboard() {
                 </span>
               </div>
               <h1 className="text-4xl md:text-5xl font-black mb-1 tracking-tighter">
-                Hello, {teacherProfile?.title || 'Mr'} {teacherProfile?.surname || 'Teacher'}
+                Hello, {teacherProfile?.title || ''} {teacherProfile?.firstName || teacherProfile?.displayName || 'Teacher'}
+
               </h1>
               <p className="opacity-70 text-sm font-medium flex items-center gap-2">
-                <School size={14} /> {teacherProfile?.school || 'South African Educator'}
+                <School size={14} /> {teacherProfile?.schoolName || teacherProfile?.school || 'South African Educator'}
               </p>
             </div>
             <div className="flex flex-col items-end gap-2">
