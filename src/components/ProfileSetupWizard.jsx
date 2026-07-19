@@ -482,7 +482,13 @@ function StepSchool({ role, school, onChange, uid }) {
                                 <button
                                     key={r.id}
                                     type="button"
-                                    onClick={() => set('schoolId', r.id)}
+                                    onClick={() => onChange(prev => ({
+                                        ...prev,
+                                        schoolId: r.id,
+                                        name: r.schoolName || r.name || '',
+                                        country: r.country || '',
+                                        curriculum: r.curriculum || '',
+                                    }))}
                                     className={`w-full text-left flex items-center gap-3 p-4
                                rounded-2xl border-2 transition-colors
                                ${school.schoolId === r.id
@@ -681,6 +687,11 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
             let schoolId = school.schoolId || '';
             if (role === 'principal' && !schoolId) {
                 schoolId = `${currentUid}_${school.name.replace(/\s+/g, '_').substring(0, 30)}`;
+            }
+            // For teachers/students — schoolId comes from the school they selected.
+            // If still empty after selection, log a warning so it is caught early.
+            if (!schoolId && role !== 'principal') {
+                console.warn('[ProfileSetup] Teacher/student has no schoolId — school was not selected');
             }
 
             // 3. Queue up the base user document

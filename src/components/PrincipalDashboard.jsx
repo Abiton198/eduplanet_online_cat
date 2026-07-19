@@ -776,8 +776,7 @@ export default function PrincipalDashboard({ principal }) {
                     <div className="flex-1 min-w-0">
                         <h1 className="text-sm font-black text-slate-800 dark:text-white truncate">Principal Dashboard</h1>
                         <p className="text-[9px] text-slate-400 hidden sm:block truncate">
-                            {school?.name} · {new Date().toLocaleDateString('en-ZA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                        </p>
+                            {selectedSchoolDoc?.schoolName || selectedSchoolDoc?.name || 'My School'} · {new Date().toLocaleDateString('en-ZA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}                        </p>
                     </div>
 
                     {/* Tier chip — turns red if any resource is blocked */}

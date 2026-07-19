@@ -515,10 +515,14 @@ export default function TeacherDashboard() {
   const { school } = useSchool();
   const [selectedCurriculum, setSelectedCurriculum] = useState('');
 
+  const schoolCountry = school?.country
+    || teacherProfile?.country
+    || 'South Africa';
+
   const { data: levels, loading: levelsLoading, error: levelsError, retry: retryLevels } = useAiList(
     fetchLevels,
-    [school?.country, selectedCurriculum],
-    !!school?.country && !!selectedCurriculum
+    [schoolCountry, selectedCurriculum],
+    !!schoolCountry && !!selectedCurriculum   // always true with fallback
   );
 
   const [students, setStudents] = useState([]);
@@ -540,6 +544,11 @@ export default function TeacherDashboard() {
   const [selectedSubject, setSelectedSubject] = useState('');
   const [examSubject, setExamSubject] = useState('');
   const [subjectName, setSubjectName] = useState('');
+
+  const activeCurriculum =
+    (school?.curriculum && school.curriculum.trim() !== "") ? school.curriculum :
+      (teacherProfile?.curriculum && teacherProfile.curriculum.trim() !== "") ? teacherProfile.curriculum :
+        selectedCurriculum || 'CAPS';
 
   // ─── Auth listener ────────────────────────────────────────────────── 
   useEffect(() => {
@@ -602,7 +611,13 @@ export default function TeacherDashboard() {
       ? [teacherProfile.subjects]
       : [];
 
-  const schoolCurricula = school?.curricula || [];
+  // const schoolCurricula = school?.curricula || [];
+  // Locate where you process your school context data, and ensure it defaults to an array containing 'CAPS' if missing
+  const schoolCurricula = (school?.curriculum
+    ? (Array.isArray(school.curriculum) ? school.curriculum : [school.curriculum])
+    : ['CAPS']
+  ).filter(Boolean); // Clears out any accidental null/empty string records
+
 
   useEffect(() => {
     if (schoolCurricula.length === 1 && !selectedCurriculum) {
@@ -746,7 +761,7 @@ export default function TeacherDashboard() {
 
             // 🔑 FIXED: Changed from selectedSubject to paperSubject to match your input state hook
             subject: paperSubject || teacherSubjects[0] || "",
-
+            schoolId: teacherProfile?.schoolId || '',
             grade: selectedGrade || "12",
             curriculum: selectedCurriculum,
             examType: currentActiveType,
@@ -988,16 +1003,56 @@ export default function TeacherDashboard() {
             <div className="flex flex-col items-end gap-2">
               {/* ✅  Drive badge removed, curriculum badge kept: */}
               <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-2xl text-xs font-bold border border-white/5">
-                <GraduationCap size={14} /> {teacherProfile?.curriculum || 'CAPS'}
+                {activeCurriculum}
               </div>
             </div>
           </div>
 
+          {/* ── REPLACE the InfoItem grid ───────────────────────────────────────── */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-8 border-t border-white/10 mt-8">
-            <InfoItem icon={BookOpen} label="Subjects" value={Array.isArray(teacherProfile?.subjects) ? teacherProfile.subjects.join(', ') : (teacherProfile?.subjects || '—')} />
-            <InfoItem icon={MapPin} label="Province" value={teacherProfile?.province || 'South Africa'} />
-            <InfoItem icon={LayoutDashboard} label="Role" value="Portal Moderator" />
-            <InfoItem icon={ShieldCheck} label="Uploaded" value={`${uploadedExams.length} paper${uploadedExams.length !== 1 ? 's' : ''}`} />
+
+            {/* Subjects — from teacher profile (wizard writes this) */}
+            <InfoItem
+              icon={BookOpen}
+              label="Subjects"
+              value={
+                Array.isArray(teacherProfile?.subjects)
+                  ? teacherProfile.subjects.join(', ')
+                  : teacherProfile?.subjects || '—'
+              }
+            />
+
+            {/* Province/Country — from school document */}
+            <InfoItem
+              icon={MapPin}
+              label="Province"
+              value={
+                school?.province          // if school doc has province
+                || school?.country        // fallback to country
+                || teacherProfile?.province
+                || 'South Africa'
+              }
+            />
+
+            {/* Curriculum — from school document */}
+            <InfoItem
+              icon={GraduationCap}
+              label="Curriculum"
+              value={
+                school?.curriculum
+                || teacherProfile?.curriculum
+                || selectedCurriculum
+                || 'CAPS'
+              }
+            />
+
+            {/* Uploads count */}
+            <InfoItem
+              icon={ShieldCheck}
+              label="Uploaded"
+              value={`${uploadedExams.length} paper${uploadedExams.length !== 1 ? 's' : ''}`}
+            />
+
           </div>
         </div>
         <div className="absolute -right-10 -top-10 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -1098,45 +1153,51 @@ export default function TeacherDashboard() {
                   {/* Curriculum + Grade */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {schoolCurricula.length <= 1 ? (
-                      <div
-                        className="p-5 border-2 border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800/50"
-                        ref={(el) => {
-                          if (schoolCurricula[0] && !selectedCurriculum) {
-                            setSelectedCurriculum(schoolCurricula[0]);
-                          }
-                        }}
-                      >
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Curriculum</p>
+                      <div className="p-5 border-2 border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800/50 flex flex-col justify-center">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                          Curriculum
+                        </p>
                         <p className="font-bold text-sm text-slate-700 dark:text-slate-200">
                           {schoolCurricula[0] || 'No curriculum on file — contact your principal'}
                         </p>
                       </div>
                     ) : (
-                      <select
-                        value={selectedCurriculum}
-                        onChange={(e) => { setSelectedCurriculum(e.target.value); setPaperGrade(''); }}
-                        className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600"
-                      >
-                        <option value="">Select Curriculum</option>
-                        {schoolCurricula.map((c) => <option key={c} value={c}>{c}</option>)}
-                      </select>
+                      <div className="flex flex-col relative">
+                        <select
+                          value={selectedCurriculum}
+                          onChange={(e) => {
+                            setSelectedCurriculum(e.target.value);
+                            setPaperGrade('');
+                          }}
+                          className="p-5 border-2 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600 dark:focus:border-indigo-500 text-slate-700 dark:text-slate-200 w-full transition-colors"
+                        >
+                          <option value="">Select Curriculum</option>
+                          {schoolCurricula.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
                     )}
 
-                    <select
-                      value={paperGrade}
-                      onChange={(e) => setPaperGrade(e.target.value)}
-                      disabled={!selectedCurriculum || levelsLoading}
-                      className="p-5 border-2 dark:bg-slate-800 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600 disabled:opacity-50"
-                    >
-                      <option value="">
-                        {!selectedCurriculum
-                          ? 'Select curriculum first'
-                          : levelsLoading
-                            ? 'Loading levels...'
-                            : 'Select Grade / Level'}
-                      </option>
-                      {levels.map((lvl) => <option key={lvl} value={lvl}>{lvl}</option>)}
-                    </select>
+                    <div className="flex flex-col relative">
+                      <select
+                        value={paperGrade}
+                        onChange={(e) => setPaperGrade(e.target.value)}
+                        disabled={!selectedCurriculum || levelsLoading}
+                        className="p-5 border-2 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none focus:border-indigo-600 dark:focus:border-indigo-500 text-slate-700 dark:text-slate-200 disabled:opacity-50 disabled:bg-slate-50 dark:disabled:bg-slate-900/40 disabled:border-slate-100 dark:disabled:border-slate-800/80 transition-all w-full"
+                      >
+                        <option value="">
+                          {!selectedCurriculum
+                            ? 'Select curriculum first'
+                            : levelsLoading
+                              ? 'Loading levels...'
+                              : 'Select Grade / Level'}
+                        </option>
+                        {levels.map((lvl) => (
+                          <option key={lvl} value={lvl}>{lvl}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
                   {levelsError && (
