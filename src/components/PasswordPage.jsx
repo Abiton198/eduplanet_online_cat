@@ -45,6 +45,7 @@ const AUTH_ERRORS = {
   'auth/popup-closed-by-user': '',
   'auth/popup-blocked': 'Popup blocked. Please allow popups for this site.',
   'auth/network-request-failed': 'Network error. Check your connection.',
+  'auth/password-does-not-meet-requirements': null,
 };
 const AUTH_DEFAULT_ERROR = 'Something went wrong. Please try again.';
 const getFriendlyError = (code) => AUTH_ERRORS[code] ?? AUTH_DEFAULT_ERROR;
@@ -128,11 +129,30 @@ function AuthModal({ isOpen, onClose, onSuccess, onNeedsSetup, setStudentInfo })
         await routeExistingUser(cred.user.uid);
       }
     } catch (err) {
-      const msg = getFriendlyError(err.code);
-      if (msg) setError(msg);
-      setCaptchaToken(null); captchaRef.current?.reset();
-    } finally {
-      setIsSubmitting(false);
+      console.error('[Auth] Registration failed:', err.code, err.message);
+
+      let msg = '';
+
+      if (err.code === 'auth/password-does-not-meet-requirements') {
+        // Firebase message contains the exact requirements in square brackets
+        // e.g. "[Password must contain an upper case character, ...]"
+        const match = err.message.match(/\[([^\]]+)\]/);
+        if (match) {
+          const requirements = match[1]
+            .split(',')
+            .map(r => r.trim())
+            .join('\n• ');
+          msg = `Password does not meet requirements:\n• ${requirements}`;
+        } else {
+          msg = 'Password does not meet the required security standards.';
+        }
+      } else {
+        msg = getFriendlyError(err.code) || err.message || 'Something went wrong. Please try again.';
+      }
+
+      setError(msg);
+      setCaptchaToken(null);
+      captchaRef.current?.reset();
     }
   };
 
@@ -225,6 +245,12 @@ function AuthModal({ isOpen, onClose, onSuccess, onNeedsSetup, setStudentInfo })
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full border border-white/10 bg-[#0A0D14] text-[#F3F6FB] p-4 pr-12 rounded-xl outline-none text-sm focus:border-[#1EA1FE] transition-colors placeholder:text-[#AEB7C7]/50"
               />
+              {isRegistering && (
+                <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                  Password must contain: uppercase letter, lowercase letter,
+                  number, and a special character (e.g. !@#$%)
+                </p>
+              )}
               <button
                 type="button"
                 onClick={() => setShowPassword(v => !v)}
