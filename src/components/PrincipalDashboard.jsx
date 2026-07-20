@@ -39,7 +39,33 @@ import { onSnapshot, collection, getDocs, query, where } from 'firebase/firestor
 
 
 // ─── GRADE ORDER ──────────────────────────────────────────────────────────────
-const GRADE_ORDER = ['Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+// 1. Defensively find the school object under any typical naming pattern
+const activeSchoolInstance =
+    typeof school !== 'undefined' ? school :
+        typeof schoolData !== 'undefined' ? schoolData :
+            typeof currentSchool !== 'undefined' ? currentSchool : null;
+
+// 2. Safely resolve the active curriculum string name
+const currentCurriculum =
+    typeof schoolCurricula !== 'undefined' && schoolCurricula?.[0] ? schoolCurricula[0] :
+        activeSchoolInstance?.curriculum ? activeSchoolInstance.curriculum : 'Dynamic';
+
+// 3. Locate the student grade tallies defensively without reading undeclared parents
+const activeGradeCounts =
+    typeof gradeCounts !== 'undefined' ? gradeCounts :
+        typeof stats !== 'undefined' && stats?.gradeCounts ? stats.gradeCounts :
+            typeof metrics !== 'undefined' && metrics?.gradeCounts ? metrics.gradeCounts :
+                activeSchoolInstance?.gradeCounts ? activeSchoolInstance.gradeCounts : {};
+
+// 4. Extract the active grade text keys and sort them naturally
+const dynamicGradeOrder = Object.keys(activeGradeCounts).sort((a, b) => {
+    const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+    const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+    return numA - numB;
+});
+
+// Alias the old variable name to the new dynamic order so legacy components don't crash
+const GRADE_ORDER = dynamicGradeOrder;
 
 // ─── TIER VISUAL META ─────────────────────────────────────────────────────────
 const TIER_VISUAL = TIERS.map(tier => ({
@@ -838,24 +864,53 @@ export default function PrincipalDashboard({ principal }) {
 
                             </div>
 
-                            {/* Grade chart */}
+
+                            {/* Dynamic Grade Chart */}
                             <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700">
-                                <h2 className="text-sm font-black text-slate-700 dark:text-white mb-4">Students per Grade</h2>
-                                <div className="flex items-end gap-2 md:gap-3 h-28">
-                                    {GRADE_ORDER.map(g => {
-                                        const count = gradeCounts[g] || 0;
-                                        const max = Math.max(...GRADE_ORDER.map(gr => gradeCounts[gr] || 0), 1);
-                                        const pct = (count / max) * 100;
-                                        return (
-                                            <div key={g} className="flex-1 flex flex-col items-center gap-1">
-                                                <span className="text-[10px] font-black text-slate-600 dark:text-slate-300">{count}</span>
-                                                <div className="w-full rounded-t-xl transition-all duration-700"
-                                                    style={{ height: `${pct}%`, backgroundColor: primary, minHeight: count ? 6 : 0 }} />
-                                                <span className="text-[9px] text-slate-400 font-bold">{g.replace('Grade ', 'Gr ')}</span>
-                                            </div>
-                                        );
-                                    })}
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-sm font-black text-slate-700 dark:text-white">Students per Grade</h2>
+                                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300">
+                                        {currentCurriculum}
+                                    </span>
                                 </div>
+
+                                {dynamicGradeOrder.length === 0 ? (
+                                    <div className="h-28 flex items-center justify-center border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+                                        <p className="text-xs font-medium text-slate-400">No student enrollment records found</p>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-end gap-2 md:gap-3 h-28 pt-4">
+                                        {dynamicGradeOrder.map(g => {
+                                            const count = activeGradeCounts[g] || 0;
+                                            const max = Math.max(...dynamicGradeOrder.map(gr => activeGradeCounts[gr] || 0), 1);
+                                            const pct = (count / max) * 100;
+
+                                            // Formats display cleanly: "Grade 11" -> "Gr 11", "Year 8" -> "Yr 8"
+                                            const displayLabel = g
+                                                .replace('Grade ', 'Gr ')
+                                                .replace('Year ', 'Yr ');
+
+                                            return (
+                                                <div key={g} className="flex-1 flex flex-col items-center gap-1">
+                                                    <span className="text-[10px] font-black text-slate-600 dark:text-slate-300">
+                                                        {count}
+                                                    </span>
+                                                    <div
+                                                        className="w-full rounded-t-xl transition-all duration-700"
+                                                        style={{
+                                                            height: `${pct}%`,
+                                                            backgroundColor: primary || '#4f46e5', // Safe fallback color
+                                                            minHeight: count ? 6 : 0
+                                                        }}
+                                                    />
+                                                    <span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">
+                                                        {displayLabel}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Subject performance */}

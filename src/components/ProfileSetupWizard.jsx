@@ -400,12 +400,13 @@ function StepDetails({ role, details, onChange }) {
 // STEP 3 — School details
 // ══════════════════════════════════════════════════════════════════════════════
 
-function StepSchool({ role, school, onChange, uid }) {
+function StepSchool({ role, school = {}, onChange, uid }) {
     const [searching, setSearching] = useState(false);
     const [results, setResults] = useState([]);
     const [query, setQuery] = useState('');
     const [searchDone, setSearchDone] = useState(false);
 
+    // Helper to update individual school fields cleanly
     const set = (field, value) => onChange({ ...school, [field]: value });
 
     const searchSchools = async () => {
@@ -417,10 +418,9 @@ function StepSchool({ role, school, onChange, uid }) {
             const q = query_fs(
                 collection(db, 'schools'),
                 where('searchName', '>=', query.toLowerCase()),
-                where('searchName', '<=', query.toLowerCase() + '\uf8ff'),
+                where('searchName', '<=', query.toLowerCase() + '\uf8ff')
             );
             const snap = await getDocs(q);
-            // setResults(snap.docs.map(d => ({ id: d.id, ...d.to_dict() })));
             setResults(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         } catch (err) {
             // Search index may not exist — show manual entry
@@ -433,18 +433,16 @@ function StepSchool({ role, school, onChange, uid }) {
 
     return (
         <div className="space-y-4">
-
             {/* Students and teachers — join an existing school */}
             {(role === 'student' || role === 'teacher') && (
                 <>
-                    <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30
-                          border border-blue-100 dark:border-blue-900">
+                    {/* 1. School Finder Section */}
+                    <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900">
                         <p className="text-xs font-black text-blue-700 dark:text-blue-300 mb-1">
                             Find your school
                         </p>
                         <p className="text-xs text-blue-600 dark:text-blue-400">
-                            Enter your school name below. If your school is not registered,
-                            ask your principal to register first.
+                            Enter your school name below. If your school is not registered, ask your principal to register first.
                         </p>
                     </div>
 
@@ -454,7 +452,10 @@ function StepSchool({ role, school, onChange, uid }) {
                             <Input
                                 placeholder="e.g. Prince Edward High School"
                                 value={school.name || ''}
-                                onChange={(e) => { set('name', e.target.value); setQuery(e.target.value); }}
+                                onChange={(e) => {
+                                    set('name', e.target.value);
+                                    setQuery(e.target.value);
+                                }}
                             />
                         </div>
                         <div className="pt-6">
@@ -462,12 +463,7 @@ function StepSchool({ role, school, onChange, uid }) {
                                 type="button"
                                 onClick={searchSchools}
                                 disabled={searching || !(school.name || '').trim()}
-                                className="flex items-center gap-2 px-4 py-4 rounded-2xl
-                           bg-slate-100 dark:bg-slate-800 font-bold text-sm
-                           text-slate-600 dark:text-slate-300
-                           hover:bg-indigo-50 dark:hover:bg-indigo-900/30
-                           hover:text-indigo-600 disabled:opacity-50
-                           transition-colors"
+                                className="flex items-center gap-2 px-4 py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 font-bold text-sm text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 disabled:opacity-50 transition-colors"
                             >
                                 <Search size={16} />
                                 {searching ? '…' : 'Find'}
@@ -482,16 +478,15 @@ function StepSchool({ role, school, onChange, uid }) {
                                 <button
                                     key={r.id}
                                     type="button"
-                                    onClick={() => onChange(prev => ({
-                                        ...prev,
+                                    onClick={() => onChange({
+                                        ...school,
                                         schoolId: r.id,
                                         name: r.schoolName || r.name || '',
                                         country: r.country || '',
                                         curriculum: r.curriculum || '',
-                                    }))}
-                                    className={`w-full text-left flex items-center gap-3 p-4
-                               rounded-2xl border-2 transition-colors
-                               ${school.schoolId === r.id
+                                        offeredSubjects: Array.isArray(r.subjects) ? r.subjects : []
+                                    })}
+                                    className={`w-full text-left flex items-center gap-3 p-4 rounded-2xl border-2 transition-colors ${school.schoolId === r.id
                                             ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
                                             : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300'
                                         }`}
@@ -499,7 +494,7 @@ function StepSchool({ role, school, onChange, uid }) {
                                     <Building2 size={18} className="text-indigo-500 flex-shrink-0" />
                                     <div>
                                         <p className="text-sm font-black text-slate-800 dark:text-white">
-                                            {r.schoolName}
+                                            {r.schoolName || r.name}
                                         </p>
                                         <p className="text-xs text-slate-400">{r.country} · {r.curriculum}</p>
                                     </div>
@@ -512,16 +507,70 @@ function StepSchool({ role, school, onChange, uid }) {
                     )}
 
                     {searchDone && results.length === 0 && (
-                        <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30
-                            border border-amber-200 dark:border-amber-800">
+                        <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
                             <p className="text-xs font-black text-amber-700 dark:text-amber-300 mb-1">
                                 School not found
                             </p>
                             <p className="text-xs text-amber-600 dark:text-amber-400">
-                                Your school may not be registered yet. Ask your principal to
-                                register the school first, then come back to complete setup.
-                                You can still continue — your school name will be saved.
+                                Your school may not be registered yet. Ask your principal to register the school first, then come back to complete setup. You can still continue — your school name will be saved.
                             </p>
+                        </div>
+                    )}
+
+                    {/* 2. DYNAMIC SUBJECT SELECTION ZONE */}
+                    {school.schoolId && role === 'student' && (
+                        <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                            <div>
+                                <h3 className="text-sm font-black text-slate-800 dark:text-white">
+                                    Select Your Active Registered Subjects
+                                </h3>
+                                <p className="text-xs text-slate-400">
+                                    Tap all subjects currently listed on your dashboard tracker table (Curriculum: {school.curriculum || 'CAPS'})
+                                </p>
+                            </div>
+
+                            {(() => {
+                                // Dynamic choices from school or fallback baseline
+                                const dynamicSubjects = (school.offeredSubjects && school.offeredSubjects.length > 0)
+                                    ? school.offeredSubjects
+                                    : ['Mathematics', 'Physical Sciences', 'Life Sciences', 'Accounting', 'Business Studies', 'History', 'Geography', 'English'];
+
+                                const activeSubjects = school.subjects || [];
+
+                                return (
+                                    <div className="flex flex-wrap gap-2 pt-2">
+                                        {dynamicSubjects.map((sub) => {
+                                            const isSelected = activeSubjects.includes(sub);
+                                            return (
+                                                <button
+                                                    key={sub}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const updatedList = isSelected
+                                                            ? activeSubjects.filter(item => item !== sub)
+                                                            : [...activeSubjects, sub];
+
+                                                        set('subjects', updatedList);
+                                                    }}
+                                                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border-2 text-left ${isSelected
+                                                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300'
+                                                        }`}
+                                                >
+                                                    {sub}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Validation reminder notice */}
+                            {(!school.subjects || school.subjects.length === 0) && (
+                                <p className="text-[11px] font-semibold text-rose-500 pt-1">
+                                    ⚠️ You must pick at least one subject before completing setup.
+                                </p>
+                            )}
                         </div>
                     )}
                 </>
@@ -530,14 +579,12 @@ function StepSchool({ role, school, onChange, uid }) {
             {/* Principals — register a new school */}
             {role === 'principal' && (
                 <>
-                    <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30
-                          border border-indigo-100 dark:border-indigo-900">
+                    <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900">
                         <p className="text-xs font-black text-indigo-700 dark:text-indigo-300 mb-1">
                             Register your school
                         </p>
                         <p className="text-xs text-indigo-600 dark:text-indigo-400">
-                            Your school is the hub for all teachers and students. Fill in
-                            the details below — this takes 2 minutes.
+                            Your school is the hub for all teachers and students. Fill in the details below — this takes 2 minutes.
                         </p>
                     </div>
 
@@ -553,7 +600,7 @@ function StepSchool({ role, school, onChange, uid }) {
                     <div>
                         <Label>Country</Label>
                         <Input
-                            placeholder="e.g. Zimbabwe"
+                            placeholder="e.g. South Africa"
                             value={school.country || ''}
                             onChange={(e) => set('country', e.target.value)}
                         />
@@ -584,8 +631,8 @@ function StepSchool({ role, school, onChange, uid }) {
     );
 }
 
-// Alias — Firestore query needs to be imported properly in real code
-// Replace with: import { query as query_fs, collection, where, getDocs } from 'firebase/firestore'
+// Alias — ensure query is imported from 'firebase/firestore' in your top imports:
+// import { query as query_fs, collection, where, getDocs } from 'firebase/firestore';
 const query_fs = query;
 
 
@@ -608,16 +655,13 @@ function StepDone({ role }) {
 
     return (
         <div className="text-center py-6">
-            <div className="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-indigo-500
-                      to-purple-600 text-white flex items-center justify-center
-                      mx-auto mb-6 shadow-2xl shadow-indigo-500/30">
+            <div className="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-indigo-500/30">
                 <Icon size={32} />
             </div>
             <h3 className="text-2xl font-black text-slate-800 dark:text-white mb-3">
                 You're all set! 🎉
             </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto
-                    leading-relaxed">
+            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
                 {messages[role] || 'Your profile is ready.'}
             </p>
         </div>

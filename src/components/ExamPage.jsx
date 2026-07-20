@@ -452,21 +452,52 @@ export default function ExamPage({ studentInfo, addResult, setStudentInfo, isDar
 
   // ─── LISTEN FOR TEACHER UPLOADS ───────────────────────────────────────
   useEffect(() => {
-    if (!user || !studentInfo?.grade || !studentInfo?.subject) return;
+    if (!user) return;
+    if (!studentInfo?.schoolId) {
+      console.warn('[ExamPage] Student has no schoolId — cannot load exams');
+      return;
+    }
 
+    // Query by schoolId only — filter grade/subject client-side.
+    // Avoids composite index requirement and handles array subjects correctly.
     const q = query(
       collection(db, "exams"),
-      where("grade", "==", studentInfo.grade),
-      where("subject", "==", studentInfo.subject),
-      orderBy("uploadedAt", "desc")
+      where("schoolId", "==", studentInfo.schoolId),
+      where("status", "==", "ready"),
+      orderBy("uploadedAt", "desc"),
+      limit(50)
     );
 
     const unsub = onSnapshot(q, (snap) => {
-      const exams = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const studentGrade = studentInfo.grade || '';
+      const studentSubjects = Array.isArray(studentInfo.subjects)
+        ? studentInfo.subjects.map(s => s.toLowerCase().trim())
+        : (studentInfo.subject ? [studentInfo.subject.toLowerCase().trim()] : []);
 
+      const exams = snap.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(exam => {
+          // Must be ready
+          if (exam.status !== 'ready') return false;
+
+          const normaliseGrade = (g) => {
+            const s = String(g || '').toLowerCase().trim();
+            // Extract the number: "form 4" → "4", "grade 12" → "12", "12" → "12"
+            const match = s.match(/\d+/);
+            return match ? match[0] : s;
+          };
+          const gradeMatch = !studentGrade
+            || !exam.grade
+            || normaliseGrade(exam.grade) === normaliseGrade(studentGrade)
+            || exam.grade === studentGrade;  // exact match fallback
+
+          // Subject match — student may study multiple subjects
+          const examSubject = (exam.subject || '').toLowerCase().trim();
+          const subjectMatch = studentSubjects.length === 0
+            || studentSubjects.some(s => examSubject.includes(s) || s.includes(examSubject));
+
+          return gradeMatch && subjectMatch;
+        });
 
       setDynamicExams(exams);
 
