@@ -359,42 +359,111 @@ export default function PasswordPage({ setStudentInfo, userProfile }) {
   };
 
   // ── handleSetupComplete ──────────────────────────────────
+  const notifyPrincipal = (profile) => {
+    // Only notify for teachers and students — not principals (they ARE the principal)
+    if (profile.role === 'principal') return;
+    if (!profile.schoolId) return;
+
+    // Fire and forget — never block navigation
+    fetch(`${import.meta.env.VITE_API_URL}/notify-principal-signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        schoolId: profile.schoolId,
+        schoolName: profile.schoolName || '',
+        uid: profile.uid || '',
+        email: profile.email || '',
+        displayName: profile.displayName || '',
+        firstName: profile.firstName || '',
+        role: profile.role,
+        grade: profile.grade || '',
+        subjects: profile.subjects || [],
+      }),
+    }).catch(err => console.warn('[Notify] Principal alert failed:', err));
+  };
+
+  // ── In handleSetupComplete — add notifyPrincipal call after welcome email ────
   const handleSetupComplete = async (profile) => {
     setSetupPending(false);
     if (!profile) return;
 
     try {
+      const dashboardUrls = {
+        principal: `${window.location.origin}/principal-dashboard`,
+        teacher: `${window.location.origin}/teacher-dashboard`,
+        student: `${window.location.origin}/exam`,
+      };
+
+      // Send welcome email to the new user (fire and forget)
+      fetch(`${import.meta.env.VITE_API_URL}/send-welcome-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: profile.email,
+          displayName: profile.displayName,
+          firstName: profile.firstName,
+          role: profile.role,
+          schoolName: profile.schoolName,
+          grade: profile.grade || '',
+          subjects: profile.subjects || [],
+          dashboardUrl: dashboardUrls[profile.role] || window.location.origin,
+        }),
+      }).catch(err => console.warn('[Welcome Email] Send failed:', err));
+
+      // Notify principal of new signup (fire and forget)
+      notifyPrincipal(profile);
+
+      // Navigate...
       if (profile.role === 'student') {
         setStudentInfo?.(profile);
         localStorage.setItem('user-session', JSON.stringify(profile));
         await Swal.fire({
-          icon: 'success', title: 'Welcome to Eduket OS!',
-          text: 'Your student profile is ready. Find your first exam below.',
-          confirmButtonColor: '#1EA1FE', timer: 4000, timerProgressBar: true,
+          icon: 'success',
+          title: 'Welcome to Eduket OS! 🎉',
+          html: `
+          <p style="margin-bottom:8px">Your student profile is ready.</p>
+          <p style="font-size:13px;color:#6b7280">
+            📧 A welcome email with your details has been sent to<br/>
+            <strong>${profile.email}</strong>
+          </p>
+        `,
+          confirmButtonText: 'Go to My Exams',
+          confirmButtonColor: '#1d4ed8',
         });
         window.location.href = '/exam';
 
-      }
-
-      else if (profile.role === 'teacher') {
+      } else if (profile.role === 'teacher') {
         await Swal.fire({
-          icon: 'success', title: 'Welcome, Teacher!',
-          text: 'Your profile is set up. Start by uploading your first exam.',
-          confirmButtonColor: '#1EA1FE', timer: 4000, timerProgressBar: true,
+          icon: 'success',
+          title: 'Welcome, Teacher! 📚',
+          html: `
+          <p style="margin-bottom:8px">Your profile is set up.</p>
+          <p style="font-size:13px;color:#6b7280">
+            📧 A welcome email has been sent to<br/>
+            <strong>${profile.email}</strong>
+          </p>
+        `,
+          confirmButtonText: 'Go to Dashboard',
+          confirmButtonColor: '#059669',
         });
         window.location.href = '/teacher-dashboard';
-      }
-      else if (profile.role === 'principal') {
+
+      } else if (profile.role === 'principal') {
         await Swal.fire({
-          icon: 'success', title: 'School registered!',
-          text: 'Your school is live. Invite teachers and students to join.',
-          confirmButtonColor: '#1EA1FE', timer: 4000, timerProgressBar: true,
+          icon: 'success',
+          title: 'School Registered! 🏫',
+          html: `
+          <p style="margin-bottom:8px">
+            <strong>${profile.schoolName}</strong> is now live on Eduket OS.
+          </p>
+          <p style="font-size:13px;color:#6b7280">
+            📧 A welcome email has been sent to<br/>
+            <strong>${profile.email}</strong>
+          </p>
+        `,
+          confirmButtonText: 'Go to Dashboard',
+          confirmButtonColor: '#7c3aed',
         });
-        // Use window.location instead of navigate() — this triggers a full
-        // page reload which re-fires onAuthStateChanged with the profile
-        // already written in Firestore. navigate() does not re-trigger
-        // onAuthStateChanged so userProfile stays null and RequireRole
-        // redirects back to /.
         window.location.href = '/principal-dashboard';
       }
 

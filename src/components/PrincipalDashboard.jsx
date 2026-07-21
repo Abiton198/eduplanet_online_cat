@@ -34,6 +34,7 @@ import { TIERS, getTierConfig, isFeatureAllowed, isAtLimit, getUsagePercent } fr
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { onSnapshot, collection, getDocs, query, where } from 'firebase/firestore';
+import { ActivityFeed } from './ActivityFeed';
 
 
 
@@ -863,6 +864,11 @@ export default function PrincipalDashboard({ principal }) {
                                 <StatCard label="Avg Score" value={avgScore != null ? `${avgScore}%` : '—'} icon={TrendingUp} color="rose" sub={`Pass: ${overallPassRate}%`} />
 
                             </div>
+
+                            <ActivityFeed
+                                schoolId={selectedSchoolDoc?.schoolId || principal?.schoolId}
+                                apiUrl={import.meta.env.VITE_API_URL}
+                            />
 
 
                             {/* Dynamic Grade Chart */}
