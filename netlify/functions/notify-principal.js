@@ -8,7 +8,19 @@ const { getFirestore, FieldValue }      = require('firebase-admin/firestore');
 // ── Firebase Admin SDK (single instance) ──────────────────────────────────
 function getAdminDb() {
   if (!getApps().length) {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
+    const raw = process.env.FIREBASE_SERVICE_ACCOUNT || '';
+    if (!raw) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT env var is not set in Netlify');
+    }
+    let serviceAccount;
+    try {
+      serviceAccount = JSON.parse(raw);
+    } catch {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON');
+    }
+    if (!serviceAccount.project_id) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT missing project_id field');
+    }
     initializeApp({ credential: cert(serviceAccount) });
   }
   return getFirestore();

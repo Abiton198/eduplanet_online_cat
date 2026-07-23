@@ -1,3 +1,5 @@
+const { i } = require("framer-motion/client");
+
 // netlify/functions/send-welcome-email.js
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -120,7 +122,7 @@ function buildWelcomeHtml(cfg, name, rows, dashboard = 'https://eduket.tech') {
 
 // ── Resend API call ────────────────────────────────────────────────────────
 async function sendViaResend({ to, subject, html, from: fromAddr }) {
-  const key = process.env.VITE_RESEND_API_KEY;
+  const key = process.env.RESEND_API_KEY;
   if (!key) return { success: false, error: 'RESEND_API_KEY not set' };
 
   const res = await fetch('https://api.resend.com/emails', {
