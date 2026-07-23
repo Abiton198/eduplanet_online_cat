@@ -102,11 +102,13 @@ function AuthModal({ isOpen, onClose, onSuccess, onNeedsSetup, setStudentInfo })
 const routeExistingUser = async (uid) => {
   const userSnap = await getDoc(doc(db, 'users', uid));
   if (!userSnap.exists()) { onNeedsSetup?.(uid, email); return; }
-  
+
   const { role, schoolId } = userSnap.data();
-  const col = role === 'principal' ? 'principals' : role === 'teacher' ? 'teachers' : 'students';
+  const col = role === 'principal' ? 'principals'
+            : role === 'teacher'   ? 'teachers'
+            :                        'students';
   const profSnap = await getDoc(doc(db, col, uid));
-  
+
   const profile = profSnap.exists()
     ? { ...profSnap.data(), role, schoolId, uid }
     : { role, schoolId, uid };
@@ -115,32 +117,49 @@ const routeExistingUser = async (uid) => {
     setStudentInfo?.(profile);
     localStorage.setItem('user-session', JSON.stringify(profile));
   }
-  
+
   resetForm();
 
-  // 🔒 CHECK APPROVAL STATUS BEFORE ROUTING
-if (role !== 'principal' && profile.approvalStatus === 'declined') {
-  onClose();
-  await Swal.fire({
-    icon:  'error',
-    title: 'Access Declined',
-    html:  `
-      <p>Your registration has been declined by the school principal.</p>
-      <p style="font-size:13px;color:#6b7280;margin-top:8px">
-        Contact your school admin or email
-        <a href="mailto:support@eduket.tech">support@eduket.tech</a>
-        if you believe this is a mistake.
-      </p>
-    `,
-    confirmButtonColor: '#4F46E5',
-    confirmButtonText:  'OK',
-  });
-  await signOut(auth);
-  return;
-}
+  // ── Check approval status — handle both field formats ────────────────────
+  // Registration writes: approved: false (boolean)
+  // Principal action writes: approvalStatus: 'approved'|'declined' (string)
+  const isDeclined = profile.approvalStatus === 'declined'
+                  || profile.approved === false;
 
-onSuccess?.(profile);
-}
+  const isPending  = role !== 'principal'
+                  && profile.approvalStatus == null   // never been reviewed
+                  && profile.approved === false;       // registration set this
+
+  if (role !== 'principal' && isDeclined && !isPending) {
+    onClose();
+    await Swal.fire({
+      icon:  'error',
+      title: 'Access Declined',
+      html:  `
+        <p>Your registration has been declined by the school principal.</p>
+        <p style="font-size:13px;color:#6b7280;margin-top:8px">
+          Contact your school admin or email
+          <a href="mailto:support@eduket.tech">support@eduket.tech</a>
+          if you believe this is a mistake.
+        </p>
+      `,
+      confirmButtonColor: '#4F46E5',
+      confirmButtonText:  'OK',
+    });
+    await signOut(auth);
+    return;
+  }
+
+  // Pending — principal has not reviewed yet
+  if (isPending) {
+    onClose();
+    navigate('/pending-approval');
+    return;
+  }
+
+  onSuccess?.(profile);
+};
+
 
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
@@ -404,6 +423,7 @@ const notifyPrincipal = (profile) => {
       role:        profile.role,
       grade:       profile.grade       || '',
       subjects:    profile.subjects    || [],
+       photoURL:    profile.photoURL    || '', 
     }),
   })
     .then(r => r.json())

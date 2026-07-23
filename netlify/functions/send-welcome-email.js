@@ -1,4 +1,3 @@
-const { i } = require("framer-motion/client");
 
 // netlify/functions/send-welcome-email.js
 exports.handler = async (event) => {
@@ -103,6 +102,8 @@ function buildWelcomeHtml(cfg, name, rows, dashboard = 'https://eduket.tech') {
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr><td align="center">
         <a href="${dashboard}"
+         target="_blank";
+        rel="noopener noreferrer";
            style="display:inline-block;padding:14px 36px;background:${cfg.colour};
                   color:#fff;font-size:14px;font-weight:900;text-decoration:none;
                   border-radius:12px;">${cfg.btn} &rarr;</a>
@@ -119,6 +120,8 @@ function buildWelcomeHtml(cfg, name, rows, dashboard = 'https://eduket.tech') {
 </td></tr></table>
 </body></html>`;
 }
+
+
 
 // ── Resend API call ────────────────────────────────────────────────────────
 async function sendViaResend({ to, subject, html, from: fromAddr }) {
@@ -155,3 +158,5 @@ function respond(statusCode, body) {
     body: JSON.stringify(body),
   };
 }
+
+

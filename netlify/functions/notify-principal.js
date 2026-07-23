@@ -86,6 +86,7 @@ exports.handler = async (event) => {
     grade,
     subjects,
     uid,
+    photoURL
   } = data;
 
   const userName = displayName || firstName || newEmail || 'New User';
@@ -105,6 +106,7 @@ exports.handler = async (event) => {
       actorUid:    uid         || '',
       actorName:   userName,
       actorEmail:  newEmail,
+      actorPhotoURL: photoURL || '',
       actorRole:   role        || 'student',
       grade:       grade       || '',
       subjects:    Array.isArray(subjects) ? subjects : [],
@@ -245,15 +247,19 @@ exports.handler = async (event) => {
     <!-- Buttons -->
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
       <td style="padding-right:6px;">
-        <a href="https://eduket.tech/principal-dashboard"
-           style="display:block;text-align:center;padding:13px 0;background:#7c3aed;
-                  color:#fff;font-size:13px;font-weight:900;text-decoration:none;
-                  border-radius:10px;">
-          Review in Dashboard &rarr;
-        </a>
+       <a href="https://eduket.tech/principal-dashboard"
+   target="_blank"
+   rel="noopener noreferrer"
+   style="display:block;text-align:center;padding:13px 0;background:#7c3aed;
+          color:#fff;font-size:13px;font-weight:900;text-decoration:none;
+          border-radius:10px;">
+  Review in Dashboard &rarr;
+</a>
       </td>
       <td style="padding-left:6px;">
         <a href="mailto:support@eduket.tech?subject=Unknown user: ${newEmail}&body=School: ${schoolName}%0AUser: ${userName} (${newEmail})"
+        target="_blank";
+        rel="noopener noreferrer";
            style="display:block;text-align:center;padding:13px 0;background:#dc2626;
                   color:#fff;font-size:13px;font-weight:900;text-decoration:none;
                   border-radius:10px;">
