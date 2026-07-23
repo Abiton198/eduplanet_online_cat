@@ -98,22 +98,49 @@ function AuthModal({ isOpen, onClose, onSuccess, onNeedsSetup, setStudentInfo })
   const handleClose = () => { resetForm(); onClose(); };
   const toggleMode = () => { setIsRegistering(v => !v); setError(''); };
 
-  const routeExistingUser = async (uid) => {
-    const userSnap = await getDoc(doc(db, 'users', uid));
-    if (!userSnap.exists()) { onNeedsSetup?.(uid, email); return; }
-    const { role, schoolId } = userSnap.data();
-    const col = role === 'principal' ? 'principals' : role === 'teacher' ? 'teachers' : 'students';
-    const profSnap = await getDoc(doc(db, col, uid));
-    const profile = profSnap.exists()
-      ? { ...profSnap.data(), role, schoolId, uid }
-      : { role, schoolId, uid };
-    if (role === 'student') {
-      setStudentInfo?.(profile);
-      localStorage.setItem('user-session', JSON.stringify(profile));
-    }
-    resetForm();
-    onSuccess?.(profile);
-  };
+  // 1. UPDATED routeExistingUser inside AuthModal
+const routeExistingUser = async (uid) => {
+  const userSnap = await getDoc(doc(db, 'users', uid));
+  if (!userSnap.exists()) { onNeedsSetup?.(uid, email); return; }
+  
+  const { role, schoolId } = userSnap.data();
+  const col = role === 'principal' ? 'principals' : role === 'teacher' ? 'teachers' : 'students';
+  const profSnap = await getDoc(doc(db, col, uid));
+  
+  const profile = profSnap.exists()
+    ? { ...profSnap.data(), role, schoolId, uid }
+    : { role, schoolId, uid };
+
+  if (role === 'student') {
+    setStudentInfo?.(profile);
+    localStorage.setItem('user-session', JSON.stringify(profile));
+  }
+  
+  resetForm();
+
+  // 🔒 CHECK APPROVAL STATUS BEFORE ROUTING
+if (role !== 'principal' && profile.approvalStatus === 'declined') {
+  onClose();
+  await Swal.fire({
+    icon:  'error',
+    title: 'Access Declined',
+    html:  `
+      <p>Your registration has been declined by the school principal.</p>
+      <p style="font-size:13px;color:#6b7280;margin-top:8px">
+        Contact your school admin or email
+        <a href="mailto:support@eduket.tech">support@eduket.tech</a>
+        if you believe this is a mistake.
+      </p>
+    `,
+    confirmButtonColor: '#4F46E5',
+    confirmButtonText:  'OK',
+  });
+  await signOut(auth);
+  return;
+}
+
+onSuccess?.(profile);
+}
 
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
@@ -336,18 +363,68 @@ function AuthModal({ isOpen, onClose, onSuccess, onNeedsSetup, setStudentInfo })
 // MAIN PAGE
 // ══════════════════════════════════════════════════════════════════════════════
 
+// ── Email helpers — Netlify Functions (no backend needed) ─────────────────
+
+const sendWelcomeEmail = (profile, dashboardUrl) => {
+  // Fire and forget — never block navigation
+  fetch('/.netlify/functions/send-welcome-email', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email:        profile.email        || '',
+      displayName:  profile.displayName  || '',
+      firstName:    profile.firstName    || '',
+      role:         profile.role,
+      schoolName:   profile.schoolName   || '',
+      grade:        profile.grade        || '',
+      subjects:     profile.subjects     || [],
+      dashboardUrl,
+    }),
+  })
+    .then(r => r.json())
+    .then(d => console.log('[Welcome Email]', d))
+    .catch(err => console.warn('[Welcome Email] Failed:', err));
+};
+
+const notifyPrincipal = (profile) => {
+  // Only for teachers and students — principals ARE the principal
+  if (profile.role === 'principal') return;
+  if (!profile.schoolId) return;
+
+  fetch('/.netlify/functions/notify-principal', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      schoolId:    profile.schoolId    || '',
+      schoolName:  profile.schoolName  || '',
+      uid:         profile.uid         || '',
+      email:       profile.email       || '',
+      displayName: profile.displayName || '',
+      firstName:   profile.firstName   || '',
+      role:        profile.role,
+      grade:       profile.grade       || '',
+      subjects:    profile.subjects    || [],
+    }),
+  })
+    .then(r => r.json())
+    .then(d => console.log('[Notify Principal]', d))
+    .catch(err => console.warn('[Notify Principal] Failed:', err));
+};
+
+// ── Component ──────────────────────────────────────────────────────────────
+
 export default function PasswordPage({ setStudentInfo, userProfile }) {
   const navigate = useNavigate();
 
-  const [modalOpen, setModalOpen] = useState(false);
+  const [modalOpen,    setModalOpen]    = useState(false);
   const [setupPending, setSetupPending] = useState(false);
-  const [newUserUid, setNewUserUid] = useState('');
+  const [newUserUid,   setNewUserUid]   = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
 
   const handleAuthSuccess = (profile) => {
     setModalOpen(false);
     if (!profile) return;
-    if (profile.role === 'teacher') return navigate('/teacher-dashboard');
+    if (profile.role === 'teacher')   return navigate('/teacher-dashboard');
     if (profile.role === 'principal') return navigate('/principal-dashboard');
   };
 
@@ -358,31 +435,6 @@ export default function PasswordPage({ setStudentInfo, userProfile }) {
     setSetupPending(true);
   };
 
-  // ── handleSetupComplete ──────────────────────────────────
-  const notifyPrincipal = (profile) => {
-    // Only notify for teachers and students — not principals (they ARE the principal)
-    if (profile.role === 'principal') return;
-    if (!profile.schoolId) return;
-
-    // Fire and forget — never block navigation
-    fetch(`${import.meta.env.VITE_API_URL}/notify-principal-signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        schoolId: profile.schoolId,
-        schoolName: profile.schoolName || '',
-        uid: profile.uid || '',
-        email: profile.email || '',
-        displayName: profile.displayName || '',
-        firstName: profile.firstName || '',
-        role: profile.role,
-        grade: profile.grade || '',
-        subjects: profile.subjects || [],
-      }),
-    }).catch(err => console.warn('[Notify] Principal alert failed:', err));
-  };
-
-  // ── In handleSetupComplete — add notifyPrincipal call after welcome email ────
   const handleSetupComplete = async (profile) => {
     setSetupPending(false);
     if (!profile) return;
@@ -390,78 +442,66 @@ export default function PasswordPage({ setStudentInfo, userProfile }) {
     try {
       const dashboardUrls = {
         principal: `${window.location.origin}/principal-dashboard`,
-        teacher: `${window.location.origin}/teacher-dashboard`,
-        student: `${window.location.origin}/exam`,
+        teacher:   `${window.location.origin}/teacher-dashboard`,
+        student:   `${window.location.origin}/exam`,
       };
 
-      // Send welcome email to the new user (fire and forget)
-      fetch(`${import.meta.env.VITE_API_URL}/send-welcome-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: profile.email,
-          displayName: profile.displayName,
-          firstName: profile.firstName,
-          role: profile.role,
-          schoolName: profile.schoolName,
-          grade: profile.grade || '',
-          subjects: profile.subjects || [],
-          dashboardUrl: dashboardUrls[profile.role] || window.location.origin,
-        }),
-      }).catch(err => console.warn('[Welcome Email] Send failed:', err));
+      // Send welcome email via Netlify Function (fire and forget)
+      sendWelcomeEmail(profile, dashboardUrls[profile.role] || window.location.origin);
 
-      // Notify principal of new signup (fire and forget)
+      // Notify principal via Netlify Function (fire and forget)
       notifyPrincipal(profile);
 
-      // Navigate...
+      // Navigate and show success
       if (profile.role === 'student') {
         setStudentInfo?.(profile);
         localStorage.setItem('user-session', JSON.stringify(profile));
+
         await Swal.fire({
-          icon: 'success',
+          icon:  'success',
           title: 'Welcome to Eduket OS! 🎉',
-          html: `
-          <p style="margin-bottom:8px">Your student profile is ready.</p>
-          <p style="font-size:13px;color:#6b7280">
-            📧 A welcome email with your details has been sent to<br/>
-            <strong>${profile.email}</strong>
-          </p>
-        `,
-          confirmButtonText: 'Go to My Exams',
+          html:  `
+            <p style="margin-bottom:8px">Your student profile is ready.</p>
+            <p style="font-size:13px;color:#6b7280">
+              📧 A welcome email has been sent to<br/>
+              <strong>${profile.email}</strong>
+            </p>
+          `,
+          confirmButtonText:  'Go to My Exams',
           confirmButtonColor: '#1d4ed8',
         });
         window.location.href = '/exam';
 
       } else if (profile.role === 'teacher') {
         await Swal.fire({
-          icon: 'success',
+          icon:  'success',
           title: 'Welcome, Teacher! 📚',
-          html: `
-          <p style="margin-bottom:8px">Your profile is set up.</p>
-          <p style="font-size:13px;color:#6b7280">
-            📧 A welcome email has been sent to<br/>
-            <strong>${profile.email}</strong>
-          </p>
-        `,
-          confirmButtonText: 'Go to Dashboard',
+          html:  `
+            <p style="margin-bottom:8px">Your profile is set up.</p>
+            <p style="font-size:13px;color:#6b7280">
+              📧 A welcome email has been sent to<br/>
+              <strong>${profile.email}</strong>
+            </p>
+          `,
+          confirmButtonText:  'Go to Dashboard',
           confirmButtonColor: '#059669',
         });
         window.location.href = '/teacher-dashboard';
 
       } else if (profile.role === 'principal') {
         await Swal.fire({
-          icon: 'success',
+          icon:  'success',
           title: 'School Registered! 🏫',
-          html: `
-          <p style="margin-bottom:8px">
-            <strong>${profile.schoolName}</strong> is now live on Eduket OS.
-          </p>
-          <p style="font-size:13px;color:#6b7280">
-            📧 A welcome email has been sent to<br/>
-            <strong>${profile.email}</strong>
-          </p>
-        `,
-          confirmButtonText: 'Go to Dashboard',
+          html:  `
+            <p style="margin-bottom:8px">
+              <strong>${profile.schoolName}</strong> is now live on Eduket OS.
+            </p>
+            <p style="font-size:13px;color:#6b7280">
+              📧 A welcome email has been sent to<br/>
+              <strong>${profile.email}</strong>
+            </p>
+          `,
+          confirmButtonText:  'Go to Dashboard',
           confirmButtonColor: '#7c3aed',
         });
         window.location.href = '/principal-dashboard';
@@ -474,7 +514,7 @@ export default function PasswordPage({ setStudentInfo, userProfile }) {
 
   const handleDashboard = () => {
     if (!userProfile) { setModalOpen(true); return; }
-    if (userProfile.role === 'teacher') return navigate('/teacher-dashboard');
+    if (userProfile.role === 'teacher')   return navigate('/teacher-dashboard');
     if (userProfile.role === 'principal') return navigate('/principal-dashboard');
     navigate('/exam');
   };
@@ -519,14 +559,14 @@ export default function PasswordPage({ setStudentInfo, userProfile }) {
       />
 
       <div className="min-h-screen bg-[#0A0D14]">
-        <Hero onOpenModal={() => setModalOpen(true)} />
+        <Hero     onOpenModal={() => setModalOpen(true)} />
         <FeatureStrip />
         <VideoSection onOpenModal={() => setModalOpen(true)} />
         <Demosection />
         <HowItWorks />
         <CTA />
         <ThreePaths onOpenModal={() => setModalOpen(true)} />
-        <Mission onOpenModal={() => setModalOpen(true)} />
+        <Mission  onOpenModal={() => setModalOpen(true)} />
         <Footer />
       </div>
     </>

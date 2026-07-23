@@ -121,35 +121,40 @@ export function useAuthModal({
     // Inside useAuthModal.js
 
     const handleGoogleSignIn = useCallback(async (captchaToken, resetCaptcha) => {
-        // ── Safety Guard Check ──────────────────────────────────────────────────
-        if (!captchaToken) {
-            setError('Please complete the security check first.');
-            return;
-        }
+    if (!captchaToken) {
+        setError('Please complete the security check first.');
+        return;
+    }
 
-        setError('');
-        setIsSubmitting(true);
-        try {
-            const credential = await signInWithGoogle();
-            const uid = credential.user.uid;
-            const email = credential.user.email;
+    setError('');
+    setIsSubmitting(true);
 
-            const userSnap = await getDoc(doc(db, 'users', uid));
-            if (userSnap.exists()) {
-                await handleExistingUser(uid);
-            } else {
-                resetForm();
-                onClose?.();
-                onNeedsSetup?.(uid, email);
-            }
-        } catch (err) {
-            const msg = getFriendlyAuthError(err.code);
-            if (msg) setError(msg);
-            resetCaptcha?.();
-        } finally {
-            setIsSubmitting(false);
+    try {
+        const credential = await signInWithGoogle();
+        const uid = credential.user.uid;
+        const email = credential.user.email;
+
+        // Fetch profile across your role collections (teachers/students/users)
+        const profile = await fetchUserProfile(uid);
+
+        if (profile) {
+            // Returning user found -> Route to dashboard / check approval
+            await handleExistingUser(uid);
+        } else {
+            // Brand new user -> Hand off to ProfileSetupWizard
+            resetForm();
+            onClose?.();
+            onNeedsSetup?.(uid, email);
         }
-    }, [handleExistingUser, onNeedsSetup, onClose, resetForm]);
+    } catch (err) {
+        console.error('[Google Auth Error]:', err);
+        const msg = getFriendlyAuthError(err.code);
+        if (msg) setError(msg);
+        resetCaptcha?.();
+    } finally {
+        setIsSubmitting(false);
+    }
+}, [fetchUserProfile, handleExistingUser, onNeedsSetup, onClose, resetForm]);
 
     return {
         isRegistering,

@@ -117,28 +117,90 @@ function LoadingSpinner() {
  * This replaces the original RequireAuth which only checked authentication,
  * allowing a student who typed /teacher-dashboard into the URL to reach it.
  */
-function RequireRole({ children, user, loading, userProfile, role }) {
-  // Auth still resolving
-  if (loading) return <LoadingSpinner />;
+function RequireRole({ user, loading, userProfile, role, children }) {
+  // 1. Wait for auth AND user profile to finish fetching
+  if (loading || (user && !userProfile)) {
+    return <LoadingSpinner />;
+  }
 
-  // Not signed in
-  if (!user) return <Navigate to="/" replace />;
+  // 2. Not logged in -> send home
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
 
-  // Signed in but absolutely no Firestore profile documents exist yet
-  // Send them back to the root page to complete registration/wizard setup
-  if (!userProfile) return <Navigate to="/" replace />;
+  // 3. Not approved -> send to pending approval page
+  if (userProfile?.role !== 'principal' && userProfile?.approved !== true) {
+    return <Navigate to="/pending-approval" replace />;
+  }
 
-  // Signed in but wrong role — redirect to their dashboard
-  if (userProfile.role !== role) {
-    if (userProfile.role === 'student') return <Navigate to="/exam" replace />;
-    if (userProfile.role === 'teacher') return <Navigate to="/teacher-dashboard" replace />;
-    if (userProfile.role === 'principal') return <Navigate to="/principal-dashboard" replace />;
+  // 4. Role mismatch -> send home
+  if (userProfile?.role !== role) {
     return <Navigate to="/" replace />;
   }
 
   return children;
 }
 
+function PendingApprovalPage({ userProfile }) {
+  const handleSignOut = async () => {
+    const { signOut } = await import('firebase/auth');
+    const { auth }    = await import('./utils/firebase');
+    await signOut(auth);
+    localStorage.removeItem('user-session');
+    window.location.href = '/';
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0A0D14] text-[#F3F6FB] flex items-center justify-center p-6">
+      <div className="max-w-md w-full bg-[#141822] border border-white/10 rounded-3xl p-8 text-center shadow-2xl">
+        <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl">
+          ⏳
+        </div>
+        <h2 className="text-2xl font-bold mb-2">Approval Pending</h2>
+        <p className="text-sm text-[#AEB7C7] leading-relaxed mb-6">
+          Your account for <strong className="text-white">
+            {userProfile?.schoolName || 'your school'}
+          </strong> has been created.
+          Your Principal has been notified to review and approve your access.
+        </p>
+        <div className="p-4 rounded-xl bg-white/5 border border-white/5
+                        text-xs text-[#AEB7C7] text-left space-y-1 mb-6">
+          <p><span className="font-semibold text-white">Email:</span> {userProfile?.email}</p>
+          <p><span className="font-semibold text-white">Role:</span> {userProfile?.role}</p>
+          <p><span className="font-semibold text-white">School:</span> {userProfile?.schoolName}</p>
+          <p><span className="font-semibold text-white">Status:</span>{' '}
+            <span className="text-amber-400 font-bold">
+              {userProfile?.approvalStatus === 'declined' ? '❌ Declined' : '⏳ Awaiting approval'}
+            </span>
+          </p>
+        </div>
+
+        {/* Declined message */}
+        {userProfile?.approvalStatus === 'declined' && (
+          <div className="mb-4 p-3 bg-red-900/20 border border-red-500/30
+                          rounded-xl text-xs text-red-400 text-left">
+            <p className="font-bold mb-1">Your access was declined.</p>
+            <p>Contact your school admin or{' '}
+              <a href="mailto:support@eduket.tech"
+                 className="underline hover:text-red-300">
+                support@eduket.tech
+              </a>
+              {' '}if you believe this is a mistake.
+            </p>
+          </div>
+        )}
+
+        <button
+          onClick={handleSignOut}
+          className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10
+                     text-sm font-bold rounded-2xl transition-colors text-[#AEB7C7]"
+        >
+          Sign Out
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ROOT APP
@@ -147,10 +209,9 @@ function RequireRole({ children, user, loading, userProfile, role }) {
 function App() {
 
   // ── Global state ──────────────────────────────────────────────────────────
-  const [user, setUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);   // Firestore profile
-  const [loading, setLoading] = useState(true);   // true until first auth event
-
+const [user, setUser] = useState(null);
+const [userProfile, setUserProfile] = useState(null);
+const [loading, setLoading] = useState(true);
   // Legacy student session — kept for ExamPage / ProtectedRoute compatibility
   const [studentInfo, setStudentInfo] = useState(null);
 
@@ -180,60 +241,13 @@ function App() {
     return () => clearInterval(id);
   }, []);
 
-
-  // ── Legacy session restore ─────────────────────────────────────────────────
-  // Restores studentInfo from localStorage only when:
-  //   1. The stored uid matches the live Firebase user's uid
-  //   2. The stored role is "student"
-  // This prevents a cached teacher session from being misread as student on
-  // a shared device after role switch.
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
-      if (!firebaseUser) {
-        localStorage.removeItem('user-session');
-        return;
-      }
-      try {
-        const saved = localStorage.getItem('user-session');
-        if (!saved) return;
-        const parsed = JSON.parse(saved);
-        if (parsed?.uid === firebaseUser.uid && parsed?.role === 'student') {
-          setStudentInfo(parsed);
-        } else {
-          // UID mismatch or wrong role — discard stale cache
-          localStorage.removeItem('user-session');
-        }
-      } catch {
-        localStorage.removeItem('user-session');
-      }
-    });
-    return () => unsub();
-  }, []);
-
-
-  // ── Primary Firebase auth listener ────────────────────────────────────────
-  // Sequence on every auth state change:
-  //   1. If signed out → clear all state
-  //   2. If signed in  → read users/{uid} for role + schoolId
-  //                    → read role-specific profile collection
-  //                    → set userProfile
-  //                    → if student: persist to localStorage
-  //                    → if not student: clear any stale student state
-  //   3. Always        → setLoading(false)
-  //
-  // Critical: setLoading(false) must be called even on error — otherwise the
-  // app is stuck on the spinner with no way out.
-
+// ── getDocWithRetry — retries on permission-denied after registration ─────
   const getDocWithRetry = async (docRef, retries = 3) => {
     for (let i = 0; i < retries; i++) {
       try {
-        const snap = await getDoc(docRef);
-        return snap;
+        return await getDoc(docRef);
       } catch (err) {
-        const isPermission = err.code === 'permission-denied';
-        if (isPermission && i < retries - 1) {
-          // Brief window after registration where rules engine hasn't
-          // seen the newly written users/{uid} yet — wait and retry
+        if (err.code === 'permission-denied' && i < retries - 1) {
           await new Promise(r => setTimeout(r, 1200 * (i + 1)));
           continue;
         }
@@ -241,63 +255,89 @@ function App() {
       }
     }
   };
-
-  //  useEffect after defining getDocWithRetry
+ 
+  // ── Primary Firebase auth listener ────────────────────────────────────────
+  // Single listener — handles everything:
+  //   signed out → clear all state
+  //   signed in, new user → no Firestore profile, setUserProfile(null)
+  //                         ProfileSetupWizard handles via onNeedsSetup
+  //   signed in, existing → load profile from users + role collection
+  //   always → setLoading(false) in finally block
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!firebaseUser) {
         setUser(null);
         setUserProfile(null);
+        setStudentInfo(null);
+        localStorage.removeItem('user-session');
         setLoading(false);
         return;
       }
+ 
       setUser(firebaseUser);
-      // ── Replace the try block in App.jsx temporarily ──────────────────────────
+ 
       try {
-        // Read 1 — users/{uid}
+        // Force fresh token — without this, new Google users get
+        // permission-denied because the token hasn't propagated yet
         await firebaseUser.getIdToken(true);
-        console.log('[App] Reading users/', firebaseUser.uid);
-        const userSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
-        console.log('[App] users snap exists:', userSnap.exists());
-
+ 
+        const userSnap = await getDocWithRetry(
+          doc(db, 'users', firebaseUser.uid)
+        );
+ 
         if (!userSnap.exists()) {
+          // New user — no profile yet. ProfileSetupWizard will handle this.
+          // DO NOT redirect — just show the landing page with setup modal.
           setUserProfile(null);
-          setLoading(false);
           return;
         }
-
+ 
         const { role, schoolId } = userSnap.data();
-        console.log('[App] role:', role, 'schoolId:', schoolId);
-
-        // Read 2 — role-specific profile
+ 
         const profileCol = role === 'principal' ? 'principals'
-          : role === 'teacher' ? 'teachers' : 'students';
-
-        console.log('[App] Reading', profileCol, '/', firebaseUser.uid);
-        const profSnap = await getDoc(doc(db, profileCol, firebaseUser.uid));
-        console.log('[App] profile snap exists:', profSnap.exists());
-
+          : role === 'teacher'                  ? 'teachers'
+          :                                       'students';
+ 
+        const profSnap = await getDocWithRetry(
+          doc(db, profileCol, firebaseUser.uid)
+        );
+ 
         const profile = profSnap.exists()
           ? { ...profSnap.data(), role, schoolId, uid: firebaseUser.uid }
           : { role, schoolId, uid: firebaseUser.uid };
-
+ 
         setUserProfile(profile);
-
+ 
         if (role === 'student') {
           setStudentInfo(profile);
           localStorage.setItem('user-session', JSON.stringify(profile));
         } else {
-          setStudentInfo(null);
-          localStorage.removeItem('user-session');
+          // Restore localStorage session only if it belongs to this user
+          try {
+            const saved  = localStorage.getItem('user-session');
+            const parsed = saved ? JSON.parse(saved) : null;
+            if (parsed?.uid === firebaseUser.uid && parsed?.role === 'student') {
+              setStudentInfo(parsed);
+            } else {
+              setStudentInfo(null);
+              localStorage.removeItem('user-session');
+            }
+          } catch {
+            setStudentInfo(null);
+            localStorage.removeItem('user-session');
+          }
         }
-
+ 
       } catch (err) {
         console.error('[App] Profile load error:', err.code, err.message);
-        console.error('[App] Error details:', JSON.stringify(err));
         setUserProfile(null);
+      } finally {
+        // CRITICAL: always runs — no matter what threw above
+        // Without finally, any error leaves loading=true forever
+        setLoading(false);
       }
-      setLoading(false);
     });
+ 
     return () => unsub();
   }, []);
 
@@ -485,19 +525,34 @@ function App() {
              * New: userProfile is passed so PasswordPage's LandingNavbar
              * can show the ProfileChip for already-signed-in users.
              */}
-            <Route
-              path="/"
-              element={
-                loading ? <LoadingSpinner /> :
-                  isPrincipal ? <Navigate to="/principal-dashboard" replace /> :
-                    isTeacher ? <Navigate to="/teacher-dashboard" replace /> :
-                      (isStudent || studentInfo) ? <Navigate to="/exam" replace /> :
-                        <PasswordPage
-                          setStudentInfo={setStudentInfo}
-                          userProfile={userProfile}         // ← NEW: powers ProfileChip
-                        />
-              }
-            />
+         <Route
+  path="/"
+  element={
+    loading ? (
+      <LoadingSpinner />
+    ) : isPrincipal ? (
+      <Navigate to="/principal-dashboard" replace />
+
+    ) : isTeacher ? (
+      // Check approvalStatus field — NOT approved boolean
+      userProfile?.approvalStatus === 'declined'
+        ? <Navigate to="/pending-approval" replace />
+        : <Navigate to="/teacher-dashboard" replace />
+
+    ) : (isStudent || studentInfo) ? (
+      userProfile?.approvalStatus === 'declined'
+        ? <Navigate to="/pending-approval" replace />
+        : <Navigate to="/exam" replace />
+
+    ) : (
+      <PasswordPage
+        setStudentInfo={setStudentInfo}
+        userProfile={userProfile}
+      />
+    )
+  }
+/>
+
 
             {/* ── Student: take exam ──────────────────────────────────── */}
             <Route
@@ -629,6 +684,26 @@ function App() {
                 </RequireRole>
               }
             />
+
+            {/* ── Pending Approval Route ───────────────────────────── */}
+<Route
+  path="/pending-approval"
+  element={
+    loading ? (
+      <LoadingSpinner />
+    ) : !user ? (
+      <Navigate to="/" replace />
+    ) : userProfile?.approvalStatus === 'approved' ? (
+      // Principal approved them while on this screen — send to dashboard
+      <Navigate
+        to={userProfile.role === 'teacher' ? '/teacher-dashboard' : '/exam'}
+        replace
+      />
+    ) : (
+      <PendingApprovalPage userProfile={userProfile} />
+    )
+  }
+/>
 
             {/* ── Privacy policy ──────────────────────────────────── */}
             <Route path="/privacy" element={<PrivacyPolicy />} />

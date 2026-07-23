@@ -40,6 +40,7 @@ import {
     ArrowRight, ArrowLeft, CheckCircle2,
     Search, Building2, Sparkles,
 } from 'lucide-react';
+import { fetchLevels, fetchSubjects } from '../utils/academicResolver';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 const TITLES = ['Mr', 'Mrs', 'Ms', 'Dr', 'Prof', 'Rev'];
@@ -62,6 +63,7 @@ const INST_TYPES = [
     'Primary School', 'Secondary / High School', 'College',
     'University', 'Private College', 'Other',
 ];
+import { useAiList } from './SchoolRegistration';
 
 
 // ── Reusable form elements ─────────────────────────────────────────────────
@@ -272,8 +274,20 @@ function StepRole({ role, onSelect }) {
 // STEP 2 — Personal details (varies by role)
 // ══════════════════════════════════════════════════════════════════════════════
 
-function StepDetails({ role, details, onChange }) {
+function StepDetails({ role, details, onChange, subjects, subjectsLoading, curriculum }) {
     const set = (field, value) => onChange({ ...details, [field]: value });
+
+    const FALLBACK_SUBJECTS = [
+        'Mathematics', 'Mathematical Literacy', 'English Home Language',
+        'English First Additional Language', 'Physical Sciences', 'Life Sciences',
+        'Geography', 'History', 'Accounting', 'Business Studies', 'Economics',
+        'Computer Applications Technology', 'Information Technology',
+        'Life Orientation', 'Tourism', 'Consumer Studies',
+    ];
+
+    const subjectList = (subjects && subjects.length > 0)
+        ? subjects
+        : FALLBACK_SUBJECTS;
 
     return (
         <div className="space-y-4">
@@ -329,17 +343,54 @@ function StepDetails({ role, details, onChange }) {
             {/* Subjects — teachers only */}
             {role === 'teacher' && (
                 <div>
-                    <Label>Subjects you teach</Label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52
-                          overflow-y-auto pr-1">
-                        {SUBJECTS.map(s => {
+                    <Label>
+                        Subjects you teach
+                        {curriculum && (
+                            <span className="ml-2 text-[10px] font-black text-violet-500
+                         uppercase tracking-widest">
+                                {curriculum}
+                            </span>
+                        )}
+                    </Label>
+
+                    {/* Loading banner */}
+                    {subjectsLoading && (
+                        <div className="flex items-center gap-2 p-3 bg-violet-50
+                      dark:bg-violet-900/20 rounded-xl mb-3 border
+                      border-violet-200 dark:border-violet-800">
+                            <div className="w-3.5 h-3.5 border-2 border-violet-500
+                        border-t-transparent rounded-full animate-spin" />
+                            <p className="text-xs text-violet-600 dark:text-violet-400 font-bold">
+                                Loading {curriculum} subjects...
+                            </p>
+                        </div>
+                    )}
+
+                    {/* No school selected hint */}
+                    {!curriculum && !subjectsLoading && (
+                        <p className="text-xs text-amber-500 font-bold mb-3 flex items-center gap-1">
+                            ⚠ Select your school first for curriculum-specific subjects
+                        </p>
+                    )}
+
+                    {/* Curriculum confirmed */}
+                    {curriculum && !subjectsLoading && subjectList.length > 0 && (
+                        <p className="text-xs text-violet-500 font-bold mb-3 flex items-center gap-1">
+                            ✓ Showing {subjectList.length} {curriculum} subjects
+                        </p>
+                    )}
+
+                    {/* Subject checkboxes */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2
+                    max-h-52 overflow-y-auto pr-1">
+                        {subjectList.map(s => {
                             const selected = (details.subjects || []).includes(s);
                             return (
                                 <label
                                     key={s}
                                     className={`flex items-center gap-2.5 p-3 rounded-xl
-                               border-2 cursor-pointer transition-colors text-sm
-                               ${selected
+                       border-2 cursor-pointer transition-colors text-sm
+                       ${selected
                                             ? 'border-violet-400 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300'
                                             : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                                         }`}
@@ -357,8 +408,8 @@ function StepDetails({ role, details, onChange }) {
                                         className="sr-only"
                                     />
                                     <div className={`w-4 h-4 rounded flex items-center justify-center
-                                   flex-shrink-0 border-2 transition-colors
-                                   ${selected
+                            flex-shrink-0 border-2 transition-colors
+                            ${selected
                                             ? 'border-violet-500 bg-violet-500'
                                             : 'border-slate-300 dark:border-slate-600'
                                         }`}>
@@ -369,6 +420,7 @@ function StepDetails({ role, details, onChange }) {
                             );
                         })}
                     </div>
+
                     {(details.subjects || []).length > 0 && (
                         <p className="text-xs text-violet-600 dark:text-violet-400 mt-2 font-bold">
                             {details.subjects.length} subject{details.subjects.length !== 1 ? 's' : ''} selected
@@ -400,14 +452,14 @@ function StepDetails({ role, details, onChange }) {
 // STEP 3 — School details
 // ══════════════════════════════════════════════════════════════════════════════
 
-function StepSchool({ role, school = {}, onChange, uid }) {
+function StepSchool({ role, school = {}, onChange, uid, aiSubjects, subjectsLoading }) {
     const [searching, setSearching] = useState(false);
     const [results, setResults] = useState([]);
     const [query, setQuery] = useState('');
     const [searchDone, setSearchDone] = useState(false);
 
     // Helper to update individual school fields cleanly
-    const set = (field, value) => onChange({ ...school, [field]: value });
+    const set = (field, value) => onChange(prev => ({ ...prev, [field]: value }));
 
     const searchSchools = async () => {
         if (!query.trim()) return;
@@ -478,17 +530,16 @@ function StepSchool({ role, school = {}, onChange, uid }) {
                                 <button
                                     key={r.id}
                                     type="button"
-                                    onClick={() => onChange({
-                                        ...school,
+                                    onClick={() => onChange(prev => ({
+                                        ...prev,
                                         schoolId: r.id,
                                         name: r.schoolName || r.name || '',
                                         country: r.country || '',
                                         curriculum: r.curriculum || '',
-                                        offeredSubjects: Array.isArray(r.subjects) ? r.subjects : []
-                                    })}
+                                    }))}
                                     className={`w-full text-left flex items-center gap-3 p-4 rounded-2xl border-2 transition-colors ${school.schoolId === r.id
-                                            ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
-                                            : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300'
+                                        ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
+                                        : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300'
                                         }`}
                                 >
                                     <Building2 size={18} className="text-indigo-500 flex-shrink-0" />
@@ -519,15 +570,14 @@ function StepSchool({ role, school = {}, onChange, uid }) {
 
                     {/* 2. DYNAMIC SUBJECT SELECTION ZONE */}
                     {school.schoolId && role === 'student' && (
-                        <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                            <div>
-                                <h3 className="text-sm font-black text-slate-800 dark:text-white">
-                                    Select Your Active Registered Subjects
-                                </h3>
-                                <p className="text-xs text-slate-400">
-                                    Tap all subjects currently listed on your dashboard tracker table (Curriculum: {school.curriculum || 'CAPS'})
-                                </p>
-                            </div>
+                        <div className="pt-6 pb-4 border-t border-slate-100 dark:border-slate-800 space-y-3">        <div>
+                            <h3 className="text-sm font-black text-slate-800 dark:text-white">
+                                Select Your Active Registered Subjects
+                            </h3>
+                            <p className="text-xs text-slate-400">
+                                Tap all subjects currently listed on your dashboard tracker table (Curriculum: {school.curriculum || 'CAPS'})
+                            </p>
+                        </div>
 
                             {(() => {
                                 // Dynamic choices from school or fallback baseline
@@ -553,8 +603,8 @@ function StepSchool({ role, school = {}, onChange, uid }) {
                                                         set('subjects', updatedList);
                                                     }}
                                                     className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border-2 text-left ${isSelected
-                                                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-                                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300'
+                                                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                                                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300'
                                                         }`}
                                                 >
                                                     {sub}
@@ -640,7 +690,7 @@ const query_fs = query;
 // STEP 4 — Writing to Firestore + Welcome screen
 // ══════════════════════════════════════════════════════════════════════════════
 
-function StepDone({ role }) {
+function StepDone({ role, school, details }) {
     const icons = {
         student: GraduationCap,
         teacher: BookOpen,
@@ -652,6 +702,7 @@ function StepDone({ role }) {
         teacher: 'Your teacher profile is ready. Upload your first exam to get started.',
         principal: 'Your school is registered. Invite teachers and students to join.',
     };
+
 
     return (
         <div className="text-center py-6">
@@ -681,32 +732,50 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
 
+    const {
+        data: aiSubjects,
+        loading: subjectsLoading,
+    } = useAiList(
+        fetchSubjects,
+        [school?.country, school?.curriculum],
+        !!school?.country && !!school?.curriculum
+    );
 
     const STEP_TITLES = [
         'Who are you?',
-        'Your details',
         'Your school',
+        'Your details',
         'All set!',
     ];
 
     // ── Validation per step ───────────────────────────────────────────────────
     const canProceed = () => {
         if (step === 0) return !!role;
+
         if (step === 1) {
+            if (role === 'principal') {
+                return !!school.name?.trim() && !!school.curriculum;
+            }
+            if (role === 'student') {
+                const studentSubjects = school.subjects || details.subjects || [];
+                return !!school.schoolId
+                    && !!school.name?.trim()
+                    && studentSubjects.length > 0;
+            }
+            return !!school.schoolId && !!school.name?.trim();
+        }
+
+        if (step === 2) {
             if (!details.firstName?.trim() || !details.lastName?.trim()) return false;
             if (role === 'teacher' && !(details.subjects || []).length) return false;
             if (role === 'student' && !details.grade) return false;
             return true;
         }
-        if (step === 2) {
-            if (!school.name?.trim()) return false;
-            if (role === 'principal' && !school.curriculum) return false;
-            return true;
-        }
+
         return true;
     };
 
-    // ── Save to Firestore ─────────────────────────────────────────────────────
+    // ── Save to Firestore & Trigger Backend Emails ──────────────────────────────
     const saveProfile = async () => {
         const user = auth.currentUser;
 
@@ -724,21 +793,18 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
             const profileCol = role === 'principal' ? 'principals' :
                 role === 'teacher' ? 'teachers' : 'students';
 
-            // 1. Initialize the batch
             const batch = writeBatch(db);
 
-            // 2. Setup the school ID structure
             let schoolId = school.schoolId || '';
             if (role === 'principal' && !schoolId) {
                 schoolId = `${currentUid}_${school.name.replace(/\s+/g, '_').substring(0, 30)}`;
             }
-            // For teachers/students — schoolId comes from the school they selected.
-            // If still empty after selection, log a warning so it is caught early.
+
             if (!schoolId && role !== 'principal') {
                 console.warn('[ProfileSetup] Teacher/student has no schoolId — school was not selected');
             }
 
-            // 3. Queue up the base user document
+            // 1. Base User Document
             const userRef = doc(db, 'users', currentUid);
             batch.set(userRef, {
                 uid: currentUid,
@@ -749,7 +815,7 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
                 createdAt: serverTimestamp(),
             });
 
-            // 4. Queue up the school creation if principal
+            // 2. School creation (Principal)
             if (role === 'principal' && school.name) {
                 const schoolRef = doc(db, 'schools', schoolId);
                 batch.set(schoolRef, {
@@ -765,10 +831,11 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
                     principalUid: currentUid,
                     createdAt: serverTimestamp(),
                 });
-
             }
 
-            // 5. Queue up the role-specific profile document
+            // 3. Role-Specific Document
+            const isApproved = role === 'principal'; 
+
             const profileData = {
                 uid: currentUid,
                 email,
@@ -779,19 +846,67 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
                 role,
                 schoolId: schoolId,
                 schoolName: school.name || '',
+                approved: isApproved,
                 createdAt: serverTimestamp(),
                 ...(role === 'principal' && { tier: 'free' }),
                 ...(details.title && { title: details.title }),
                 ...(details.grade && { grade: details.grade }),
                 ...(details.subjects && { subjects: details.subjects }),
-                ...(details.institutionType && { institutionType: details.institutionType }),
             };
 
             const profileRef = doc(db, profileCol, currentUid);
             batch.set(profileRef, profileData);
 
-            // 6. Commit everything simultaneously
+            // 4. Commit Firestore Writes
             await batch.commit();
+
+            // ── 5. Trigger Backend Endpoints (Resend Emails & Activity Logging) ──
+            const apiBase = import.meta.env.VITE_API_URL;
+            // Trigger Welcome Email to registering user
+            try {
+  const welcomeRes = await fetch(`${apiBase}/send-welcome-email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      displayName,
+      firstName: details.firstName,
+      role,
+      schoolName: school.name || '',
+      grade: details.grade || '',
+      subjects: details.subjects || [],
+      dashboardUrl: 'https://eduket.tech'
+    }),
+  });
+  const welcomeData = await welcomeRes.json();
+  console.log('[Welcome Email Result]:', welcomeData);
+} catch (e) {
+  console.error('[Welcome Email Error]:', e);
+}
+            // Trigger Principal Alert if Student or Teacher is pending approval
+           if (!isApproved && schoolId) {
+  try {
+    const notifyRes = await fetch(`${apiBase}/notify-principal-signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uid: currentUid,
+        email,
+        displayName,
+        firstName: details.firstName,
+        role,
+        schoolId,
+        schoolName: school.name || '',
+        grade: details.grade || '',
+        subjects: details.subjects || []
+      }),
+    });
+    const notifyData = await notifyRes.json();
+    console.log('[Principal Notification Result]:', notifyData);
+  } catch (e) {
+    console.error('[Principal Notification Error]:', e);
+  }
+}
 
             // Advance to done screen
             setStep(3);
@@ -807,7 +922,6 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
     // ── Next / back handlers ──────────────────────────────────────────────────
     const handleNext = async () => {
         if (step === 2) {
-            // Step 3 → save before showing done screen
             await saveProfile();
         } else if (step < 3) {
             setStep(s => s + 1);
@@ -819,8 +933,6 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
     };
 
     const handleFinish = () => {
-        // Match the schoolId generation from the batch write above
-        // so the profile carries the same schoolId Firestore stored.
         let resolvedSchoolId = school.schoolId || '';
         if (role === 'principal' && !resolvedSchoolId && school.name) {
             resolvedSchoolId = `${uid}_${school.name
@@ -846,23 +958,16 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4
-                    bg-slate-900/80 backdrop-blur-md">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-lg
-                      rounded-[2.5rem] shadow-2xl
-                      border border-slate-200 dark:border-slate-800
-                      max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[90vh] flex flex-col overflow-hidden">
 
                 {/* Header */}
-                <div className="sticky top-0 bg-white dark:bg-slate-900
-                        rounded-t-[2.5rem] px-8 pt-8 pb-4 z-10">
+                <div className="bg-white dark:bg-slate-900 px-8 pt-8 pb-4 flex-shrink-0">
                     <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-black uppercase tracking-widest
-                             text-indigo-500 dark:text-indigo-400">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400">
                             Step {step + 1} of 4
                         </span>
-                        <span className="text-[10px] font-black uppercase tracking-widest
-                             text-slate-400">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                             Profile setup
                         </span>
                     </div>
@@ -875,26 +980,42 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
                     {step < 3 && (
                         <p className="text-sm text-slate-400">
                             {step === 0 && 'Choose how you will use Eduket OS.'}
-                            {step === 1 && 'Tell us a bit about yourself.'}
-                            {step === 2 && (role === 'principal' ? 'Register your school.' : 'Find and join your school.')}
+                            {step === 1 && 'Tell us a bit about your school.'}
+                            {step === 2 && 'Tell us a bit about yourself.'}
                         </p>
                     )}
                 </div>
 
-                {/* Content */}
-                <div className="px-8 pb-4">
+                {/* Content Container (Fixed duplication issue) */}
+                <div className="flex-1 overflow-y-auto px-8 py-4 space-y-6">
                     <ErrorBox message={error} />
 
                     {step === 0 && <StepRole role={role} onSelect={setRole} />}
-                    {step === 1 && <StepDetails role={role} details={details} onChange={setDetails} />}
-                    {step === 2 && <StepSchool role={role} school={school} onChange={setSchool} uid={uid} />}
+                    {step === 1 && (
+                        <StepSchool
+                            role={role}
+                            school={school}
+                            onChange={setSchool}
+                            uid={uid}
+                            aiSubjects={aiSubjects}
+                            subjectsLoading={subjectsLoading}
+                        />
+                    )}
+                    {step === 2 && (
+                        <StepDetails
+                            role={role}
+                            details={details}
+                            onChange={setDetails}
+                            subjects={aiSubjects}
+                            subjectsLoading={subjectsLoading}
+                            curriculum={school?.curriculum}
+                        />
+                    )}
                     {step === 3 && <StepDone role={role} />}
                 </div>
 
                 {/* Footer buttons */}
-                <div className="sticky bottom-0 bg-white dark:bg-slate-900
-                        rounded-b-[2.5rem] px-8 py-6 pt-4
-                        border-t border-slate-100 dark:border-slate-800">
+                <div className="flex-shrink-0 px-8 pb-8 pt-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                     {step < 3 ? (
                         <div className="flex items-center justify-between gap-3">
                             <div>
@@ -911,11 +1032,7 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
                         <button
                             type="button"
                             onClick={handleFinish}
-                            className="w-full flex items-center justify-center gap-2
-                         py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500
-                         text-white font-black text-sm shadow-lg
-                         shadow-indigo-500/20 transition-all
-                         hover:-translate-y-0.5"
+                            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-sm shadow-lg shadow-indigo-500/20 transition-all hover:-translate-y-0.5"
                         >
                             <Sparkles size={16} />
                             Go to my dashboard

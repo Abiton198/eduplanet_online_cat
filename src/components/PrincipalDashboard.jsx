@@ -413,9 +413,22 @@ export default function PrincipalDashboard({ principal }) {
     const { userRole, loading } = useUser();
     const { user } = useUser();
     const [selectedSchoolDoc, setSelectedSchoolDoc] = useState(null);
+    const [authToken, setAuthToken] = useState(null);
 
 
 
+useEffect(() => {
+  const auth = getAuth();
+  const unsub = onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      const token = await user.getIdToken();
+      setAuthToken(token);
+    } else {
+      setAuthToken(null);
+    }
+  });
+  return () => unsub();
+}, []);
 
     useEffect(() => {
         const fetchSchool = async () => {
@@ -865,9 +878,12 @@ export default function PrincipalDashboard({ principal }) {
 
                             </div>
 
+                    
+{/* For new users approval */}
                             <ActivityFeed
-                                schoolId={selectedSchoolDoc?.schoolId || principal?.schoolId}
-                                apiUrl={import.meta.env.VITE_API_URL}
+                            schoolId={selectedSchoolDoc?.schoolId || principal?.schoolId}
+                            apiUrl={import.meta.env.VITE_API_URL}
+                            authToken={authToken} 
                             />
 
 
