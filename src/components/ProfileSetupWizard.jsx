@@ -775,7 +775,7 @@ export function ProfileSetupWizard({ uid, email, onComplete }) {
         return true;
     };
 
-    // ── Save to Firestore & Trigger Backend Emails ──────────────────────────────
+
     // ── Save to Firestore & Trigger Backend Emails ──────────────────────────────
 const saveProfile = async () => {
     const user = auth.currentUser;
@@ -788,7 +788,8 @@ const saveProfile = async () => {
     setSaving(true);
     setError('');
 
-    const apiBase = import.meta.env.VITE_API_URL;
+    // 🔑 Fix 1: Safe fallback for apiBase
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
     try {
         const currentUid = user.uid;
@@ -799,7 +800,7 @@ const saveProfile = async () => {
             schoolId = `${currentUid}_${school.name.replace(/\s+/g, '_').substring(0, 30)}`;
         }
 
-        // ── 0. BACKEND TIER LIMIT CHECK (For Teachers & Students) ───────────
+        // ── 0. BACKEND TIER LIMIT CHECK ──────────────────────────────────────
         if (role === 'teacher' || role === 'student') {
             if (!schoolId) {
                 setError('Please select a valid school before continuing.');
@@ -807,23 +808,29 @@ const saveProfile = async () => {
                 return;
             }
 
-            // Verify with backend if school has reached teacher/student limit
-            const limitCheckRes = await fetch(`${apiBase}/check-tier-limit`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    schoolId,
-                    role // 'teacher' or 'student'
-                })
-            });
+            try {
+                const limitCheckRes = await fetch(`${apiBase}/check-tier-limit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        schoolId,
+                        role // 'teacher' or 'student'
+                    })
+                });
 
-            const limitData = await limitCheckRes.json();
+                const limitData = await limitCheckRes.json();
 
-            // Catch 403 Tier Limit Reached
-            if (limitCheckRes.status === 403 || !limitCheckRes.ok) {
-                setError(limitData.error || 'This school has reached its tier limit for registrations.');
+                if (limitCheckRes.status === 403 || !limitCheckRes.ok) {
+                    setError(limitData.message || limitData.error || 'Registration limit reached for this school.');
+                    setSaving(false);
+                    return; // Stop profile save without crashing flow
+                }
+            } catch (fetchErr) {
+                console.error('[Tier Limit Check Error]:', fetchErr);
+                // Fail-open or show network warning if server is down:
+                setError('Could not connect to validation server. Please check your network and try again.');
                 setSaving(false);
-                return; // Stop profile save
+                return;
             }
         }
 
@@ -889,50 +896,43 @@ const saveProfile = async () => {
         // ── 2. COMMIT FIRESTORE WRITES ──────────────────────────────────────
         await batch.commit();
 
-        // ── 3. TRIGGER BACKEND EMAILS ───────────────────────────────────────
-        try {
-            await fetch(`${apiBase}/send-welcome-email`, {
+        // ── 3. OPTIONAL EMAILS (NON-BLOCKING) ──────────────────────────────
+        // Wrap emails in independent try/catch so email server delays don't hang registration
+        fetch(`${apiBase}/send-welcome-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email,
+                displayName,
+                firstName: details.firstName,
+                role,
+                schoolName: school.name || '',
+                principalEmail: school.principalEmail || school.email || 'nextgenskills96@gmail.com',
+                grade: details.grade || '',
+                subjects: details.subjects || [],
+                dashboardUrl: 'https://eduket.tech'
+            }),
+        }).catch(e => console.error('[Welcome Email Error]:', e));
+
+        if (!isApproved && schoolId) {
+            fetch(`${apiBase}/notify-principal-signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    uid: currentUid,
                     email,
                     displayName,
                     firstName: details.firstName,
                     role,
+                    schoolId,
                     schoolName: school.name || '',
-                    principalEmail: school.principalEmail || school.email || 'nextgenskills96@gmail.com',
                     grade: details.grade || '',
-                    subjects: details.subjects || [],
-                    dashboardUrl: 'https://eduket.tech'
+                    subjects: details.subjects || []
                 }),
-            });
-        } catch (e) {
-            console.error('[Welcome Email Error]:', e);
+            }).catch(e => console.error('[Principal Notification Error]:', e));
         }
 
-        if (!isApproved && schoolId) {
-            try {
-                await fetch(`${apiBase}/notify-principal-signup`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        uid: currentUid,
-                        email,
-                        displayName,
-                        firstName: details.firstName,
-                        role,
-                        schoolId,
-                        schoolName: school.name || '',
-                        grade: details.grade || '',
-                        subjects: details.subjects || []
-                    }),
-                });
-            } catch (e) {
-                console.error('[Principal Notification Error]:', e);
-            }
-        }
-
-        // Advance to done screen
+        // 🔑 Advance to done screen!
         setStep(3);
 
     } catch (err) {
@@ -942,7 +942,6 @@ const saveProfile = async () => {
         setSaving(false);
     }
 };
-
     // ── Next / back handlers ──────────────────────────────────────────────────
     const handleNext = async () => {
         if (step === 2) {
