@@ -1,16 +1,15 @@
-// src/components/ActivityFeed.jsx
 import { useState, useEffect, useCallback } from 'react';
 import {
-    Users, GraduationCap, BookOpen, AlertTriangle,
-    CheckCircle, XCircle, Clock, Bell, RefreshCw,
-    ChevronDown, ChevronUp,
-} from 'lucide-react';
-import { collection, query, where, orderBy, limit,
-         onSnapshot, updateDoc, doc, addDoc,
-         serverTimestamp } from 'firebase/firestore';
+    collection, query, where, orderBy, limit,
+    onSnapshot, updateDoc, addDoc, doc,
+    serverTimestamp,
+} from 'firebase/firestore';
 import { db } from '../utils/firebase';
-
-
+import {
+    Bell, AlertTriangle, CheckCircle, XCircle,
+    Clock, ChevronUp, RefreshCw,
+    ChevronDown, Users, BookOpen, GraduationCap,
+} from 'lucide-react';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -33,11 +32,9 @@ const ROLE_STYLES = {
     default:   { bg: 'bg-slate-100 dark:bg-slate-800',         text: 'text-slate-600 dark:text-slate-400',     dot: 'bg-slate-400',   icon: '👤'  },
 };
 
-// ── Single activity card ──────────────────────────────────────────────────
-// ── ActivityCard — complete component ────────────────────────────────────
-// Paste this inside ActivityFeed.jsx, replacing the existing ActivityCard
+// ── Activity Card ─────────────────────────────────────────────────────────
 
-function ActivityCard({ event, onApprove, onDecline, processingId }) {
+function ActivityCard({ event, onApprove, onDecline, processingId, removing }) {
     const [expanded,         setExpanded]         = useState(false);
     const [showDeclineInput, setShowDeclineInput] = useState(false);
     const [declineReason,    setDeclineReason]    = useState('');
@@ -47,57 +44,39 @@ function ActivityCard({ event, onApprove, onDecline, processingId }) {
     const isPending    = event.type === 'user_joined' && !event.approvalStatus;
     const isProcessing = processingId === event.id;
     const status       = event.approvalStatus;
-
-    // Type label
-    const typeLabel = {
+    const typeLabel    = {
         user_joined:    'New Registration',
         user_approved:  'User Approved',
         user_declined:  'User Declined',
         exam_uploaded:  'Exam Uploaded',
-        exam_submitted: 'Exam Submitted',
     }[event.type] || 'Activity';
 
     return (
-        <div className={`border-b border-slate-100 dark:border-slate-800
-                         last:border-0 transition-colors
+        <div className={`border-b border-slate-50 dark:border-slate-800
+                         last:border-0 transition-all duration-300 ease-in-out
+                         ${removing ? 'opacity-0 scale-95 -translate-x-4 max-h-0 py-0 overflow-hidden' : 'opacity-100 max-h-[500px]'}
                          ${isNew ? 'bg-indigo-50/40 dark:bg-indigo-900/10' : ''}`}>
 
-            {/* ── Main content row ──────────────────────────────────────── */}
+            {/* Main row */}
             <div className="flex items-start gap-3 px-5 py-4">
+                {/* Avatar */}
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center
+                                 flex-shrink-0 text-lg select-none overflow-hidden ${styles.bg}`}>
+                    {event.actorPhoto
+                        ? <img src={event.actorPhoto} alt={event.actorName}
+                               className="w-10 h-10 object-cover rounded-xl"
+                               onError={e => { e.target.style.display = 'none'; }} />
+                        : event.type === 'user_approved' ? '✅'
+                        : event.type === 'user_declined' ? '❌'
+                        : styles.icon
+                    }
+                </div>
 
-                {/* Role icon avatar */}
-<div className={`w-10 h-10 rounded-xl flex items-center justify-center
-                 flex-shrink-0 overflow-hidden ${styles.bg}`}>
-  {event.actorPhoto ? (
-    <img
-      src={event.actorPhoto}
-      alt={event.actorName}
-      className="w-10 h-10 object-cover rounded-xl"
-      onError={(e) => {
-        // If photo fails to load — fall back to emoji
-        e.target.style.display = 'none';
-        e.target.nextSibling.style.display = 'flex';
-      }}
-    />
-  ) : null}
-  <span
-    className={`text-lg select-none w-10 h-10 flex items-center justify-center
-                ${event.actorPhoto ? 'hidden' : ''}`}
-  >
-    {event.type === 'user_approved' ? '✅' :
-     event.type === 'user_declined' ? '❌' :
-     styles.icon}
-  </span>
-</div>
-
-                {/* Text content */}
+                {/* Content */}
                 <div className="flex-1 min-w-0">
-
-                    {/* Name + unread dot + time */}
                     <div className="flex items-start justify-between gap-2 mb-0.5">
                         <div className="min-w-0">
-                            <p className="text-sm font-bold text-slate-800
-                                          dark:text-white truncate leading-snug">
+                            <p className="text-sm font-bold text-slate-800 dark:text-white truncate">
                                 {event.actorName || event.targetName || 'Unknown User'}
                                 {isNew && (
                                     <span className={`ml-2 inline-block w-2 h-2 rounded-full
@@ -108,13 +87,11 @@ function ActivityCard({ event, onApprove, onDecline, processingId }) {
                                 {event.actorEmail || event.targetEmail || ''}
                             </p>
                         </div>
-                        <span className="text-[10px] text-slate-400 flex-shrink-0
-                                         whitespace-nowrap pt-0.5">
+                        <span className="text-[10px] text-slate-400 flex-shrink-0 whitespace-nowrap pt-0.5">
                             {timeAgo(event.timestamp)}
                         </span>
                     </div>
 
-                    {/* Type + description */}
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
                         <span className="font-bold">{typeLabel}</span>
                         {event.description && ` — ${event.description}`}
@@ -122,16 +99,12 @@ function ActivityCard({ event, onApprove, onDecline, processingId }) {
 
                     {/* Badges */}
                     <div className="flex items-center gap-1.5 flex-wrap">
-                        {/* Role */}
                         {event.actorRole && (
                             <span className={`text-[10px] font-black px-2 py-0.5
-                                              rounded-full capitalize
-                                              ${styles.bg} ${styles.text}`}>
+                                              rounded-full capitalize ${styles.bg} ${styles.text}`}>
                                 {event.actorRole}
                             </span>
                         )}
-
-                        {/* Grade */}
                         {event.grade && (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full
                                              bg-slate-100 dark:bg-slate-800
@@ -139,25 +112,12 @@ function ActivityCard({ event, onApprove, onDecline, processingId }) {
                                 Gr {event.grade}
                             </span>
                         )}
-
-                        {/* Subjects — first 2 */}
                         {(event.subjects || []).length > 0 && (
                             <span className="text-[10px] text-slate-400 truncate max-w-[140px]">
                                 📚 {event.subjects.slice(0, 2).join(', ')}
-                                {event.subjects.length > 2 &&
-                                    <span className="font-bold"> +{event.subjects.length - 2}</span>
-                                }
+                                {event.subjects.length > 2 && ` +${event.subjects.length - 2}`}
                             </span>
                         )}
-
-                        {/* School */}
-                        {event.schoolName && (
-                            <span className="text-[10px] text-slate-400 truncate max-w-[120px]">
-                                🏫 {event.schoolName}
-                            </span>
-                        )}
-
-                        {/* Approval status badges */}
                         {isPending && (
                             <span className="text-[10px] font-black px-2 py-0.5 rounded-full
                                              bg-amber-100 text-amber-700
@@ -181,53 +141,26 @@ function ActivityCard({ event, onApprove, onDecline, processingId }) {
                         )}
                     </div>
 
-                    {/* Expand / collapse toggle */}
+                    {/* Expand toggle */}
                     <button
                         onClick={() => setExpanded(v => !v)}
                         className="mt-2 flex items-center gap-1 text-[10px]
-                                   text-indigo-400 hover:text-indigo-600
-                                   dark:text-indigo-500 dark:hover:text-indigo-400
-                                   font-bold transition-colors"
+                                   text-indigo-400 hover:text-indigo-600 font-bold"
                     >
                         {expanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-                        {expanded ? 'Hide details' : 'View full details'}
+                        {expanded ? 'Hide details' : 'View details'}
                     </button>
 
-                    {/* ── Expanded detail panel ───────────────────────── */}
+                    {/* Expanded panel */}
                     {expanded && (
                         <div className="mt-2 p-3 bg-slate-50 dark:bg-slate-800/60
                                         rounded-xl text-xs space-y-1.5
                                         border border-slate-100 dark:border-slate-700">
-                            {event.actorName && (
-                                <p className="text-slate-600 dark:text-slate-300">
-                                    <span className="font-bold w-20 inline-block">Name</span>
-                                    {event.actorName}
-                                </p>
-                            )}
-                            {event.actorEmail && (
-                                <p className="text-slate-600 dark:text-slate-300">
-                                    <span className="font-bold w-20 inline-block">Email</span>
-                                    {event.actorEmail}
-                                </p>
-                            )}
-                            {event.actorRole && (
-                                <p className="text-slate-600 dark:text-slate-300 capitalize">
-                                    <span className="font-bold w-20 inline-block">Role</span>
-                                    {event.actorRole}
-                                </p>
-                            )}
-                            {event.grade && (
-                                <p className="text-slate-600 dark:text-slate-300">
-                                    <span className="font-bold w-20 inline-block">Grade</span>
-                                    {event.grade}
-                                </p>
-                            )}
-                            {event.schoolName && (
-                                <p className="text-slate-600 dark:text-slate-300">
-                                    <span className="font-bold w-20 inline-block">School</span>
-                                    {event.schoolName}
-                                </p>
-                            )}
+                            {event.actorName  && <p className="text-slate-600 dark:text-slate-300"><span className="font-bold w-20 inline-block">Name</span>{event.actorName}</p>}
+                            {event.actorEmail && <p className="text-slate-600 dark:text-slate-300"><span className="font-bold w-20 inline-block">Email</span>{event.actorEmail}</p>}
+                            {event.actorRole  && <p className="text-slate-600 dark:text-slate-300 capitalize"><span className="font-bold w-20 inline-block">Role</span>{event.actorRole}</p>}
+                            {event.grade      && <p className="text-slate-600 dark:text-slate-300"><span className="font-bold w-20 inline-block">Grade</span>{event.grade}</p>}
+                            {event.schoolName && <p className="text-slate-600 dark:text-slate-300"><span className="font-bold w-20 inline-block">School</span>{event.schoolName}</p>}
                             {(event.subjects || []).length > 0 && (
                                 <p className="text-slate-600 dark:text-slate-300">
                                     <span className="font-bold w-20 inline-block">Subjects</span>
@@ -249,8 +182,8 @@ function ActivityCard({ event, onApprove, onDecline, processingId }) {
                                 </p>
                             )}
                             {event.timestamp && (
-                                <p className="text-slate-400 dark:text-slate-500 pt-1
-                                              border-t border-slate-100 dark:border-slate-700">
+                                <p className="text-slate-400 pt-1 border-t
+                                              border-slate-100 dark:border-slate-700">
                                     <span className="font-bold w-20 inline-block">Time</span>
                                     {new Date(event.timestamp).toLocaleString('en-ZA', {
                                         dateStyle: 'medium', timeStyle: 'short'
@@ -260,13 +193,11 @@ function ActivityCard({ event, onApprove, onDecline, processingId }) {
                         </div>
                     )}
 
-                    {/* Report unknown user link */}
+                    {/* Unknown user warning */}
                     {event.type === 'user_joined' && (
-                        <a
-                            href={`mailto:support@eduket.tech?subject=Unknown user: ${event.actorEmail}&body=School: ${event.schoolName || ''}%0AUser: ${event.actorName} (${event.actorEmail})`}
-                            className="mt-2 flex items-center gap-1 text-[10px]
-                                       text-amber-500 hover:text-amber-700 font-bold"
-                        >
+                        <a href={`mailto:support@eduket.tech?subject=Unknown user: ${event.actorEmail}`}
+                           className="mt-1.5 flex items-center gap-1 text-[10px]
+                                      text-amber-500 hover:text-amber-700 font-bold">
                             <AlertTriangle size={10} />
                             Don't recognise this person? Report to support
                         </a>
@@ -274,7 +205,7 @@ function ActivityCard({ event, onApprove, onDecline, processingId }) {
                 </div>
             </div>
 
-            {/* ── Approve / Decline buttons ─────────────────────────────── */}
+            {/* Approve / Decline */}
             {isPending && (
                 <div className="px-5 pb-4 pt-0">
                     {!showDeclineInput ? (
@@ -289,10 +220,8 @@ function ActivityCard({ event, onApprove, onDecline, processingId }) {
                             >
                                 {isProcessing
                                     ? <div className="w-3.5 h-3.5 border-2 border-white
-                                                      border-t-transparent rounded-full
-                                                      animate-spin" />
-                                    : <CheckCircle size={13} />
-                                }
+                                                      border-t-transparent rounded-full animate-spin" />
+                                    : <CheckCircle size={13} />}
                                 Approve Access
                             </button>
                             <button
@@ -310,41 +239,32 @@ function ActivityCard({ event, onApprove, onDecline, processingId }) {
                         <div className="space-y-2">
                             <textarea
                                 value={declineReason}
-                                onChange={(e) => setDeclineReason(e.target.value)}
+                                onChange={e => setDeclineReason(e.target.value)}
                                 placeholder="Reason for declining (optional)..."
                                 rows={2}
                                 className="w-full text-xs p-2.5 border border-red-200
                                            dark:border-red-800 rounded-xl bg-red-50
-                                           dark:bg-red-900/20 text-slate-700
-                                           dark:text-slate-300 resize-none outline-none
-                                           focus:border-red-400"
+                                           dark:bg-red-900/20 text-slate-700 dark:text-slate-300
+                                           resize-none outline-none focus:border-red-400"
                             />
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => onDecline(event, declineReason)}
                                     disabled={isProcessing}
                                     className="flex-1 py-2 bg-red-600 hover:bg-red-700
-                                               disabled:opacity-50 text-white text-xs
-                                               font-black rounded-xl transition-colors
-                                               flex items-center justify-center gap-1.5"
+                                               disabled:opacity-50 text-white text-xs font-black
+                                               rounded-xl flex items-center justify-center gap-1.5"
                                 >
                                     {isProcessing
                                         ? <div className="w-3.5 h-3.5 border-2 border-white
-                                                          border-t-transparent rounded-full
-                                                          animate-spin" />
-                                        : <XCircle size={13} />
-                                    }
+                                                          border-t-transparent rounded-full animate-spin" />
+                                        : <XCircle size={13} />}
                                     Confirm Decline
                                 </button>
                                 <button
-                                    onClick={() => {
-                                        setShowDeclineInput(false);
-                                        setDeclineReason('');
-                                    }}
+                                    onClick={() => { setShowDeclineInput(false); setDeclineReason(''); }}
                                     className="px-4 py-2 bg-slate-100 dark:bg-slate-800
-                                               text-slate-600 dark:text-slate-400 text-xs
-                                               font-bold rounded-xl hover:bg-slate-200
-                                               dark:hover:bg-slate-700 transition-colors"
+                                               text-slate-600 text-xs font-bold rounded-xl"
                                 >
                                     Cancel
                                 </button>
@@ -354,7 +274,7 @@ function ActivityCard({ event, onApprove, onDecline, processingId }) {
                 </div>
             )}
 
-            {/* ── Result banners ────────────────────────────────────────── */}
+            {/* Result banners */}
             {status === 'approved' && (
                 <div className="mx-5 mb-4 flex items-center gap-2 px-3 py-2
                                 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl">
@@ -373,7 +293,7 @@ function ActivityCard({ event, onApprove, onDecline, processingId }) {
                             Access declined
                         </p>
                         {event.declineReason && (
-                            <p className="text-[10px] text-red-500 dark:text-red-400 mt-0.5">
+                            <p className="text-[10px] text-red-500 mt-0.5">
                                 Reason: {event.declineReason}
                             </p>
                         )}
@@ -384,208 +304,228 @@ function ActivityCard({ event, onApprove, onDecline, processingId }) {
     );
 }
 
-
 // ══════════════════════════════════════════════════════════════════════════
 // MAIN EXPORT
 // ══════════════════════════════════════════════════════════════════════════
 
 export function ActivityFeed({ schoolId, apiUrl, authToken }) {
     const [events,       setEvents]       = useState([]);
+    const [removingIds,  setRemovingIds]  = useState(new Set());
     const [loading,      setLoading]      = useState(true);
-    const [refreshing,   setRefreshing]   = useState(false);
     const [processingId, setProcessingId] = useState(null);
     const [unread,       setUnread]       = useState(0);
     const [error,        setError]        = useState('');
-    const [isOpen, setIsOpen] = useState(true);
+    const [isOpen,       setIsOpen]       = useState(true);
 
-    // ── Fetch with retry (handles Render cold starts) ─────────────────────
-    // ── Fetch activity with retry and proper abort handling ──────────────
-   
-useEffect(() => {
-    if (!schoolId) {
-        setLoading(false);
-        return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    const q = query(
-        collection(db, 'schoolActivity'),
-        where('schoolId', '==', schoolId),
-        orderBy('timestamp', 'desc'),
-        limit(50)
-    );
-
-    const unsub = onSnapshot(q,
-        (snap) => {
-            const evts = snap.docs.map(d => ({
-                id: d.id,
-                ...d.data(),
-                // Convert Firestore timestamp to ISO string
-                timestamp: d.data().timestamp?.toDate?.()?.toISOString() || '',
-            }));
-            setEvents(evts);
-            setUnread(evts.filter(e => !e.read).length);
+    // ── Real-time Firestore listener ──────────────────────────────────────
+    useEffect(() => {
+        if (!schoolId) {
             setLoading(false);
-        },
-        (err) => {
-            console.error('[Activity] Firestore error:', err);
-            setError('Could not load activity. Check your connection.');
-            setLoading(false);
+            return;
         }
-    );
 
-    return () => unsub();   // ← cleanup on unmount
+        setLoading(true);
+        setError('');
 
-}, [schoolId]);
+        const q = query(
+            collection(db, 'schoolActivity'),
+            where('schoolId', '==', schoolId),
+            orderBy('timestamp', 'desc'),
+            limit(50)
+        );
 
+        const unsub = onSnapshot(q,
+            (snap) => {
+                const removedDocIds = [];
+
+                snap.docChanges().forEach(change => {
+                    if (change.type === 'removed') {
+                        removedDocIds.push(change.doc.id);
+                    }
+                });
+
+                if (removedDocIds.length > 0) {
+                    // Mark records as removing to trigger the exit animation
+                    setRemovingIds(prev => new Set([...prev, ...removedDocIds]));
+
+                    // Remove records after animation completes (300ms transition)
+                    setTimeout(() => {
+                        setEvents(prev => prev.filter(e => !removedDocIds.includes(e.id)));
+                        setRemovingIds(prev => {
+                            const next = new Set(prev);
+                            removedDocIds.forEach(id => next.delete(id));
+                            return next;
+                        });
+                    }, 300);
+                }
+
+                // Parse snapshot docs
+                const currentDocs = snap.docs.map(d => ({
+                    id:        d.id,
+                    ...d.data(),
+                    timestamp: d.data().timestamp?.toDate?.()?.toISOString() || '',
+                }));
+
+                // Keep removing documents visible during exit animation
+                setEvents(prevEvents => {
+                    const activeRemoving = prevEvents.filter(e => removingIds.has(e.id));
+                    const updatedList = [...currentDocs];
+                    
+                    // Re-insert currently animating records if missing
+                    activeRemoving.forEach(item => {
+                        if (!updatedList.some(e => e.id === item.id)) {
+                            updatedList.push(item);
+                        }
+                    });
+
+                    return updatedList;
+                });
+
+                setUnread(currentDocs.filter(e => !e.read).length);
+                setLoading(false);
+            },
+            (err) => {
+                console.error('[Activity] Firestore error:', err.code, err.message);
+                setError('Could not load activity. Check your connection.');
+                setLoading(false);
+            }
+        );
+
+        return () => unsub();
+    }, [schoolId]);
 
     // ── Mark all read ──────────────────────────────────────────────────────
     const markAllRead = async () => {
-    const unreadIds = events.filter(e => !e.read).map(e => e.id);
-    if (!unreadIds.length) return;
-    try {
-        await Promise.all(
-            unreadIds.map(id =>
-                updateDoc(doc(db, 'schoolActivity', id), { read: true })
-            )
-        );
-        // onSnapshot updates automatically — no need to setEvents
-    } catch (err) {
-        console.error('[Activity] Mark read error:', err);
-    }
-};
+        const unreadIds = events.filter(e => !e.read).map(e => e.id);
+        if (!unreadIds.length) return;
+        try {
+            await Promise.all(
+                unreadIds.map(id =>
+                    updateDoc(doc(db, 'schoolActivity', id), { read: true })
+                )
+            );
+        } catch (err) {
+            console.error('[Activity] Mark read error:', err);
+        }
+    };
 
     // ── Approve ────────────────────────────────────────────────────────────
     const handleApprove = async (event) => {
-    setProcessingId(event.id);
-    try {                          // ← was try:  (Python syntax — wrong)
-        // Update activity document
-        await updateDoc(doc(db, 'schoolActivity', event.id), {
-            approvalStatus: 'approved',
-            approvedBy:     'Principal',
-            approvedAt:     serverTimestamp(),
-            read:           true,
-        });
-
-        // Update teacher/student document directly
-        if (event.actorUid) {
-            const roleCol = event.actorRole === 'teacher' ? 'teachers'
-                          : event.actorRole === 'student' ? 'students'
-                          : 'users';
-
-            await updateDoc(doc(db, roleCol, event.actorUid), {
-                approved:       true,
+        setProcessingId(event.id);
+        try {
+            await updateDoc(doc(db, 'schoolActivity', event.id), {
                 approvalStatus: 'approved',
                 approvedBy:     'Principal',
                 approvedAt:     serverTimestamp(),
+                read:           true,
             });
 
-            await updateDoc(doc(db, 'users', event.actorUid), {
-                approved:       true,
-                approvalStatus: 'approved',
+            if (event.actorUid) {
+                const roleCol = event.actorRole === 'teacher' ? 'teachers'
+                              : event.actorRole === 'student' ? 'students'
+                              : 'users';
+                await updateDoc(doc(db, roleCol, event.actorUid), {
+                    approved:       true,
+                    approvalStatus: 'approved',
+                    approvedBy:     'Principal',
+                    approvedAt:     serverTimestamp(),
+                });
+                await updateDoc(doc(db, 'users', event.actorUid), {
+                    approved:       true,
+                    approvalStatus: 'approved',
+                });
+            }
+
+            await addDoc(collection(db, 'schoolActivity'), {
+                schoolId:    schoolId,
+                type:        'user_approved',
+                actorName:   'Principal',
+                targetName:  event.actorName,
+                targetEmail: event.actorEmail,
+                targetRole:  event.actorRole,
+                description: `Principal approved ${event.actorName} as ${event.actorRole}`,
+                timestamp:   serverTimestamp(),
+                read:        true,
             });
+        } catch (err) {
+            console.error('[Activity] Approve error:', err);
+            alert('Approval failed. Please try again.');
+        } finally {
+            setProcessingId(null);
         }
+    };
 
-        // Log the principal's action
-        await addDoc(collection(db, 'schoolActivity'), {
-            schoolId:    schoolId,
-            type:        'user_approved',
-            actorName:   'Principal',
-            targetName:  event.actorName,
-            targetEmail: event.actorEmail,
-            targetRole:  event.actorRole,
-            description: `Principal approved ${event.actorName} as ${event.actorRole}`,
-            timestamp:   serverTimestamp(),
-            read:        true,
-        });
-
-    } catch (err) {
-        console.error('[Activity] Approve error:', err);
-        alert('Approval failed. Please try again.');
-    } finally {
-        setProcessingId(null);
-    }
-};
-
-const handleDecline = async (event, reason) => {
-    setProcessingId(event.id);
-    try {
-        // Update activity document
-        await updateDoc(doc(db, 'schoolActivity', event.id), {
-            approvalStatus: 'declined',
-            approvedBy:     'Principal',
-            declineReason:  reason || '',
-            approvedAt:     serverTimestamp(),
-            read:           true,
-        });
-
-        // ── Update teacher/student document directly ───────────────────────
-        if (event.actorUid) {
-            const roleCol = event.actorRole === 'teacher' ? 'teachers'
-                          : event.actorRole === 'student' ? 'students'
-                          : 'users';
-            await updateDoc(doc(db, roleCol, event.actorUid), {
-                approved:       false,
+    // ── Decline ────────────────────────────────────────────────────────────
+    const handleDecline = async (event, reason) => {
+        setProcessingId(event.id);
+        try {
+            await updateDoc(doc(db, 'schoolActivity', event.id), {
                 approvalStatus: 'declined',
+                approvedBy:     'Principal',
                 declineReason:  reason || '',
-                approvedBy:     'Principal',
                 approvedAt:     serverTimestamp(),
+                read:           true,
             });
-            await updateDoc(doc(db, 'users', event.actorUid), {
-                approved:       false,
-                approvalStatus: 'declined',
+
+            if (event.actorUid) {
+                const roleCol = event.actorRole === 'teacher' ? 'teachers'
+                              : event.actorRole === 'student' ? 'students'
+                              : 'users';
+                await updateDoc(doc(db, roleCol, event.actorUid), {
+                    approved:       false,
+                    approvalStatus: 'declined',
+                    declineReason:  reason || '',
+                    approvedBy:     'Principal',
+                    approvedAt:     serverTimestamp(),
+                });
+                await updateDoc(doc(db, 'users', event.actorUid), {
+                    approved:       false,
+                    approvalStatus: 'declined',
+                });
+            }
+
+            await addDoc(collection(db, 'schoolActivity'), {
+                schoolId:      schoolId,
+                type:          'user_declined',
+                actorName:     'Principal',
+                targetName:    event.actorName,
+                targetEmail:   event.actorEmail,
+                targetRole:    event.actorRole,
+                declineReason: reason || '',
+                description:   `Principal declined ${event.actorName}`,
+                timestamp:     serverTimestamp(),
+                read:          true,
             });
+
+            if (apiUrl && event.actorUid) {
+                fetch(`${apiUrl.replace(/\/+$/, '')}/approve-school-user`, {
+                    method:  'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+                    },
+                    body: JSON.stringify({
+                        activityId:    event.id,
+                        actorUid:      event.actorUid,
+                        actorEmail:    event.actorEmail,
+                        actorName:     event.actorName,
+                        actorRole:     event.actorRole,
+                        schoolId,
+                        action:        'declined',
+                        declineReason: reason || '',
+                    }),
+                }).catch(err => console.warn('[Decline] Backend update failed:', err));
+            }
+        } catch (err) {
+            console.error('[Activity] Decline error:', err);
+            alert('Decline failed. Please try again.');
+        } finally {
+            setProcessingId(null);
         }
-
-        // Log the action
-        await addDoc(collection(db, 'schoolActivity'), {
-            schoolId:      schoolId,
-            type:          'user_declined',
-            actorName:     'Principal',
-            targetName:    event.actorName,
-            targetEmail:   event.actorEmail,
-            targetRole:    event.actorRole,
-            declineReason: reason || '',
-            description:   `Principal declined ${event.actorName}`,
-            timestamp:     serverTimestamp(),
-            read:          true,
-        });
-
-        // Fire-and-forget backend update for any server-side logic
-        if (apiUrl && event.actorUid) {
-            fetch(`${apiUrl.replace(/\/+$/, '')}/approve-school-user`, {
-                method:  'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-                },
-                body: JSON.stringify({
-                    activityId:    event.id,
-                    actorUid:      event.actorUid,
-                    actorEmail:    event.actorEmail,
-                    actorName:     event.actorName,
-                    actorRole:     event.actorRole,
-                    schoolId,
-                    action:        'declined',
-                    declineReason: reason || '',
-                }),
-            }).catch(err => console.warn('[Decline] Backend update failed:', err));
-        }
-
-    } catch (err) {
-        console.error('[Activity] Decline error:', err);
-        alert('Decline failed. Please try again.');
-    } finally {
-        setProcessingId(null);
-    }
-};
+    };
 
     // ── Counts ─────────────────────────────────────────────────────────────
-    const pendingCount  = events.filter(e =>
-        e.type === 'user_joined' && !e.approvalStatus
-    ).length;
+    const pendingCount  = events.filter(e => e.type === 'user_joined' && !e.approvalStatus).length;
     const approvedCount = events.filter(e => e.approvalStatus === 'approved').length;
     const declinedCount = events.filter(e => e.approvalStatus === 'declined').length;
 
@@ -594,115 +534,118 @@ const handleDecline = async (event, reason) => {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border
                         border-slate-200 dark:border-slate-800 overflow-hidden">
 
-            {/* Header */}
+            {/* Collapsible header */}
             <button
-    onClick={() => setIsOpen(v => !v)}
-    className="w-full flex items-center justify-between px-5 py-4
-               border-b border-slate-100 dark:border-slate-800
-               bg-white dark:bg-slate-900 hover:bg-slate-50
-               dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
->
-    <div className="flex items-center gap-2">
-        <Bell size={15} className="text-slate-500" />
-        <h3 className="font-black text-sm text-slate-800 dark:text-white">
-            School Activity
-        </h3>
-        {unread > 0 && (
-            <span className="bg-red-500 text-white text-[10px] font-black
-                             px-2 py-0.5 rounded-full">
-                {unread} new
-            </span>
-        )}
-        {pendingCount > 0 && (
-            <span className="bg-amber-500 text-white text-[10px] font-black
-                             px-2 py-0.5 rounded-full animate-pulse">
-                {pendingCount} pending
-            </span>
-        )}
-    </div>
-    <div className="flex items-center gap-3">
-        <span className="text-[10px] text-slate-400">{events.length} events</span>
-        <ChevronUp
-            size={14}
-            className={`text-slate-400 transition-transform duration-200
-                        ${isOpen ? '' : 'rotate-180'}`}
-        />
-    </div>
-</button>
+                onClick={() => setIsOpen(v => !v)}
+                className="w-full flex items-center justify-between px-5 py-4
+                           bg-white dark:bg-slate-900
+                           hover:bg-slate-50 dark:hover:bg-slate-800/50
+                           transition-colors cursor-pointer"
+            >
+                <div className="flex items-center gap-2">
+                    <Bell size={15} className="text-slate-500" />
+                    <h3 className="font-black text-sm text-slate-800 dark:text-white">
+                        School Activity
+                    </h3>
+                    {unread > 0 && (
+                        <span className="bg-red-500 text-white text-[10px] font-black
+                                         px-2 py-0.5 rounded-full">
+                            {unread} new
+                        </span>
+                    )}
+                    {pendingCount > 0 && (
+                        <span className="bg-amber-500 text-white text-[10px] font-black
+                                         px-2 py-0.5 rounded-full animate-pulse">
+                            {pendingCount} pending
+                        </span>
+                    )}
+                </div>
+                <div className="flex items-center gap-3">
+                    {unread > 0 && (
+                        <button
+                            onClick={e => { e.stopPropagation(); markAllRead(); }}
+                            className="text-[10px] text-indigo-500 hover:text-indigo-700
+                                       font-bold flex items-center gap-1"
+                        >
+                            <CheckCircle size={10} /> Mark read
+                        </button>
+                    )}
+                    <span className="text-[10px] text-slate-400">
+                        {events.length} events
+                    </span>
+                    <ChevronUp
+                        size={14}
+                        className={`text-slate-400 transition-transform duration-200
+                                    ${isOpen ? '' : 'rotate-180'}`}
+                    />
+                </div>
+            </button>
 
-{isOpen && (
-    <>
-       
-        {events.length > 0 && (
-            <div className="grid grid-cols-3 divide-x divide-slate-100
-                            dark:divide-slate-800 border-b border-slate-100
-                            dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                <div className="px-4 py-2.5 text-center">
-                    <p className="text-base font-black text-amber-500">{pendingCount}</p>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-widest">Pending</p>
-                </div>
-                <div className="px-4 py-2.5 text-center">
-                    <p className="text-base font-black text-emerald-500">{approvedCount}</p>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-widest">Approved</p>
-                </div>
-                <div className="px-4 py-2.5 text-center">
-                    <p className="text-base font-black text-red-500">{declinedCount}</p>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-widest">Declined</p>
-                </div>
-            </div>
-        )}
-
-        {/* Content */}
-        <div className="max-h-[520px] overflow-y-auto">
-            {loading ? (
-                <div className="p-5 space-y-4">
-                    {[1, 2, 3].map(i => (
-                        <div key={i} className="flex gap-3 animate-pulse">
-                            <div className="w-9 h-9 rounded-xl bg-slate-200
-                                            dark:bg-slate-700 flex-shrink-0" />
-                            <div className="flex-1 space-y-2">
-                                <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-3/4" />
-                                <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2" />
-                                <div className="h-7 bg-slate-100 dark:bg-slate-800 rounded-xl w-full mt-2" />
+            {isOpen && (
+                <>
+                    {/* Stats bar */}
+                    {events.length > 0 && (
+                        <div className="grid grid-cols-3 divide-x divide-slate-100
+                                        dark:divide-slate-800 border-y border-slate-100
+                                        dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                            <div className="px-4 py-2.5 text-center">
+                                <p className="text-base font-black text-amber-500">{pendingCount}</p>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest">Pending</p>
+                            </div>
+                            <div className="px-4 py-2.5 text-center">
+                                <p className="text-base font-black text-emerald-500">{approvedCount}</p>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest">Approved</p>
+                            </div>
+                            <div className="px-4 py-2.5 text-center">
+                                <p className="text-base font-black text-red-500">{declinedCount}</p>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest">Declined</p>
                             </div>
                         </div>
-                    ))}
-                </div>
-            ) : error ? (
-                <div className="px-5 py-10 text-center">
-                    <AlertTriangle size={28} className="text-amber-400 mx-auto mb-3" />
-                    <p className="text-sm text-slate-500">{error}</p>
-                    <button
-                        onClick={() => fetchActivity()}
-                        className="mt-3 text-xs text-indigo-500 font-bold hover:text-indigo-700"
-                    >
-                        Try again
-                    </button>
-                </div>
-            ) : events.length === 0 ? (
-                <div className="px-5 py-12 text-center">
-                    <Clock size={32} className="text-slate-300 mx-auto mb-3" />
-                    <p className="text-sm text-slate-400 font-bold">No activity yet</p>
-                    <p className="text-xs text-slate-300 mt-1">
-                        Teachers and students joining your school will appear here
-                    </p>
-                </div>
-            ) : (
-                events.map(event => (
-                    <ActivityCard
-                        key={event.id}
-                        event={event}
-                        onApprove={handleApprove}
-                        onDecline={handleDecline}
-                        processingId={processingId}
-                    />
-                ))
+                    )}
+
+                    {/* Scrollable feed */}
+                    <div className="max-h-[520px] overflow-y-auto">
+                        {loading ? (
+                            <div className="p-5 space-y-4">
+                                {[1, 2, 3].map(i => (
+                                    <div key={i} className="flex gap-3 animate-pulse">
+                                        <div className="w-9 h-9 rounded-xl bg-slate-200
+                                                        dark:bg-slate-700 flex-shrink-0" />
+                                        <div className="flex-1 space-y-2">
+                                            <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-3/4" />
+                                            <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : error ? (
+                            <div className="px-5 py-10 text-center">
+                                <AlertTriangle size={28} className="text-amber-400 mx-auto mb-3" />
+                                <p className="text-sm text-slate-500">{error}</p>
+                            </div>
+                        ) : events.length === 0 ? (
+                            <div className="px-5 py-12 text-center">
+                                <Clock size={32} className="text-slate-300 mx-auto mb-3" />
+                                <p className="text-sm text-slate-400 font-bold">No activity yet</p>
+                                <p className="text-xs text-slate-300 mt-1">
+                                    Teachers and students joining your school will appear here
+                                </p>
+                            </div>
+                        ) : (
+                            events.map(event => (
+                                <ActivityCard
+                                    key={event.id}
+                                    event={event}
+                                    onApprove={handleApprove}
+                                    onDecline={handleDecline}
+                                    processingId={processingId}
+                                    removing={removingIds.has(event.id)}
+                                />
+                            ))
+                        )}
+                    </div>
+                </>
             )}
-        </div>
- </>
-)}   
         </div>
     );
 }
-
-export default ActivityFeed;

@@ -396,6 +396,11 @@ export default function PrincipalDashboard({ principal }) {
     const schoolId = principal?.schoolId || principal?.uid;
     const printRef = useRef();
 
+    // UI state for collapsible sections
+    const [gradeOpen, setGradeOpen] = useState(true);
+    const [subjectOpen, setSubjectOpen] = useState(true);
+    const [activityOpen, setActivityOpen] = useState(true);
+
 
 
     // ── Live usage object — drives ALL limit checks ───────────────────────────
@@ -888,101 +893,261 @@ useEffect(() => {
 
 
                             {/* Dynamic Grade Chart */}
-                            <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-sm font-black text-slate-700 dark:text-white">Students per Grade</h2>
-                                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300">
-                                        {currentCurriculum}
+                            <div className="bg-white dark:bg-slate-800 rounded-2xl border
+                border-slate-100 dark:border-slate-700 overflow-hidden">
+
+    {/* Header — clickable to collapse */}
+    <button
+        onClick={() => setGradeOpen(v => !v)}
+        className="w-full flex justify-between items-center p-5
+                   hover:bg-slate-50 dark:hover:bg-slate-700/50
+                   transition-colors cursor-pointer"
+    >
+        <h2 className="text-sm font-black text-slate-700 dark:text-white">
+            Students per Grade
+        </h2>
+        <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold px-2.5 py-1 rounded-full
+                             bg-slate-100 dark:bg-slate-700
+                             text-slate-500 dark:text-slate-300">
+                {currentCurriculum}
+            </span>
+            <svg
+                className={`w-4 h-4 text-slate-400 transition-transform duration-200
+                            ${gradeOpen ? '' : 'rotate-180'}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            >
+                <path strokeLinecap="round" strokeLinejoin="round"
+                      strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
+        </div>
+    </button>
+
+    {/* Collapsible content */}
+    {gradeOpen && (
+        <div className="px-5 pb-5 border-t border-slate-100 dark:border-slate-700">
+            {dynamicGradeOrder.length === 0 ? (
+                <div className="h-28 flex items-center justify-center
+                                border border-dashed border-slate-200
+                                dark:border-slate-700 rounded-xl mt-4">
+                    <p className="text-xs font-medium text-slate-400">
+                        No student enrollment records found
+                    </p>
+                </div>
+            ) : (
+                /* Scrollable bar chart — handles many grades gracefully */
+                <div className="overflow-x-auto mt-4">
+                    <div
+                        className="flex items-end gap-2 h-28 pt-4"
+                        style={{
+                            minWidth: `${dynamicGradeOrder.length * 48}px`
+                        }}
+                    >
+                        {dynamicGradeOrder.map(g => {
+                            const count = activeGradeCounts[g] || 0;
+                            const max   = Math.max(
+                                ...dynamicGradeOrder.map(gr => activeGradeCounts[gr] || 0),
+                                1
+                            );
+                            const pct  = (count / max) * 100;
+                            const displayLabel = g
+                                .replace('Grade ', 'Gr ')
+                                .replace('Year ',  'Yr ')
+                                .replace('Form ',  'Fm ');
+
+                            return (
+                                <div key={g}
+                                     className="flex flex-col items-center gap-1"
+                                     style={{ minWidth: 40 }}>
+                                    <span className="text-[10px] font-black
+                                                     text-slate-600 dark:text-slate-300">
+                                        {count}
+                                    </span>
+                                    <div
+                                        className="w-full rounded-t-xl transition-all duration-700"
+                                        style={{
+                                            height:          `${pct}%`,
+                                            backgroundColor: primary || '#4f46e5',
+                                            minHeight:       count ? 6 : 0,
+                                            width:           32,
+                                        }}
+                                    />
+                                    <span className="text-[9px] text-slate-400
+                                                     font-bold whitespace-nowrap">
+                                        {displayLabel}
                                     </span>
                                 </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    )}
+</div>
 
-                                {dynamicGradeOrder.length === 0 ? (
-                                    <div className="h-28 flex items-center justify-center border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
-                                        <p className="text-xs font-medium text-slate-400">No student enrollment records found</p>
+                            <div className="bg-white dark:bg-slate-800 rounded-2xl border
+                border-slate-100 dark:border-slate-700 overflow-hidden">
+
+    {/* Header — clickable to collapse */}
+    <button
+        onClick={() => setSubjectOpen(v => !v)}
+        className="w-full flex justify-between items-center p-5
+                   hover:bg-slate-50 dark:hover:bg-slate-700/50
+                   transition-colors cursor-pointer"
+    >
+        <h2 className="text-sm font-black text-slate-700 dark:text-white">
+            Performance by Subject
+        </h2>
+        <div className="flex items-center gap-2">
+            {Object.keys(subjectGroups).length > 0 && (
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full
+                                 bg-slate-100 dark:bg-slate-700
+                                 text-slate-500 dark:text-slate-300">
+                    {Object.keys(subjectGroups).length} subjects
+                </span>
+            )}
+            <svg
+                className={`w-4 h-4 text-slate-400 transition-transform duration-200
+                            ${subjectOpen ? '' : 'rotate-180'}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            >
+                <path strokeLinecap="round" strokeLinejoin="round"
+                      strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
+        </div>
+    </button>
+
+    {/* Collapsible + scrollable content */}
+    {subjectOpen && (
+        <div className="border-t border-slate-100 dark:border-slate-700">
+            {Object.keys(subjectGroups).length === 0 ? (
+                <div className="px-5 py-6 flex items-center justify-center
+                                border border-dashed border-slate-200
+                                dark:border-slate-700 rounded-xl mx-5 my-4">
+                    <p className="text-xs text-slate-400">
+                        No attempts recorded yet.
+                    </p>
+                </div>
+            ) : (
+                /* Scrollable — grows with number of subjects */
+                <div className="overflow-y-auto max-h-64 px-5 py-4 space-y-3">
+                    {Object.entries(subjectGroups)
+                        .sort((a, b) => b[1].length - a[1].length)
+                        .map(([sub, atts]) => {
+                            const avg = averageScore(atts);
+                            return (
+                                <div key={sub} className="flex items-center gap-2 md:gap-3">
+                                    <span className="text-[10px] font-bold
+                                                     text-slate-600 dark:text-slate-300
+                                                     w-28 md:w-36 truncate flex-shrink-0">
+                                        {sub}
+                                    </span>
+                                    <div className="flex-1 bg-slate-100 dark:bg-slate-700
+                                                    rounded-full h-2">
+                                        <div
+                                            className="h-2 rounded-full transition-all duration-700"
+                                            style={{
+                                                width:           `${avg || 0}%`,
+                                                backgroundColor: primary,
+                                            }}
+                                        />
                                     </div>
-                                ) : (
-                                    <div className="flex items-end gap-2 md:gap-3 h-28 pt-4">
-                                        {dynamicGradeOrder.map(g => {
-                                            const count = activeGradeCounts[g] || 0;
-                                            const max = Math.max(...dynamicGradeOrder.map(gr => activeGradeCounts[gr] || 0), 1);
-                                            const pct = (count / max) * 100;
+                                    <ScoreBadge score={avg} />
+                                    <span className="text-[9px] text-slate-400
+                                                     w-14 md:w-16 text-right flex-shrink-0">
+                                        {atts.length} att.
+                                    </span>
+                                </div>
+                            );
+                        })
+                    }
+                </div>
+            )}
+        </div>
+    )}
+</div>
 
-                                            // Formats display cleanly: "Grade 11" -> "Gr 11", "Year 8" -> "Yr 8"
-                                            const displayLabel = g
-                                                .replace('Grade ', 'Gr ')
-                                                .replace('Year ', 'Yr ');
+                          <div className="bg-white dark:bg-slate-800 rounded-2xl border
+                border-slate-100 dark:border-slate-700 overflow-hidden">
 
-                                            return (
-                                                <div key={g} className="flex-1 flex flex-col items-center gap-1">
-                                                    <span className="text-[10px] font-black text-slate-600 dark:text-slate-300">
-                                                        {count}
-                                                    </span>
-                                                    <div
-                                                        className="w-full rounded-t-xl transition-all duration-700"
-                                                        style={{
-                                                            height: `${pct}%`,
-                                                            backgroundColor: primary || '#4f46e5', // Safe fallback color
-                                                            minHeight: count ? 6 : 0
-                                                        }}
-                                                    />
-                                                    <span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">
-                                                        {displayLabel}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
+    {/* Header — clickable to collapse */}
+    <button
+        onClick={() => setActivityOpen(v => !v)}
+        className="w-full flex justify-between items-center p-5
+                   hover:bg-slate-50 dark:hover:bg-slate-700/50
+                   transition-colors cursor-pointer"
+    >
+        <h2 className="text-sm font-black text-slate-700 dark:text-white">
+            Recent Activity
+        </h2>
+        <div className="flex items-center gap-2">
+            {auditLog.length > 0 && (
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full
+                                 bg-slate-100 dark:bg-slate-700
+                                 text-slate-500 dark:text-slate-300">
+                    {auditLog.length} events
+                </span>
+            )}
+            <svg
+                className={`w-4 h-4 text-slate-400 transition-transform duration-200
+                            ${activityOpen ? '' : 'rotate-180'}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            >
+                <path strokeLinecap="round" strokeLinejoin="round"
+                      strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
+        </div>
+    </button>
+
+    {/* Collapsible + scrollable content */}
+    {activityOpen && (
+        <div className="border-t border-slate-100 dark:border-slate-700">
+            {auditLog.length === 0 ? (
+                <div className="px-5 py-6 flex items-center justify-center
+                                border border-dashed border-slate-200
+                                dark:border-slate-700 rounded-xl mx-5 my-4">
+                    <p className="text-xs text-slate-400">
+                        No activity recorded yet.
+                    </p>
+                </div>
+            ) : (
+                /* Scrollable — grows with audit log */
+                <div className="overflow-y-auto max-h-64 px-5 py-4 space-y-3">
+                    {auditLog.map(ev => (
+                        <div key={ev.id} className="flex items-start gap-3 text-xs">
+                            <div className="w-5 h-5 rounded-full bg-slate-100
+                                            dark:bg-slate-700 flex items-center
+                                            justify-center flex-shrink-0 mt-0.5">
+                                {ev.type === 'ai_mark'
+                                    ? <Award size={10} className="text-indigo-500" />
+                                    : ev.type === 'remark'
+                                        ? <RefreshCw size={10} className="text-amber-500" />
+                                        : <CheckCircle2 size={10} className="text-emerald-500" />
+                                }
                             </div>
-
-                            {/* Subject performance */}
-                            <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700">
-                                <h2 className="text-sm font-black text-slate-700 dark:text-white mb-4">Performance by Subject</h2>
-                                {Object.keys(subjectGroups).length === 0
-                                    ? <p className="text-xs text-slate-400">No attempts recorded yet.</p>
-                                    : (
-                                        <div className="space-y-2">
-                                            {Object.entries(subjectGroups).sort((a, b) => b[1].length - a[1].length).slice(0, 8).map(([sub, atts]) => {
-                                                const avg = averageScore(atts);
-                                                return (
-                                                    <div key={sub} className="flex items-center gap-2 md:gap-3">
-                                                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 w-28 md:w-36 truncate">{sub}</span>
-                                                        <div className="flex-1 bg-slate-100 dark:bg-slate-700 rounded-full h-2">
-                                                            <div className="h-2 rounded-full transition-all duration-700"
-                                                                style={{ width: `${avg || 0}%`, backgroundColor: primary }} />
-                                                        </div>
-                                                        <ScoreBadge score={avg} />
-                                                        <span className="text-[9px] text-slate-400 w-14 md:w-16 text-right">{atts.length} att.</span>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
+                            <div className="flex-1 min-w-0">
+                                <p className="font-bold text-slate-700 dark:text-slate-200 truncate">
+                                    {ev.description || ev.type}
+                                </p>
+                                <p className="text-slate-400 mt-0.5">
+                                    {ev.actorName || 'System'} &middot;{' '}
+                                    {ev.timestamp?.toDate?.().toLocaleDateString(
+                                        'en-ZA', {
+                                            day:   '2-digit',
+                                            month: 'short',
+                                            year:  'numeric',
+                                        }
+                                    ) || '—'}
+                                </p>
                             </div>
-
-                            {/* Recent activity */}
-                            <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700">
-                                <h2 className="text-sm font-black text-slate-700 dark:text-white mb-4">Recent Activity</h2>
-                                {auditLog.length === 0
-                                    ? <p className="text-xs text-slate-400">No activity recorded yet.</p>
-                                    : (
-                                        <div className="space-y-2">
-                                            {auditLog.slice(0, 5).map(ev => (
-                                                <div key={ev.id} className="flex items-start gap-3 text-xs">
-                                                    <div className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                                        {ev.type === 'ai_mark' ? <Award size={10} className="text-indigo-500" />
-                                                            : ev.type === 'remark' ? <RefreshCw size={10} className="text-amber-500" />
-                                                                : <CheckCircle2 size={10} className="text-emerald-500" />}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-bold text-slate-700 dark:text-slate-200">{ev.description || ev.type}</p>
-                                                        <p className="text-slate-400">{ev.actorName || 'System'} · {ev.timestamp?.toDate?.().toLocaleDateString('en-ZA') || '—'}</p>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    )}
+</div>
                         </>
                     )}
 

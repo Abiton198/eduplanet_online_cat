@@ -7,7 +7,16 @@ exports.handler = async (event) => {
 
   try {
     const data = JSON.parse(event.body || '{}');
-    const { email, displayName, role, schoolName, grade, subjects, dashboardUrl } = data;
+    const { 
+      email, 
+      displayName, 
+      role, 
+      schoolName, 
+      principalEmail, // Pass principal's email from request
+      grade, 
+      subjects, 
+      dashboardUrl 
+    } = data;
 
     if (!email) {
       return respond(400, { error: 'Email required' });
@@ -17,11 +26,19 @@ exports.handler = async (event) => {
     const rows = buildRows({ displayName, email, role, schoolName, grade, subjects });
     const html = buildWelcomeHtml(cfg, displayName, rows, dashboardUrl);
 
+    // Format sender name dynamically: "Fairview High via Eduket OS"
+    const senderName = schoolName ? `${schoolName} via Eduket OS` : 'Eduket OS';
+    const fromAddress = `${senderName} <notifications@eduket.tech>`;
+    
+    // Set replyTo so responses go straight to the principal
+    const replyToAddress = principalEmail || 'nextgenskills96@gmail.com';
+
     const result = await sendViaResend({
       to:      email,
       subject: `${cfg.icon} ${cfg.subtitle}`,
       html,
-      from:    'Eduket OS <onboarding@resend.dev>',
+      from:    fromAddress,
+      replyTo: replyToAddress,
     });
 
     return respond(200, result);
@@ -30,6 +47,39 @@ exports.handler = async (event) => {
     return respond(200, { success: false, error: err.message });
   }
 };
+
+// ── Resend API Call with replyTo ──────────────────────────────────────────
+async function sendViaResend({ to, subject, html, from: fromAddr, replyTo }) {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return { success: false, error: 'RESEND_API_KEY not set' };
+
+  const payload = {
+    from: fromAddr,
+    to: [to],
+    subject,
+    html,
+  };
+
+  if (replyTo) {
+    payload.reply_to = replyTo;
+  }
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method:  'POST',
+    headers: {
+      'Authorization': `Bearer ${key}`,
+      'Content-Type':  'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    console.error('[Resend Error]', json);
+    return { success: false, error: json.message || res.statusText };
+  }
+  return { success: true, id: json.id };
+}
 
 // ── Role config ────────────────────────────────────────────────────────────
 function roleConfig(role, schoolName, grade) {

@@ -710,16 +710,47 @@ export default function TeacherDashboard() {
     }
 
     setIsUploading(true);
-    setUploadProgress('Uploading exam file…');
+    setUploadProgress('Checking account upload limits…');
 
     try {
+      const token = await user.getIdToken();
+
+      // ── 2. PRE-CHECK TIER LIMIT BEFORE UPLOADING STORAGE FILES ─────────────
+      const checkRes = await fetch(`${import.meta.env.VITE_API_URL}/check-tier-limit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          schoolId: teacherProfile?.schoolId,
+          role: 'exams' // checking exam upload limit
+        })
+      });
+
+      const checkData = await checkRes.json();
+
+      if (checkRes.status === 403 || checkData.error === 'limit_reached') {
+        setIsUploading(false);
+        setUploadProgress('');
+        await Swal.fire({
+          icon: 'warning',
+          title: 'Upload Limit Reached',
+          text: checkData.message || checkData.error || 'Your school has reached its exam upload limit for this tier.',
+          confirmButtonText: 'Upgrade Plan',
+          confirmButtonColor: '#4F46E5',
+        });
+        return; // Stop execution before uploading any files to Storage
+      }
+
+      // ── 3. Upload exam file to Firebase Storage ───────────────────────────
+      setUploadProgress('Uploading exam file…');
       const examId = `${user.uid}_${Date.now()}`;
       const schoolFolder = `${teacherProfile.schoolId}_${(teacherProfile.schoolName || teacherProfile.school || 'School')
         .replace(/\s+/g, '_')
         .replace(/[^a-zA-Z0-9_-]/g, '')
         }`;
 
-      // ── 2. Upload exam file to Firebase Storage ───────────────────────────
       const exam = await uploadExamFile(
         examFile,
         schoolFolder,
@@ -728,7 +759,7 @@ export default function TeacherDashboard() {
         'exam',
       );
 
-      // ── 3. Upload memo file if provided ───────────────────────────────────
+      // ── 4. Upload memo file if provided ───────────────────────────────────
       let memo = { path: '', url: '', fileName: '', fileType: '' };
       if (!skipMemo && memoFile) {
         setUploadProgress('Uploading memo file…');
@@ -741,10 +772,8 @@ export default function TeacherDashboard() {
         );
       }
 
-      // ── 4. Send paths + metadata to Flask backend ─────────────────────────
+      // ── 5. Send paths + metadata to Flask backend ─────────────────────────
       setUploadProgress('Creating exam record…');
-      const token = await user.getIdToken();
-
       const currentActiveType = assessmentType || examType || 'exam';
 
       const response = await fetch(
@@ -758,8 +787,6 @@ export default function TeacherDashboard() {
           body: JSON.stringify({
             examId,
             title: paperTitle || "Untitled Assessment",
-
-            // 🔑 FIXED: Changed from selectedSubject to paperSubject to match your input state hook
             subject: paperSubject || teacherSubjects[0] || "",
             schoolId: teacherProfile?.schoolId || '',
             grade: selectedGrade || "12",
@@ -777,7 +804,6 @@ export default function TeacherDashboard() {
             memoStorageUrl: memo.url || '',
             aiMarkingOnly: skipMemo || !memoFile,
             teacherName: teacherProfile.displayName || teacherProfile.name || 'Teacher',
-            schoolId: teacherProfile.schoolId,
             schoolName: teacherProfile.schoolName || teacherProfile.school || '',
             schoolFolder,
             uploadedBy: user.uid,
@@ -789,18 +815,6 @@ export default function TeacherDashboard() {
 
       setUploadProgress('Finalising…');
       const saved = await response.json();
-
-      // ── 5. Response handling ──────────────────────────────────────────────
-      if (response.status === 403 && saved.error === 'limit_reached') {
-        await Swal.fire({
-          icon: 'warning',
-          title: 'Upload Limit Reached',
-          text: saved.message,
-          confirmButtonText: 'Got it',
-          confirmButtonColor: '#4F46E5',
-        });
-        return;
-      }
 
       if (!response.ok || !saved?.examId) {
         throw new Error(saved?.error || 'Failed to create exam record');
